@@ -300,7 +300,11 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
         }
 
         final boolean keepAlive = isKeepAlive(nettyRequest);
-        if (file != null && file.isFile()) {
+		// bran 
+		if (keepAlive)
+			addKeepAliveHeader(nettyResponse);
+
+		if (file != null && file.isFile()) {
             try {
                 nettyResponse = addEtag(nettyRequest, nettyResponse, file);
                 if (nettyResponse.getStatus().equals(HttpResponseStatus.NOT_MODIFIED)) {
@@ -355,7 +359,7 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
         } else {
             writeResponse(ctx, response, nettyResponse, nettyRequest);
         }
-        Logger.trace("copyResponse: end");
+
     }
 
     static String getRemoteIPAddress(ChannelHandlerContext ctx) {
@@ -657,6 +661,10 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
                 } else {
                     final File localFile = file.getRealFile();
                     final boolean keepAlive = isKeepAlive(nettyRequest);
+					//bran
+					if (keepAlive)
+						PlayHandler.addKeepAliveHeader(nettyResponse);
+
                     nettyResponse = addEtag(nettyRequest, nettyResponse, localFile);
 
                     if (nettyResponse.getStatus().equals(HttpResponseStatus.NOT_MODIFIED)) {
@@ -776,10 +784,21 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
     }
 
     public static boolean isKeepAlive(HttpMessage message) {
-        return HttpHeaders.isKeepAlive(message) && message.getProtocolVersion().equals(HttpVersion.HTTP_1_1);
+        return HttpHeaders.isKeepAlive(message) /*&& message.getProtocolVersion().equals(HttpVersion.HTTP_1_1)*/;
     }
 
     public static void setContentLength(HttpMessage message, long contentLength) {
         message.setHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(contentLength));
     }
+
+	/**
+	 * bran: http 1.1 defaults to keep-alive, but 1.0 has no spec about it. Some browsers will observe 
+	 * the Connection: Keep-Alive header. 
+	 * 
+	 * @param nettyResponse
+	 */
+	static public void addKeepAliveHeader(HttpResponse nettyResponse) {
+		nettyResponse.setHeader("Connection", "Keep-Alive");
+	}
+	
 }
