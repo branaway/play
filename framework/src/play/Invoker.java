@@ -279,10 +279,14 @@ public class Invoker {
             start();
         }
 
-        public static void waitFor(List<Future<?>> tasks, Invocation invocation) {
+		private synchronized static void init() {
             if (instance == null) {
                 instance = new WaitForTasksCompletion();
             }
+		}
+
+		public static void waitFor(List<Future<?>> tasks, Invocation invocation) {
+			init();
             instance.queue.put(tasks, invocation);
         }
 

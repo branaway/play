@@ -14,7 +14,7 @@ import play.utils.Utils;
  * Parse url-encoded requests.
  */
 public class UrlEncodedParser extends DataParser {
-    
+	public static final String FULLBODY = "_body";
     boolean forQueryString = false;
     
     public static Map<String, String[]> parse(String urlEncoded) {
@@ -43,7 +43,7 @@ public class UrlEncodedParser extends DataParser {
             byte[] data = os.toByteArray();
             // add the complete body as a parameters
             if(!forQueryString) {
-                params.put("body", new String[] {new String(data, "utf-8")});
+                params.put(FULLBODY, new String[] {new String(data, "utf-8")});
             }
             
             int ix = 0;

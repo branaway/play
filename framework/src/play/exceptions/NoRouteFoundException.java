@@ -38,7 +38,7 @@ public class NoRouteFoundException extends PlayException implements SourceAttach
     }
     
     public NoRouteFoundException(String action, Map<String, Object> args) {
-        super("No route found");
+        super("No route found: " + action + "...");
         this.action = action;
         this.args = args;
         if(this.action.startsWith("controllers.")) {
