@@ -77,7 +77,9 @@ public class LocalvariablesNamesEnhancer extends Enhancer {
                 iv.append("};");
             }
 
-            CtField signature = CtField.make("public static String[] $" + method.getName() + LocalVariablesNamesTracer.computeMethodHash(method.getParameterTypes()) + " = " + iv.toString(), ctClass);
+            String synthField = method.getName() + LocalVariablesNamesTracer.computeMethodHash(method.getParameterTypes());
+            Logger.info("Local Var Enhancer on: " + applicationClass.name + ". Add synth field: " + synthField);
+			CtField signature = CtField.make("public static String[] $" + synthField + " = " + iv.toString(), ctClass);
             ctClass.addField(signature);
 
             // No variable name, skip...
