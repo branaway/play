@@ -4,6 +4,18 @@ Play framework makes it easier to build Web applications with Java. It is a clea
 
 Learn more on the "http://www.playframework.org":http://www.playframework.org website.
 
+h2. Bing Ran local patches:
+
+I have made a few patched that fix a few bugs and inconvenience
+
+# MemecachedImpl: clean keys with space and delegate to super class loader for primitive array types
+# UrlEncodeParser: changed to use "_body" from "body" to avoid conflicts with user's body parameter
+# NoRouteFoundException: added the action name in the error message.
+# Invoker: synch the creation of the suspended invocations.
+# Play: added a delay in detecting changes to avoid run the detection for very requests in a burst.
+# PlayHandler: added keep-alive header to the http 1.0 request. 
+
+
 h2. Getting started
 
 1. Install the latest version of Play framework and unzip it anywhere you want:
@@ -48,3 +60,5 @@ Please report bugs on "our lighthouse tracker":http://play.lighthouseapp.com/pro
 h2. Licence
 
 Play framework is distributed under "Apache 2 licence":http://www.apache.org/licenses/LICENSE-2.0.html.
+
+
