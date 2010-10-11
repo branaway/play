@@ -34,7 +34,7 @@ try:
     print r"~  _ __ | | __ _ _  _| |"
     print r"~ | '_ \| |/ _' | || |_|"
     print r"~ |  __/|_|\____|\__ (_)"
-    print r"~ |_|            |__/   "
+    print r"~ |_|    enhanced|__/   "
     print r"~"
 
     play_version_file = os.path.join(play_env["basedir"], 'framework', 'src', 'play', 'version')

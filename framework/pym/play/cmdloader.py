@@ -20,7 +20,11 @@ class CommandLoader:
             leafname = os.path.basename(modname).split('.')[0]
             mod = imp.load_source(leafname, os.path.join(modname, "commands.py"))
             self._load_cmd_from(mod)
-        except:
+        except Exception, e:
+            print "error caught in: " + modname + ":" + leafname
+            print type(e) 
+            print e
+            print 'no command?'
             pass # No command to load in this module
 
     def _load_cmd_from(self, mod):

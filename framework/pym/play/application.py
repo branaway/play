@@ -235,7 +235,10 @@ class PlayConfParser:
                 continue
             if linedef.find('=') == -1:
                 continue
-            self.entries[linedef.split('=')[0].rstrip()] = linedef.split('=')[1].lstrip()
+# bug: cannot parse entries with more than one "="
+#            self.entries[linedef.split('=')[0].rstrip()] = linedef.split('=')[1].lstrip()
+# my fix
+            self.entries[linedef.split('=')[0].rstrip()] = linedef[linedef.find('=') + 1:].lstrip()
         f.close()
 
     def get(self, key):
