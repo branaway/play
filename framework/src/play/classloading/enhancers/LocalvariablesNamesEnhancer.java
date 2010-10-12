@@ -34,7 +34,8 @@ public class LocalvariablesNamesEnhancer extends Enhancer {
             return;
         }
 
-        for (CtMethod method : ctClass.getDeclaredMethods()) {
+        CtMethod[] methods = ctClass.getDeclaredMethods();
+		for (CtMethod method : methods) {
 
             // Signatures names
             CodeAttribute codeAttribute = (CodeAttribute) method.getMethodInfo().getAttribute("Code");
@@ -77,9 +78,16 @@ public class LocalvariablesNamesEnhancer extends Enhancer {
                 iv.append("};");
             }
 
-            String synthField = method.getName() + LocalVariablesNamesTracer.computeMethodHash(method.getParameterTypes());
-            Logger.info("Local Var Enhancer on: " + applicationClass.name + ". Add synth field: " + synthField);
-			CtField signature = CtField.make("public static String[] $" + synthField + " = " + iv.toString(), ctClass);
+            String synthFieldName = "$" + method.getName() + LocalVariablesNamesTracer.computeMethodHash(method.getParameterTypes());
+//            Logger.info("Local Var Enhancer on: " + applicationClass.name + ". Add synth field: " + synthFieldName);
+            CtField signature = CtField.make("public static String[] " + synthFieldName + " = " + iv.toString(), ctClass);
+            // bran: fail early
+//            try {
+//            	CtField declaredField = ctClass.getDeclaredField(synthFieldName);
+//            	ctClass.removeField(declaredField);
+//            }
+//            catch(Exception e) {}
+            
             ctClass.addField(signature);
 
             // No variable name, skip...

@@ -614,7 +614,7 @@ public class Play {
 
     /**
      * Load all modules.
-     * You can even specify the list using the MODULES environement variable.
+     * You can even specify the list using the MODULES environment variable.
      */
     public static void loadModules() {
         if (System.getenv("MODULES") != null) {
