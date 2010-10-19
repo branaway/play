@@ -47,7 +47,8 @@ def execute(**kargs):
 
     shutil.copyfile(os.path.join(play_env["basedir"], 'resources/eclipse/.project'), dotProject)
     shutil.copyfile(os.path.join(play_env["basedir"], 'resources/eclipse/.classpath'), dotClasspath)
-    shutil.copytree(os.path.join(play_env["basedir"], 'resources/eclipse'), eclipse)
+    if is_application:
+	    shutil.copytree(os.path.join(play_env["basedir"], 'resources/eclipse'), eclipse)
     shutil.copytree(os.path.join(play_env["basedir"], 'resources/eclipse/.settings'), dotSettings)
     replaceAll(dotProject, r'%PROJECT_NAME%', application_name)
 
@@ -71,7 +72,8 @@ def execute(**kargs):
                     cpXML += '<classpathentry kind="lib" path="%s" sourcepath="%s"/>\n\t' % (os.path.normpath(el), cpJarToSource[el])
                 else:
                     cpXML += '<classpathentry kind="lib" path="%s"/>\n\t' % os.path.normpath(el)
-
+    if not is_application:
+        cpXML += '<classpathentry kind="src" path="src"/>'
     replaceAll(dotClasspath, r'%PROJECTCLASSPATH%', cpXML)
 
     # generate source path for test folder if one exists
