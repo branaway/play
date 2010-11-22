@@ -81,7 +81,9 @@ public class ActionInvoker {
                 request.action = request.controller + "." + request.actionMethod;
                 request.invokedMethod = actionMethod;
             } catch (ActionNotFoundException e) {
-                Logger.error(e, "%s action not found", e.getAction());
+//                Logger.error(e, "%s action not found", e.getAction());
+            	// bran: avoid excessive messages
+                Logger.error("%s action not found", e.getAction());
                 throw new NotFound(String.format("%s action not found", e.getAction()));
             }
 

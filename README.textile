@@ -8,6 +8,7 @@ h2. Bing Ran local patches:
 
 I have made a few patched that fix a few bugs and inconvenience
 
+# simplified the error message in case of ActionNotFoundException.
 # MemecachedImpl: clean keys with space and delegate to super class loader for primitive array types
 # UrlEncodeParser: changed to use "_body" from "body" to avoid conflicts with user's body parameter
 # NoRouteFoundException: added the action name in the error message.
