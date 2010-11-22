@@ -179,7 +179,6 @@ bc. <head>
     <title>#{get 'title'}Homepage #{/} 
 </head>
 
-
 h2. <a name="i18n">i18n</a>
 
 Exports localized messages in JavaScript. Localized messages are available from your JavaScript code using the **i18n()** function.

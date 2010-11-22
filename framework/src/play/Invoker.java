@@ -1,8 +1,9 @@
 package play;
 
-import com.jamonapi.Monitor;
-import com.jamonapi.MonitorFactory;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -10,12 +11,18 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
-
 import java.util.concurrent.TimeUnit;
+
+import com.jamonapi.Monitor;
+import com.jamonapi.MonitorFactory;
+import java.util.ArrayList;
+
 import play.Play.Mode;
 import play.classloading.enhancers.LocalvariablesNamesEnhancer.LocalVariablesNamesTracer;
 import play.exceptions.PlayException;
 import play.exceptions.UnexpectedException;
+import play.mvc.ActionInvoker;
+import play.mvc.Http.Request;
 
 /**
  * Run some code in a Play! context
@@ -64,7 +71,9 @@ public class Invoker {
             } else {
                 try {
                     if (invocation.retry.tasks != null) {
-                        for(Future<?> f : invocation.retry.tasks) f.get();
+                        for (Future<?> f : invocation.retry.tasks) {
+                            f.get();
+                        }
                     } else {
                         Thread.sleep(invocation.retry.timeout);
                     }
@@ -77,10 +86,69 @@ public class Invoker {
     }
 
     /**
+     * The class/method that will be invoked by the current operation
+     */
+    public static class InvocationContext {
+
+        public static ThreadLocal<InvocationContext> current = new ThreadLocal<InvocationContext>();
+        private List<Annotation> annotations = new ArrayList<Annotation>();
+
+        public static InvocationContext current() {
+            return current.get();
+        }        
+        
+        public InvocationContext(List<Annotation> annotations) {
+            this.annotations = annotations;
+        }
+
+        public InvocationContext(Annotation[] annotations) {
+            this.annotations = Arrays.asList(annotations);
+        }
+
+        public InvocationContext(Annotation[]... annotations) {
+            for(Annotation[] some : annotations) {
+                this.annotations.addAll(Arrays.asList(some));
+            }
+        }
+
+        public List<Annotation> getAnnotations() {
+            return annotations;
+        }
+
+        public <T extends Annotation> T getAnnotation(Class<T> clazz) {
+            for(Annotation annotation : annotations) {
+                if(annotation.annotationType().isAssignableFrom(clazz)) {
+                    return (T)annotation;
+                }
+            }
+            return null;
+        }
+
+        public <T extends Annotation> boolean isAnnotationPresent(Class<T> clazz) {
+            for(Annotation annotation : annotations) {
+                if(annotation.annotationType().isAssignableFrom(clazz)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder builder = new StringBuilder();
+            for(Annotation annotation : annotations) {
+                builder.append(annotation.toString()).append(",");
+            }
+            return builder.toString();
+        }
+
+    }
+
+    /**
      * An Invocation in something to run in a Play! context
      */
     public static abstract class Invocation implements Runnable {
-        
+
         /**
          * If set, monitor the time the invocation waited in the queue
          */
@@ -104,7 +172,12 @@ public class Invoker {
                 }
                 Play.start();
             }
+            InvocationContext.current.set(getInvocationContext());
             return true;
+        }
+
+        public InvocationContext getInvocationContext() {
+            return new InvocationContext(new ArrayList<Annotation>());
         }
 
         /**
@@ -178,7 +251,7 @@ public class Invoker {
          * It's time to execute.
          */
         public void run() {
-            if(waitInQueue != null) {
+            if (waitInQueue != null) {
                 waitInQueue.stop();
             }
             try {
@@ -216,14 +289,13 @@ public class Invoker {
         public void suspend(Suspend suspendRequest) {
             retry = suspendRequest;
         }
-
     }
-    
+
     /**
      * Init executor at load time.
      */
     static {
-        int core = Integer.parseInt(Play.configuration.getProperty("play.pool", Play.mode == Mode.DEV ? "1" : ((Runtime.getRuntime().availableProcessors()+1) + "")));
+        int core = Integer.parseInt(Play.configuration.getProperty("play.pool", Play.mode == Mode.DEV ? "1" : ((Runtime.getRuntime().availableProcessors() + 1) + "")));
         executor = new ScheduledThreadPoolExecutor(core, new ThreadPoolExecutor.AbortPolicy());
     }
 
@@ -236,7 +308,6 @@ public class Invoker {
          * Suspend for a timeout (in milliseconds).
          */
         long timeout;
-        
         /**
          * Wait for task execution.
          */
@@ -297,8 +368,8 @@ public class Invoker {
                     if (!queue.isEmpty()) {
                         for (List<Future<?>> tasks : new HashSet<List<Future<?>>>(queue.keySet())) {
                             boolean allDone = true;
-                            for(Future<?> f : tasks) {
-                                if(!f.isDone()) {
+                            for (Future<?> f : tasks) {
+                                if (!f.isDone()) {
                                     allDone = false;
                                 }
                             }

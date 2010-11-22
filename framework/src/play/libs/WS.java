@@ -36,7 +36,7 @@ import com.google.gson.JsonParser;
  * <p/>
  * Get latest BBC World news as a RSS content
  * <pre>
- *    response = WS.GET("http://newsrss.bbc.co.uk/rss/newsonline_world_edition/front_page/rss.xml");
+ *    HttpResponse response = WS.url("http://newsrss.bbc.co.uk/rss/newsonline_world_edition/front_page/rss.xml").get();
  *    Document xmldoc = response.getXml();
  *    // the real pain begins here...
  * </pre>
@@ -44,7 +44,7 @@ import com.google.gson.JsonParser;
  * 
  * Search what Yahoo! thinks of google (starting from the 30th result).
  * <pre>
- *    response = WS.GET("http://search.yahoo.com/search?p=<em>%s</em>&pstart=1&b=<em>%d</em>", "Google killed me", 30 );
+ *    HttpResponse response = WS.url("http://search.yahoo.com/search?p=<em>%s</em>&pstart=1&b=<em>%s</em>", "Google killed me", "30").get();
  *    if( response.getStatus() == 200 ) {
  *       html = response.getString();
  *    }
@@ -62,22 +62,21 @@ public class WS extends PlayPlugin {
         }
     }
 
-    static void init() {
+    private synchronized static void init() {
         if (wsImpl != null) return;
         String implementation = Play.configuration.getProperty("webservice", "async");
         if (implementation.equals("urlfetch")) {
             wsImpl = new WSUrlFetch();
-            Logger.info("Using URLFetch for web service");
+            Logger.trace("Using URLFetch for web service");
         } else if (implementation.equals("async")) {
-            Logger.info("Using Async for web service");
+            Logger.trace("Using Async for web service");
             wsImpl = new WSAsync();
         } else {
             try {
                 wsImpl = (WSImpl)Play.classloader.loadClass(implementation).newInstance();
-                Logger.info("Using the class:" + implementation + " for web service");
+                Logger.trace("Using the class:" + implementation + " for web service");
             } catch (Exception e) {
-                Logger.error("Cannot load class " + implementation + ", using async instead");
-                wsImpl = new WSAsync();
+                throw new RuntimeException("Unable to load the class: " + implementation + " for web service");
             }
         }
     }
