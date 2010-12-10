@@ -92,7 +92,8 @@ public class JPABase implements Serializable, play.db.Model {
         }
     }
 
-    public Object _key() {
+    @Override
+	public Object _key() {
         return Model.Manager.factoryFor(this.getClass()).keyValue(this);
     }
 

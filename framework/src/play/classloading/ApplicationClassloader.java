@@ -288,19 +288,33 @@ public class ApplicationClassloader extends ClassLoader {
         }
         List<ClassDefinition> newDefinitions = new ArrayList<ClassDefinition>();
         boolean dirtySig = false;
-        for (ApplicationClass applicationClass : modifiedWithDependencies) {
-            if (applicationClass.compile() == null) {
-                Play.classes.classes.remove(applicationClass.name);
-            } else {
-                int sigChecksum = applicationClass.sigChecksum;
-                applicationClass.enhance();
-                if (sigChecksum != applicationClass.sigChecksum) {
-                    dirtySig = true;
-                }
-                BytecodeCache.cacheBytecode(applicationClass.enhancedByteCode, applicationClass.name, applicationClass.javaSource);
-                newDefinitions.add(new ClassDefinition(applicationClass.javaClass, applicationClass.enhancedByteCode));
-            }
-        }
+        if (modifiedWithDependencies.size() > 0) {
+			Logger.info("start compiling %s modified classes", modifiedWithDependencies.size());
+			long compileTime = 0;
+			long enhanceTime = 0;
+			for (ApplicationClass applicationClass : modifiedWithDependencies) {
+				long compt = System.currentTimeMillis();
+				byte[] compile = applicationClass.compile();
+				compileTime += (System.currentTimeMillis() - compt);
+				if (compile == null) {
+					Play.classes.classes.remove(applicationClass.name);
+				} else {
+					int sigChecksum = applicationClass.sigChecksum;
+					
+					compt = System.currentTimeMillis();
+					applicationClass.enhance();
+					enhanceTime += (System.currentTimeMillis() - compt);
+					
+					if (sigChecksum != applicationClass.sigChecksum) {
+						dirtySig = true;
+					}
+					BytecodeCache.cacheBytecode(applicationClass.enhancedByteCode, applicationClass.name, applicationClass.javaSource);
+					newDefinitions.add(new ClassDefinition(applicationClass.javaClass, applicationClass.enhancedByteCode));
+				}
+			}
+			Logger.info("Finished compiling and enhancing. Took  %s (ms) to compile, %s (ms) to enhance ", compileTime, enhanceTime);
+		}
+        
         if (newDefinitions.size() > 0) {
             Cache.clear();
             if (HotswapAgent.enabled) {
@@ -358,7 +372,7 @@ public class ApplicationClassloader extends ClassLoader {
     void scan(StringBuffer buf, VirtualFile current) {
         if (!current.isDirectory()) {
             if (current.getName().endsWith(".java")) {
-                Matcher matcher = Pattern.compile("\\s+class\\s([a-zA-Z0-9_]+)\\s+").matcher(current.contentAsString());
+				Matcher matcher = classPattern.matcher(current.contentAsString());
                 buf.append(current.getName());
                 buf.append("(");
                 while (matcher.find()) {
@@ -433,6 +447,8 @@ public class ApplicationClassloader extends ClassLoader {
         return allClasses;
     }
     List<Class> allClasses = null;
+	private static Pattern classPattern = Pattern.compile("\\s+class\\s([a-zA-Z0-9_]+)\\s+");
+
 
     /**
      * Retrieve all application classes assignable to this class.

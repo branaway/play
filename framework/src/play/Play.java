@@ -416,7 +416,11 @@ public class Play {
             }
 
             // Try to load all classes
+            Logger.info("Play.start(): start loading all classes.");
+            long t = System.currentTimeMillis();
             Play.classloader.getAllClasses();
+            Logger.info("Play.start(): loading all classes took(ms): " + (System.currentTimeMillis() - t));
+            
 
             // Routes
             Router.detectChanges(ctxPath);
