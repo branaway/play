@@ -29,7 +29,8 @@ public class Error extends Result {
         this.status = status;
     }
 
-    public void apply(Request request, Response response) {
+    @Override
+	public void apply(Request request, Response response) {
         response.status = status;
         String format = request.format;
         if (request.isAjax() && "html".equals(format)) {
@@ -46,7 +47,8 @@ public class Error extends Result {
         binding.put("play", new Play());
         String errorHtml = getMessage();
         try {
-            errorHtml = TemplateLoader.load("errors/" + this.status + "." + (format == null ? "html" : format)).render(binding);
+//            errorHtml = TemplateLoader.load("errors/" + this.status + "." + (format == null ? "html" : format)).render(binding);
+            errorHtml = Play.getErrorPage(this.status, Play.PageFormat.from(format), binding);
         } catch (Exception e) {
             Logger.warn(e, "Error page caused an error");
         }

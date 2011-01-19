@@ -406,10 +406,10 @@ public class ActionInvoker {
             if (o instanceof Map) {
                 Controller.renderTemplate((Map<String, Object>) o);
             }
-            if (o instanceof Object[]) {
-                Controller.render(o);
-            }
-
+//            if (o instanceof Object[]) {
+//                Controller.render(o);
+//            }
+// bran disable Groovy rendering
             Controller.renderHtml(o);
         }
     }

@@ -28,9 +28,11 @@ public class WSUrlFetch implements WSImpl {
 
     public WSUrlFetch() {}
 
-    public void stop() {}
+    @Override
+	public void stop() {}
 
-    public play.libs.WS.WSRequest newRequest(String url) {
+    @Override
+	public play.libs.WS.WSRequest newRequest(String url) {
         return new WSUrlfetchRequest(url);
     }
 
@@ -41,7 +43,8 @@ public class WSUrlFetch implements WSImpl {
         }
 
         /** Execute a GET request synchronously. */
-        public HttpResponse get() {
+        @Override
+		public HttpResponse get() {
             try {
                 return new HttpUrlfetchResponse(prepare(new URL(url), "GET"));
             } catch (Exception e) {
@@ -51,7 +54,8 @@ public class WSUrlFetch implements WSImpl {
         }
 
         /** Execute a POST request.*/
-        public HttpResponse post() {
+        @Override
+		public HttpResponse post() {
             try {
                 return new HttpUrlfetchResponse(prepare(new URL(url), "POST"));
             } catch (Exception e) {
@@ -60,7 +64,8 @@ public class WSUrlFetch implements WSImpl {
         }
 
         /** Execute a PUT request.*/
-        public HttpResponse put() {
+        @Override
+		public HttpResponse put() {
             try {
                 return new HttpUrlfetchResponse(prepare(new URL(url), "PUT"));
             } catch (Exception e) {
@@ -69,7 +74,8 @@ public class WSUrlFetch implements WSImpl {
         }
 
        /** Execute a DELETE request.*/
-        public HttpResponse delete() {
+        @Override
+		public HttpResponse delete() {
             try {
                 return new HttpUrlfetchResponse(prepare(new URL(url), "DELETE"));
             } catch (Exception e) {
@@ -78,7 +84,8 @@ public class WSUrlFetch implements WSImpl {
         }
 
         /** Execute a OPTIONS request.*/
-        public HttpResponse options() {
+        @Override
+		public HttpResponse options() {
             try {
                 return new HttpUrlfetchResponse(prepare(new URL(url), "OPTIONS"));
             } catch (Exception e) {
@@ -87,7 +94,8 @@ public class WSUrlFetch implements WSImpl {
         }
 
         /** Execute a HEAD request.*/
-        public HttpResponse head() {
+        @Override
+		public HttpResponse head() {
             try {
                 return new HttpUrlfetchResponse(prepare(new URL(url), "HEAD"));
             } catch (Exception e) {
@@ -96,7 +104,8 @@ public class WSUrlFetch implements WSImpl {
         }
 
         /** Execute a TRACE request.*/
-        public HttpResponse trace() {
+        @Override
+		public HttpResponse trace() {
             try {
                 return new HttpUrlfetchResponse(prepare(new URL(url), "TRACE"));
             } catch (Exception e) {
@@ -193,7 +202,8 @@ public class WSUrlFetch implements WSImpl {
          * the HTTP status code
          * @return the status code of the http response
          */
-        public Integer getStatus() {
+        @Override
+		public Integer getStatus() {
             try {
                 return this.connection.getResponseCode();
             } catch (IOException e) {
@@ -201,11 +211,13 @@ public class WSUrlFetch implements WSImpl {
             }
         }
 
-        public String getHeader(String key) {
+        @Override
+		public String getHeader(String key) {
             return connection.getHeaderField(key);
         }
 
-        public List<Header> getHeaders() {
+        @Override
+		public List<Header> getHeaders() {
             Map<String, List<String>> hdrs = connection.getHeaderFields();
             List<Header> result = new ArrayList<Header>();
             for (String key: hdrs.keySet()) {
@@ -218,7 +230,8 @@ public class WSUrlFetch implements WSImpl {
          * get the response body as a string
          * @return the body of the http response
          */
-        public String getString() {
+        @Override
+		public String getString() {
             try {
                 return IO.readContentAsString(connection.getInputStream());
             } catch (IOException e) {
@@ -230,7 +243,8 @@ public class WSUrlFetch implements WSImpl {
          * get the response as a stream
          * @return an inputstream
          */
-        public InputStream getStream() {
+        @Override
+		public InputStream getStream() {
             try {
                 return connection.getInputStream();
             } catch (Exception e) {

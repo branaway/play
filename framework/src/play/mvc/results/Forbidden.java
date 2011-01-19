@@ -15,12 +15,14 @@ import play.templates.TemplateLoader;
  * 403 Forbidden
  */
 public class Forbidden extends Result {
+	private static final long serialVersionUID = 1L;
 
-    public Forbidden(String reason) {
+	public Forbidden(String reason) {
         super(reason);
     }
 
-    public void apply(Request request, Response response) {
+    @Override
+	public void apply(Request request, Response response) {
         response.status = Http.StatusCode.FORBIDDEN;
         String format = request.format;
         if(request.isAjax() && "html".equals(format)) {
@@ -36,7 +38,8 @@ public class Forbidden extends Result {
         binding.put("play", new Play());
         String errorHtml = getMessage();
         try {
-            errorHtml = TemplateLoader.load("errors/403."+(format == null ? "html" : format)).render(binding);
+//            errorHtml = TemplateLoader.load("errors/403."+(format == null ? "html" : format)).render(binding);
+            errorHtml = Play.getErrorPage(403, Play.PageFormat.from(format), binding);
         } catch(Exception e) {
         }
         try {

@@ -463,7 +463,7 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
         }
 
 
-        addToRequest(nettyRequest, request);
+        copyHeadersCookies(nettyRequest, request);
 
         request.resolveFormat();
 
@@ -473,7 +473,7 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
         return request;
     }
 
-    protected static void addToRequest(HttpRequest nettyRequest, Request request) {
+    protected static void copyHeadersCookies(HttpRequest nettyRequest, Request request) {
         for (String key : nettyRequest.getHeaderNames()) {
             Http.Header hd = new Http.Header();
             hd.name = key.toLowerCase();
@@ -521,8 +521,10 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
         }
         nettyResponse.setHeader(CONTENT_TYPE, (MimeTypes.getContentType("404." + format, "text/plain")));
 
-
-        String errorHtml = TemplateLoader.load("errors/404." + format).render(binding);
+        // bran let's decouple the template system from this handler
+//        String errorHtml = TemplateLoader.load("errors/404." + format).render(binding);
+        String errorHtml = Play.getErrorPage(404, Play.PageFormat.from(format), binding);        
+        
         try {
             ChannelBuffer buf = ChannelBuffers.copiedBuffer(errorHtml.getBytes("utf-8"));
             nettyResponse.setContent(buf);
@@ -603,7 +605,8 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
 
             nettyResponse.setHeader("Content-Type", (MimeTypes.getContentType("500." + format, "text/plain")));
             try {
-                String errorHtml = TemplateLoader.load("errors/500." + format).render(binding);
+//                String errorHtml = TemplateLoader.load("errors/500." + format).render(binding);
+                String errorHtml = Play.getErrorPage(500, Play.PageFormat.from(format), binding);
 
                 ChannelBuffer buf = ChannelBuffers.copiedBuffer(errorHtml.getBytes("utf-8"));
                 nettyResponse.setContent(buf);

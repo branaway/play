@@ -164,7 +164,7 @@ public class GenericModel extends JPABase {
     }
 
     public boolean validateAndSave() {
-        if (Validation.current().valid(this).ok) {
+        if (Validation.current().valid(this.getClass().getName(), this).ok) {
             save();
             return true;
         }
@@ -172,7 +172,7 @@ public class GenericModel extends JPABase {
     }
 
     public boolean validateAndCreate() {
-        if (Validation.current().valid(this).ok) {
+        if (Validation.current().valid(this.getClass().getName(), this).ok) {
             return create();
         }
         return false;

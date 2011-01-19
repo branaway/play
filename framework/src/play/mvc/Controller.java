@@ -588,18 +588,19 @@ public class Controller implements ControllerSupport, LocalVariablesSupport {
      * Render a specific template
      * @param templateName The template name
      * @param args The template data
+     * bran: disable rendering to groovy
      */
-    protected static void renderTemplate(String templateName, Object... args) {
-        // Template datas
-        Map<String, Object> templateBinding = new HashMap<String, Object>(16);
-        for (Object o : args) {
-            List<String> names = LocalVariablesNamesTracer.getAllLocalVariableNames(o);
-            for (String name : names) {
-                templateBinding.put(name, o);
-            }
-        }
-        renderTemplate(templateName, templateBinding);
-    }
+//    protected static void renderTemplate(String templateName, Object... args) {
+//        // Template datas
+//        Map<String, Object> templateBinding = new HashMap<String, Object>(16);
+//        for (Object o : args) {
+//            List<String> names = LocalVariablesNamesTracer.getAllLocalVariableNames(o);
+//            for (String name : names) {
+//                templateBinding.put(name, o);
+//            }
+//        }
+//        renderTemplate(templateName, templateBinding);
+//    }
 
     /**
      * Render a specific template.
@@ -641,20 +642,20 @@ public class Controller implements ControllerSupport, LocalVariablesSupport {
         renderTemplate(template(), args);
     }
 
-    /**
-     * Render the corresponding template (@see <code>template()</code>).
-     *
-     * @param args The template data
-     */
-    protected static void render(Object... args) {
-        String templateName = null;
-        if (args.length > 0 && args[0] instanceof String && LocalVariablesNamesTracer.getAllLocalVariableNames(args[0]).isEmpty()) {
-            templateName = args[0].toString();
-        } else {
-            templateName = template();
-        }
-        renderTemplate(templateName, args);
-    }
+//    /**
+//     * Render the corresponding template (@see <code>template()</code>).
+//     *
+//     * @param args The template data
+//     */
+//    protected static void render(Object... args) {
+//        String templateName = null;
+//        if (args.length > 0 && args[0] instanceof String && LocalVariablesNamesTracer.getAllLocalVariableNames(args[0]).isEmpty()) {
+//            templateName = args[0].toString();
+//        } else {
+//            templateName = template();
+//        }
+//        renderTemplate(templateName, args);
+//    }
 
     /**
      * Work out the default template to load for the invoked action.
@@ -740,20 +741,20 @@ public class Controller implements ControllerSupport, LocalVariablesSupport {
         return Http.Request.current().controllerClass;
     }
 
-    /**
-     * Call the parent action adding this objects to the params scope
-     */
-    @Deprecated
-    protected static void parent(Object... args) {
-        Map<String, Object> map = new HashMap<String, Object>(16);
-        for (Object o : args) {
-            List<String> names = LocalVariablesNamesTracer.getAllLocalVariableNames(o);
-            for (String name : names) {
-                map.put(name, o);
-            }
-        }
-        parent(map);
-    }
+//    /**
+//     * Call the parent action adding this objects to the params scope
+//     */
+//    @Deprecated
+//    protected static void parent(Object... args) {
+//        Map<String, Object> map = new HashMap<String, Object>(16);
+//        for (Object o : args) {
+//            List<String> names = LocalVariablesNamesTracer.getAllLocalVariableNames(o);
+//            for (String name : names) {
+//                map.put(name, o);
+//            }
+//        }
+//        parent(map);
+//    }
 
     /**
      * Call the parent method

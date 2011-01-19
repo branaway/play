@@ -13,6 +13,11 @@ import net.sf.oval.configuration.annotation.AbstractAnnotationCheck;
 import play.classloading.enhancers.LocalvariablesNamesEnhancer.LocalVariablesNamesTracer;
 import play.exceptions.UnexpectedException;
 
+/**
+ * 
+ * bran: some of those validation actions depend on the local variables 
+ * tracer to retrieve the variable name in runtime for use in the error message. 
+ */
 public class Validation {
 
     static ThreadLocal<Validation> current = new ThreadLocal<Validation>();
@@ -237,10 +242,10 @@ public class Validation {
         return applyCheck(check, key, o);
     }
 
-    public ValidationResult required(Object o) {
-        String key = getLocalName(o);
-        return Validation.required(key, o);
-    }
+//    public ValidationResult required(Object o) {
+//        String key = getLocalName(o);
+//        return Validation.required(key, o);
+//    }
     
     public static ValidationResult min(String key, Object o, double min) {
         MinCheck check = new MinCheck();
@@ -248,10 +253,10 @@ public class Validation {
         return applyCheck(check, key, o);
     }
 
-    public ValidationResult min(Object o, double min) {
-        String key = getLocalName(o);
-        return Validation.min(key, o, min);
-    }
+//    public ValidationResult min(Object o, double min) {
+//        String key = getLocalName(o);
+//        return Validation.min(key, o, min);
+//    }
 
     public static ValidationResult max(String key, Object o, double max) {
         MaxCheck check = new MaxCheck();
@@ -259,10 +264,10 @@ public class Validation {
         return applyCheck(check, key, o);
     }
 
-    public ValidationResult max(Object o, double max) {
-        String key = getLocalName(o);
-        return Validation.max(key, o, max);
-    }
+//    public ValidationResult max(Object o, double max) {
+//        String key = getLocalName(o);
+//        return Validation.max(key, o, max);
+//    }
     
     public static ValidationResult future(String key, Object o, Date reference) {
         InFutureCheck check = new InFutureCheck();
@@ -270,10 +275,10 @@ public class Validation {
         return applyCheck(check, key, o);
     }
 
-    public ValidationResult future(Object o, Date reference) {
-        String key = getLocalName(o);
-        return Validation.future(key, o, reference);
-    }
+//    public ValidationResult future(Object o, Date reference) {
+//        String key = getLocalName(o);
+//        return Validation.future(key, o, reference);
+//    }
     
     public static ValidationResult future(String key, Object o) {
         InFutureCheck check = new InFutureCheck();
@@ -281,10 +286,10 @@ public class Validation {
         return applyCheck(check, key, o);
     }
 
-    public ValidationResult future(Object o) {
-        String key = getLocalName(o);
-        return Validation.future(key, o, new Date());
-    }
+//    public ValidationResult future(Object o) {
+//        String key = getLocalName(o);
+//        return Validation.future(key, o, new Date());
+//    }
     
     public static ValidationResult past(String key, Object o, Date reference) {
         InPastCheck check = new InPastCheck();
@@ -292,10 +297,10 @@ public class Validation {
         return applyCheck(check, key, o);
     }
 
-    public ValidationResult past(Object o, Date reference) {
-        String key = getLocalName(o);
-        return Validation.past(key, o, reference);
-    }
+//    public ValidationResult past(Object o, Date reference) {
+//        String key = getLocalName(o);
+//        return Validation.past(key, o, reference);
+//    }
     
     public static ValidationResult past(String key, Object o) {
         InPastCheck check = new InPastCheck();
@@ -303,10 +308,10 @@ public class Validation {
         return applyCheck(check, key, o);
     }
 
-    public ValidationResult past(Object o) {
-        String key = getLocalName(o);
-        return Validation.past(key, o, new Date());
-    }
+//    public ValidationResult past(Object o) {
+//        String key = getLocalName(o);
+//        return Validation.past(key, o, new Date());
+//    }
 
     public static ValidationResult match(String key, Object o, String pattern) {
         MatchCheck check = new MatchCheck();
@@ -314,30 +319,30 @@ public class Validation {
         return applyCheck(check, key, o);
     }
 
-    public ValidationResult match(Object o, String pattern) {
-        String key = getLocalName(o);
-        return Validation.match(key, o, pattern);
-    }
+//    public ValidationResult match(Object o, String pattern) {
+//        String key = getLocalName(o);
+//        return Validation.match(key, o, pattern);
+//    }
     
     public static ValidationResult email(String key, Object o) {
         EmailCheck check = new EmailCheck();
         return applyCheck(check, key, o);
     }
 
-    public ValidationResult email(Object o) {
-        String key = getLocalName(o);
-        return Validation.email(key, o);
-    }
+//    public ValidationResult email(Object o) {
+//        String key = getLocalName(o);
+//        return Validation.email(key, o);
+//    }
     
     public static ValidationResult isTrue(String key, Object o) {
         IsTrueCheck check = new IsTrueCheck();
         return applyCheck(check, key, o);
     }
 
-    public ValidationResult isTrue(Object o) {
-        String key = getLocalName(o);
-        return Validation.isTrue(key, o);
-    }
+//    public ValidationResult isTrue(Object o) {
+//        String key = getLocalName(o);
+//        return Validation.isTrue(key, o);
+//    }
     
     
     public static ValidationResult equals(String key, Object o, String otherName, Object to) {
@@ -347,11 +352,11 @@ public class Validation {
         return applyCheck(check, key, o);
     }
 
-    public ValidationResult equals(Object o, Object to) {
-        String key = getLocalName(o);
-        String otherKey = getLocalName(to);
-        return Validation.equals(key, o, otherKey, to);
-    }
+//    public ValidationResult equals(Object o, Object to) {
+//        String key = getLocalName(o);
+//        String otherKey = getLocalName(to);
+//        return Validation.equals(key, o, otherKey, to);
+//    }
     
     public static ValidationResult range(String key, Object o, double min, double max) {
         RangeCheck check = new RangeCheck();
@@ -360,10 +365,10 @@ public class Validation {
         return applyCheck(check, key, o);
     }
 
-    public ValidationResult range(Object o, double min, double max) {
-        String key = getLocalName(o);
-        return Validation.range(key, o, min, max);
-    }
+//    public ValidationResult range(Object o, double min, double max) {
+//        String key = getLocalName(o);
+//        return Validation.range(key, o, min, max);
+//    }
     
     public static ValidationResult minSize(String key, Object o, int minSize) {
         MinSizeCheck check = new MinSizeCheck();
@@ -371,21 +376,21 @@ public class Validation {
         return applyCheck(check, key, o);
     }
 
-    public ValidationResult minSize(Object o, int minSize) {
-        String key = getLocalName(o);
-        return Validation.minSize(key, o, minSize);
-    }
-    
+//    public ValidationResult minSize(Object o, int minSize) {
+//        String key = getLocalName(o);
+//        return Validation.minSize(key, o, minSize);
+//    }
+//    
     public static ValidationResult maxSize(String key, Object o, int maxSize) {
         MaxSizeCheck check = new MaxSizeCheck();
         check.maxSize = maxSize;
         return applyCheck(check, key, o);
     }
-
-    public ValidationResult maxSize(Object o, int maxSize) {
-        String key = getLocalName(o);
-        return Validation.maxSize(key, o, maxSize);
-    }
+//
+//    public ValidationResult maxSize(Object o, int maxSize) {
+//        String key = getLocalName(o);
+//        return Validation.maxSize(key, o, maxSize);
+//    }
 
     public static ValidationResult valid(String key, Object o) {
         ValidCheck check = new ValidCheck();
@@ -393,10 +398,10 @@ public class Validation {
         return applyCheck(check, key, o);
     }
 
-    public ValidationResult valid(Object o) {
-        String key = getLocalName(o);
-        return Validation.valid(key, o);
-    }
+//    public ValidationResult valid(Object o) {
+//        String key = getLocalName(o);
+//        return Validation.valid(key, o);
+//    }
 
     static ValidationResult applyCheck(AbstractAnnotationCheck<?> check, String key, Object o) {
         try {
@@ -415,11 +420,11 @@ public class Validation {
         }
     }
     
-    static String getLocalName(Object o) {
-        List<String> names = LocalVariablesNamesTracer.getAllLocalVariableNames(o);
-        if(names.size() > 0) {
-            return names.get(0);
-        }
-        return "";
-    }
+//    static String getLocalName(Object o) {
+//        List<String> names = LocalVariablesNamesTracer.getAllLocalVariableNames(o);
+//        if(names.size() > 0) {
+//            return names.get(0);
+//        }
+//        return "";
+//    }
 }

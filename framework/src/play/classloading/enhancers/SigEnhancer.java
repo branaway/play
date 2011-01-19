@@ -40,6 +40,15 @@ public class SigEnhancer extends Enhancer {
                 sigChecksum.append(annotation + " ");
             }
             // Signatures names
+            
+            if (applicationClass.name.startsWith("japidviews.")) {
+            	// bran: ignore localvar change for japidviews.
+            	continue;
+            }
+    
+            // bran: how about no check on local vars at all?
+            // this for controllers so that the old rendering engine will match locals to the references in the Groovy views. 
+            // leave them here for now for compatibility. 
             CodeAttribute codeAttribute = (CodeAttribute) method.getMethodInfo().getAttribute("Code");
             if (codeAttribute == null || javassist.Modifier.isAbstract(method.getModifiers())) {
                 continue;

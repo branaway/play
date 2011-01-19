@@ -1,14 +1,10 @@
 package play;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
-import com.jamonapi.MonitorFactory;
-import com.jamonapi.utils.Misc;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+
 import play.Play.Mode;
 import play.classloading.ApplicationClasses.ApplicationClass;
 import play.classloading.enhancers.ControllersEnhancer;
@@ -22,6 +18,12 @@ import play.libs.Crypto;
 import play.mvc.Http.Header;
 import play.mvc.Http.Request;
 import play.mvc.Http.Response;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
+import com.jamonapi.MonitorFactory;
+import com.jamonapi.utils.Misc;
 
 /**
  * Plugin used for core tasks
@@ -284,7 +286,7 @@ public class CorePlugin extends PlayPlugin {
             ControllersEnhancer.class,
             MailerEnhancer.class,
             PropertiesEnhancer.class,
-            LocalvariablesNamesEnhancer.class
+            LocalvariablesNamesEnhancer.class // bran: let's see what will happen without this: well lots of things break including param binding
         };
         for (Class<?> enhancer : enhancers) {
             try {

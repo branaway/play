@@ -87,12 +87,14 @@ public class WSAsync implements WSImpl {
         httpClient = new AsyncHttpClient(confBuilder.build());
     }
 
-    public void stop() {
+    @Override
+	public void stop() {
         Logger.trace("Releasing http client connections...");
         httpClient.close();
     }
 
-    public WSRequest newRequest(String url) {
+    @Override
+	public WSRequest newRequest(String url) {
         return new WSAsyncRequest(url);
     }
 
@@ -304,7 +306,7 @@ public class WSAsync implements WSImpl {
         private Response response;
 
         /**
-         * you shouldnt have to create an HttpResponse yourself
+         * you shouldn't have to create an HttpResponse yourself
          * @param method
          */
         public HttpAsyncResponse(Response response) {
@@ -315,15 +317,18 @@ public class WSAsync implements WSImpl {
          * the HTTP status code
          * @return the status code of the http response
          */
-        public Integer getStatus() {
+        @Override
+		public Integer getStatus() {
             return this.response.getStatusCode();
         }
 
-        public String getHeader(String key) {
+        @Override
+		public String getHeader(String key) {
             return response.getHeader(key);
         }
 
-        public List<Header> getHeaders() {
+        @Override
+		public List<Header> getHeaders() {
             Map<String, List<String>> hdrs = response.getHeaders();
             List<Header> result = new ArrayList<Header>();
             for (String key: hdrs.keySet()) {
@@ -336,7 +341,8 @@ public class WSAsync implements WSImpl {
          * get the response body as a string
          * @return the body of the http response
          */
-        public String getString() {
+        @Override
+		public String getString() {
             try {
                 return response.getResponseBody();
             } catch (Exception e) {
@@ -348,7 +354,8 @@ public class WSAsync implements WSImpl {
          * get the response as a stream
          * @return an inputstream
          */
-        public InputStream getStream() {
+        @Override
+		public InputStream getStream() {
             try {
                 return response.getResponseBodyAsStream();
             } catch (Exception e) {
@@ -359,8 +366,9 @@ public class WSAsync implements WSImpl {
     }
 
     private static class WSOAuthConsumer extends AbstractOAuthConsumer {
+		private static final long serialVersionUID = 1L;
 
-        public WSOAuthConsumer(String consumerKey, String consumerSecret) {
+		public WSOAuthConsumer(String consumerKey, String consumerSecret) {
             super(consumerKey, consumerSecret);
         }
 
@@ -393,23 +401,28 @@ public class WSAsync implements WSImpl {
                 this.request = request;
             }
 
-            public Map<String, String> getAllHeaders() {
+            @Override
+			public Map<String, String> getAllHeaders() {
                 return request.headers;
             }
 
-            public String getContentType() {
+            @Override
+			public String getContentType() {
                 return request.mimeType;
             }
 
-            public String getHeader(String name) {
+            @Override
+			public String getHeader(String name) {
                 return request.headers.get(name);
             }
 
-            public InputStream getMessagePayload() throws IOException {
+            @Override
+			public InputStream getMessagePayload() throws IOException {
                 return null;
             }
 
-            public String getMethod() {
+            @Override
+			public String getMethod() {
                 return this.method;
             }
 
@@ -417,15 +430,18 @@ public class WSAsync implements WSImpl {
                 this.method = method;
             }
 
-            public String getRequestUrl() {
+            @Override
+			public String getRequestUrl() {
                 return request.url;
             }
 
-            public void setHeader(String name, String value) {
+            @Override
+			public void setHeader(String name, String value) {
                 request.setHeader(name, value);
             }
 
-            public void setRequestUrl(String url) {
+            @Override
+			public void setRequestUrl(String url) {
                 request.url = url;
             }
 

@@ -15,8 +15,9 @@ import play.templates.TemplateLoader;
  * 404 not found
  */
 public class NotFound extends Result {
+	private static final long serialVersionUID = 1L;
 
-    /**
+	/**
      * @param why a description of the problem
      */
     public NotFound(String why) {
@@ -31,7 +32,8 @@ public class NotFound extends Result {
         super(method + " " + path);
     }
 
-    public void apply(Request request, Response response) {
+    @Override
+	public void apply(Request request, Response response) {
         response.status = Http.StatusCode.NOT_FOUND;
         String format = request.format;
         if(request.isAjax() && "html".equals(format)) {
@@ -47,7 +49,8 @@ public class NotFound extends Result {
         binding.put("play", new Play());
         String errorHtml = "Not found";
         try {
-            errorHtml = TemplateLoader.load("errors/404." + (format == null ? "html" : format)).render(binding);
+//            errorHtml = TemplateLoader.load("errors/404." + (format == null ? "html" : format)).render(binding);
+            errorHtml = Play.getErrorPage(404, Play.PageFormat.from(format), binding);
         } catch(Exception e) {
         }
         try {

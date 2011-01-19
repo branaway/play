@@ -302,7 +302,8 @@ public class ServletWrapper extends HttpServlet implements ServletContextListene
             format = "txt";
         }
         servletResponse.setContentType(MimeTypes.getContentType("404." + format, "text/plain"));
-        String errorHtml = TemplateLoader.load("errors/404." + format).render(binding);
+//        String errorHtml = TemplateLoader.load("errors/404." + format).render(binding);
+        String errorHtml = Play.getErrorPage(404, Play.PageFormat.from(format), binding);
         try {
             servletResponse.getOutputStream().write(errorHtml.getBytes("utf-8"));
         } catch (Exception fex) {
@@ -358,7 +359,8 @@ public class ServletWrapper extends HttpServlet implements ServletContextListene
             }
             response.setContentType(MimeTypes.getContentType("500." + format, "text/plain"));
             try {
-                String errorHtml = TemplateLoader.load("errors/500." + format).render(binding);
+//                String errorHtml = TemplateLoader.load("errors/500." + format).render(binding);
+                String errorHtml = Play.getErrorPage(500, Play.PageFormat.from(format), binding);
                 response.getOutputStream().write(errorHtml.getBytes("utf-8"));
                 Logger.error(e, "Internal Server Error (500)");
             } catch (Throwable ex) {

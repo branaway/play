@@ -412,6 +412,8 @@ public class ApplicationClassloader extends ClassLoader {
             } else {
                 List<ApplicationClass> all = new ArrayList<ApplicationClass>();
 
+                long t= System.currentTimeMillis();
+                
                 // Let's plugins play
                 for (PlayPlugin plugin : Play.plugins) {
                     plugin.compileAll(all);
@@ -426,19 +428,26 @@ public class ApplicationClassloader extends ClassLoader {
                         classNames.add(all.get(i).name);
                     }
                 }
-
+                
+                System.out.println("start compiling all " + classNames.size() + " classes. ");
+                
+                t= System.currentTimeMillis();
                 Play.classes.compiler.compile(classNames.toArray(new String[classNames.size()]));
+                System.out.println("compiling took(ms): " + (System.currentTimeMillis() - t));
 
+                System.out.println("start loading all " + classNames.size() + " classes. ");
+                t= System.currentTimeMillis();
                 for (ApplicationClass applicationClass : Play.classes.all()) {
                     Class clazz = loadApplicationClass(applicationClass.name);
                     if (clazz != null) {
                         allClasses.add(clazz);
                     }
                 }
+                System.out.println("loading took(ms): " + (System.currentTimeMillis() - t));
 
                 Collections.sort(allClasses, new Comparator<Class>() {
-
-                    public int compare(Class o1, Class o2) {
+                    @Override
+					public int compare(Class o1, Class o2) {
                         return o1.getName().compareTo(o2.getName());
                     }
                 });
@@ -446,6 +455,7 @@ public class ApplicationClassloader extends ClassLoader {
         }
         return allClasses;
     }
+    
     List<Class> allClasses = null;
 	private static Pattern classPattern = Pattern.compile("\\s+class\\s([a-zA-Z0-9_]+)\\s+");
 

@@ -16,7 +16,8 @@ public class ValidCheck extends AbstractAnnotationCheck<Required> {
     final static String mes = "validation.object";
     String key;
 
-    public boolean isSatisfied(Object validatedObject, Object value, OValContext context, Validator validator) {
+    @Override
+	public boolean isSatisfied(Object validatedObject, Object value, OValContext context, Validator validator) {
         String superKey = ValidationPlugin.keys.get().get(validatedObject);
         if (value == null) {
             return true;
