@@ -329,11 +329,51 @@ public class Validation {
         return applyCheck(check, key, o);
     }
 
-//    public ValidationResult email(Object o) {
-//        String key = getLocalName(o);
-//        return Validation.email(key, o);
-//    }
+    public ValidationResult email(Object o) {
+        String key = getLocalName(o);
+        return Validation.email(key, o);
+    }
+
+    public static ValidationResult url(String key, Object o) {
+        URLCheck check = new URLCheck();
+        return applyCheck(check, key, o);
+    }
+
+    public ValidationResult url(Object o) {
+        String key = getLocalName(o);
+        return Validation.url(key, o);
+    }
+
+    public static ValidationResult phone(String key, Object o) {
+        PhoneCheck check = new PhoneCheck();
+        return applyCheck(check, key, o);
+    }
+
+    public ValidationResult phone(Object o) {
+        String key = getLocalName(o);
+        return Validation.phone(key, o);
+    }
     
+    public static ValidationResult ipv4Address(String key, Object o) {
+        IPv4AddressCheck check = new IPv4AddressCheck();
+        return applyCheck(check, key, o);
+    }
+
+    public ValidationResult ipv4Address(Object o) {
+        String key = getLocalName(o);
+        return Validation.ipv4Address(key, o);
+    }
+    
+    public static ValidationResult ipv6Address(String key, Object o) {
+        IPv6AddressCheck check = new IPv6AddressCheck();
+        return applyCheck(check, key, o);
+    }
+
+    public ValidationResult ipv6Address(Object o) {
+        String key = getLocalName(o);
+        return Validation.ipv6Address(key, o);
+    }
+
     public static ValidationResult isTrue(String key, Object o) {
         IsTrueCheck check = new IsTrueCheck();
         return applyCheck(check, key, o);
@@ -419,12 +459,19 @@ public class Validation {
             throw new UnexpectedException(e);
         }
     }
-    
-//    static String getLocalName(Object o) {
+
+    /**
+     * bran: XXX should have another way around using the local name tracer. 
+     * @deprecated
+     * @param o
+     * @return
+     */
+    static String getLocalName(Object o) {
+    	// return empty string for now.
 //        List<String> names = LocalVariablesNamesTracer.getAllLocalVariableNames(o);
 //        if(names.size() > 0) {
 //            return names.get(0);
 //        }
-//        return "";
-//    }
+        return "";
+    }
 }

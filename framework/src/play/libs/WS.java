@@ -130,12 +130,16 @@ public class WS extends PlayPlugin {
         public String url;
         public String username;
         public String password;
-        public String body;
+        public Object body;
         public FileParam[] fileParams;
         public Map<String, String> headers = new HashMap<String, String>();
         public Map<String, Object> parameters = new HashMap<String, Object>();
         public String mimeType;
-        public Integer timeout;
+        public boolean followRedirects = true;
+        /**
+         * timeout: value in seconds
+         */
+        public Integer timeout = 60;
 
         public ServiceInfo oauthInfo = null;
         public TokenPair oauthTokens = null;
@@ -161,6 +165,7 @@ public class WS extends PlayPlugin {
          * provided credentials will be used during the request
          * @param username
          * @param password
+         * @return the WSRequest for chaining.
          */
         public WSRequest authenticate(String username, String password) {
             this.username = username;
@@ -170,11 +175,31 @@ public class WS extends PlayPlugin {
 
         /**
          * Sign the request for do a call to a server protected by oauth
-         * @return
+         * @return the WSRequest for chaining.
          */
         public WSRequest oauth(ServiceInfo oauthInfo, TokenPair oauthTokens) {
             this.oauthInfo = oauthInfo;
             this.oauthTokens = oauthTokens;
+            return this;
+        }
+
+        /**
+         * Indicate if the WS should continue when hitting a 301 or 302
+         * @return the WSRequest for chaining.
+         */
+        public WSRequest followRedirects(boolean value) {
+            this.followRedirects = value;
+            return this;
+        }
+
+        /**
+         * Set the value of the request timeout, i.e. the number of seconds before cutting the
+         * connection - default to 60 seconds
+         * @param timeout the timeout value, e.g. "30s", "1min"
+         * @return the WSRequest for chaining
+         */
+        public WSRequest timeout(String timeout) {
+            this.timeout = Time.parseDuration(timeout);
             return this;
         }
 
@@ -204,7 +229,7 @@ public class WS extends PlayPlugin {
          * @return the WSRequest for chaining.
          */
         public WSRequest body(Object body) {
-            this.body = body == null ? "" : body.toString();
+            this.body = body;
             return this;
         }
 
@@ -422,7 +447,25 @@ public class WS extends PlayPlugin {
          * get the response body as a string
          * @return the body of the http response
          */
-        public abstract String getString();
+        public String getString() {
+            return IO.readContentAsString(getStream());
+        }
+
+        /**
+         * Parse the response string as a query string.
+         * @return The parameters as a Map. Return an empty map if the response
+         * is not formed as a query string.
+         */
+        public Map<String, String> getQueryString() {
+            Map<String, String> result = new HashMap<String, String>();
+            String body = getString();
+            for (String entry: body.split("&")) {
+                if (entry.indexOf("=") > 0) {
+                    result.put(entry.split("=")[0], entry.split("=")[1]);
+                }
+            }
+            return result;
+        }
 
         /**
          * get the response as a stream

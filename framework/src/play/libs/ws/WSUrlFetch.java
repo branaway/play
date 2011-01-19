@@ -1,8 +1,10 @@
 package play.libs.ws;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -28,11 +30,9 @@ public class WSUrlFetch implements WSImpl {
 
     public WSUrlFetch() {}
 
-    @Override
-	public void stop() {}
+    public void stop() {}
 
-    @Override
-	public play.libs.WS.WSRequest newRequest(String url) {
+    public play.libs.WS.WSRequest newRequest(String url) {
         return new WSUrlfetchRequest(url);
     }
 
@@ -43,8 +43,7 @@ public class WSUrlFetch implements WSImpl {
         }
 
         /** Execute a GET request synchronously. */
-        @Override
-		public HttpResponse get() {
+        public HttpResponse get() {
             try {
                 return new HttpUrlfetchResponse(prepare(new URL(url), "GET"));
             } catch (Exception e) {
@@ -54,18 +53,17 @@ public class WSUrlFetch implements WSImpl {
         }
 
         /** Execute a POST request.*/
-        @Override
-		public HttpResponse post() {
+        public HttpResponse post() {
             try {
-                return new HttpUrlfetchResponse(prepare(new URL(url), "POST"));
+                HttpURLConnection conn = prepare(new URL(url), "POST");
+                return new HttpUrlfetchResponse(conn);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
 
         /** Execute a PUT request.*/
-        @Override
-		public HttpResponse put() {
+        public HttpResponse put() {
             try {
                 return new HttpUrlfetchResponse(prepare(new URL(url), "PUT"));
             } catch (Exception e) {
@@ -74,8 +72,7 @@ public class WSUrlFetch implements WSImpl {
         }
 
        /** Execute a DELETE request.*/
-        @Override
-		public HttpResponse delete() {
+        public HttpResponse delete() {
             try {
                 return new HttpUrlfetchResponse(prepare(new URL(url), "DELETE"));
             } catch (Exception e) {
@@ -84,8 +81,7 @@ public class WSUrlFetch implements WSImpl {
         }
 
         /** Execute a OPTIONS request.*/
-        @Override
-		public HttpResponse options() {
+        public HttpResponse options() {
             try {
                 return new HttpUrlfetchResponse(prepare(new URL(url), "OPTIONS"));
             } catch (Exception e) {
@@ -94,8 +90,7 @@ public class WSUrlFetch implements WSImpl {
         }
 
         /** Execute a HEAD request.*/
-        @Override
-		public HttpResponse head() {
+        public HttpResponse head() {
             try {
                 return new HttpUrlfetchResponse(prepare(new URL(url), "HEAD"));
             } catch (Exception e) {
@@ -104,8 +99,7 @@ public class WSUrlFetch implements WSImpl {
         }
 
         /** Execute a TRACE request.*/
-        @Override
-		public HttpResponse trace() {
+        public HttpResponse trace() {
             try {
                 return new HttpUrlfetchResponse(prepare(new URL(url), "TRACE"));
             } catch (Exception e) {
@@ -119,12 +113,14 @@ public class WSUrlFetch implements WSImpl {
             }
             try {
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                checkFileBody(connection);
                 connection.setRequestMethod(method);
+                connection.setDoInput(true);
+                connection.setInstanceFollowRedirects(this.followRedirects);
+                connection.setReadTimeout(this.timeout * 1000);
                 for (String key: this.headers.keySet()) {
                     connection.setRequestProperty(key, headers.get(key));
                 }
-                connection.setDoInput(true);
+                checkFileBody(connection);
                 if (this.oauthTokens != null) {
                     OAuthConsumer consumer = new DefaultOAuthConsumer(oauthInfo.consumerKey, oauthInfo.consumerSecret);
                     consumer.setTokenWithSecret(oauthTokens.token, oauthTokens.secret);
@@ -138,6 +134,7 @@ public class WSUrlFetch implements WSImpl {
 
         private void checkFileBody(HttpURLConnection connection) throws IOException {
 /*            if (this.fileParams != null) {
+                connection.setDoOutput(true);
                 //could be optimized, we know the size of this array.
                 for (int i = 0; i < this.fileParams.length; i++) {
                     builder.addBodyPart(new FilePart(this.fileParams[i].paramName,
@@ -173,7 +170,7 @@ public class WSUrlFetch implements WSImpl {
                 }
                 connection.setDoOutput(true);
                 OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream());
-                writer.write(this.body);
+                writer.write(this.body.toString());
                 writer.close();
                 if(this.mimeType != null) {
                     connection.setRequestProperty("Content-Type", this.mimeType);
@@ -188,14 +185,24 @@ public class WSUrlFetch implements WSImpl {
      */
     public static class HttpUrlfetchResponse extends HttpResponse {
 
-        private HttpURLConnection connection;
+        private String body;
+        private Integer status;
+        private Map<String, List<String>> headersMap;
 
         /**
          * you shouldnt have to create an HttpResponse yourself
          * @param method
          */
         public HttpUrlfetchResponse(HttpURLConnection connection) {
-            this.connection = connection;
+            try {
+                this.status = connection.getResponseCode();
+                this.headersMap = connection.getHeaderFields();
+                this.body = IO.readContentAsString(connection.getInputStream());
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            } finally {
+                connection.disconnect();
+            }
         }
 
         /**
@@ -203,25 +210,20 @@ public class WSUrlFetch implements WSImpl {
          * @return the status code of the http response
          */
         @Override
-		public Integer getStatus() {
-            try {
-                return this.connection.getResponseCode();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+        public Integer getStatus() {
+            return status;
         }
 
         @Override
-		public String getHeader(String key) {
-            return connection.getHeaderField(key);
+        public String getHeader(String key) {
+            return headersMap.containsKey(key) ? headersMap.get(key).get(0) : null;
         }
 
         @Override
-		public List<Header> getHeaders() {
-            Map<String, List<String>> hdrs = connection.getHeaderFields();
+        public List<Header> getHeaders() {
             List<Header> result = new ArrayList<Header>();
-            for (String key: hdrs.keySet()) {
-                result.add(new Header(key, hdrs.get(key)));
+            for (String key: headersMap.keySet()) {
+                result.add(new Header(key, headersMap.get(key)));
             }
             return result;
         }
@@ -231,12 +233,8 @@ public class WSUrlFetch implements WSImpl {
          * @return the body of the http response
          */
         @Override
-		public String getString() {
-            try {
-                return IO.readContentAsString(connection.getInputStream());
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+        public String getString() {
+            return body;
         }
 
         /**
@@ -244,10 +242,10 @@ public class WSUrlFetch implements WSImpl {
          * @return an inputstream
          */
         @Override
-		public InputStream getStream() {
+        public InputStream getStream() {
             try {
-                return connection.getInputStream();
-            } catch (Exception e) {
+                return new ByteArrayInputStream(body.getBytes("UTF-8"));
+            } catch (UnsupportedEncodingException e) {
                 throw new RuntimeException(e);
             }
         }

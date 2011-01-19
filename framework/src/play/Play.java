@@ -12,7 +12,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -249,8 +248,12 @@ public class Play {
 		javaPath.add(appRoot.child("conf"));
 
 		// Build basic templates path
+        if (appRoot.child("app/views").exists()) {
 		templatesPath = new ArrayList<VirtualFile>(2);
 		templatesPath.add(appRoot.child("app/views"));
+        } else {
+            templatesPath = new ArrayList<VirtualFile>(1);
+        }
 
 		// Main route file
 		routes = appRoot.child("conf/routes");
@@ -306,7 +309,7 @@ public class Play {
 		} catch (RuntimeException e) {
 			if (e.getCause() instanceof IOException) {
 				Logger.fatal("Cannot read application.conf");
-				System.exit(0);
+                System.exit(-1);
 			}
 		}
 		// Ok, check for instance specifics configuration
@@ -354,12 +357,11 @@ public class Play {
 			configuration.setProperty(key.toString(), newValue.toString());
 		}
 		// Include
-		Map toInclude = new HashMap(16);
+        Map<Object, Object> toInclude = new HashMap<Object, Object>(16);
 		for (Object key : configuration.keySet()) {
 			if (key.toString().startsWith("@include.")) {
 				try {
-					toInclude
-							.putAll(IO.readUtf8Properties(appRoot.child("conf/" + configuration.getProperty(key.toString())).inputstream()));
+                    toInclude.putAll(IO.readUtf8Properties(appRoot.child("conf/" + configuration.getProperty(key.toString())).inputstream()));
 				} catch (Exception ex) {
 					Logger.warn("Missing include: %s", key);
 				}
@@ -373,7 +375,8 @@ public class Play {
 	}
 
 	/**
-	 * Start the application. Recall to restart !
+     * Start the application.
+     * Recall to restart !
 	 */
 	public static synchronized void start() {
 		try {
@@ -389,8 +392,7 @@ public class Play {
 				List<PlayPlugin> newPlugins = new ArrayList<PlayPlugin>(16);
 				for (PlayPlugin plugin : plugins) {
 					if (plugin.getClass().getClassLoader().getClass().equals(ApplicationClassloader.class)) {
-						PlayPlugin newPlugin = (PlayPlugin) classloader.loadClass(plugin.getClass().getName()).getConstructors()[0]
-								.newInstance();
+                        PlayPlugin newPlugin = (PlayPlugin) classloader.loadClass(plugin.getClass().getName()).getConstructors()[0].newInstance();
 						newPlugin.onLoad();
 						newPlugins.add(newPlugin);
 					} else {
@@ -408,7 +410,7 @@ public class Play {
 			Logger.setUp(logLevel);
 
 			// Locales
-			langs = new ArrayList(Arrays.asList(configuration.getProperty("application.langs", "").split(",")));
+            langs = new ArrayList<String>(Arrays.asList(configuration.getProperty("application.langs", "").split(",")));
 			if (langs.size() == 1 && langs.get(0).trim().length() == 0) {
 				langs = new ArrayList<String>(16);
 			}
@@ -608,23 +610,13 @@ public class Play {
 			}
 		}
 		Collections.sort(plugins);
-		for (PlayPlugin plugin : new ArrayList<PlayPlugin>(plugins)) { // wrap a
-																		// new
-																		// collection
-																		// to
-																		// allow
-																		// some
-																		// plugins
-																		// to
-																		// modify
-																		// the
-																		// list
+        for (PlayPlugin plugin : new ArrayList<PlayPlugin>(plugins)) { // wrap a new collection to allow some plugins to modify the list
 			plugin.onLoad();
 		}
 	}
 
 	/**
-	 * Allow some code to run very eraly in Play! - Use with caution !
+     * Allow some code to run very early in Play - Use with caution !
 	 */
 	public static void initStaticStuff() {
 		// Play! plugings
@@ -642,7 +634,7 @@ public class Play {
 					try {
 						Class.forName(line);
 					} catch (Exception e) {
-						System.out.println("! Cannot init static : " + line);
+                        Logger.warn("! Cannot init static: " + line);
 					}
 				}
 			} catch (Exception ex) {
@@ -670,9 +662,10 @@ public class Play {
 				}
 			}
 		}
-		for (Iterator<?> e = configuration.keySet().iterator(); e.hasNext();) {
-			String pName = e.next().toString();
+        for (Object key : configuration.keySet()) {
+            String pName = key.toString();
 			if (pName.startsWith("module.")) {
+                Logger.warn("Declaring modules in application.conf is deprecated. Use dependencies.yml instead (%s)", pName);
 				String moduleName = pName.substring(7);
 				File modulePath = new File(configuration.getProperty(pName));
 				if (!modulePath.isAbsolute()) {
@@ -685,6 +678,29 @@ public class Play {
 				}
 			}
 		}
+
+        // Load modules from modules/ directory
+        File localModules = Play.getFile("modules");
+        if (localModules.exists() && localModules.isDirectory()) {
+            for (File module : localModules.listFiles()) {
+                String moduleName = module.getName();
+                if (moduleName.contains("-")) {
+                    moduleName = moduleName.substring(0, moduleName.indexOf("-"));
+                }
+                if (module.isDirectory()) {
+                    addModule(moduleName, module);
+                } else {
+                    File modulePath = new File(IO.readContentAsString(module).trim());
+                    if (!modulePath.exists() || !modulePath.isDirectory()) {
+                        Logger.error("Module %s will not be loaded because %s does not exist", moduleName, modulePath.getAbsolutePath());
+                    } else {
+                        addModule(moduleName, modulePath);
+                    }
+
+                }
+            }
+        }
+        // Auto add special modules
 		if (Play.id.equals("test")) {
 			addModule("_testrunner", new File(Play.frameworkPath, "modules/testrunner"));
 		}

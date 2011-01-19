@@ -98,6 +98,11 @@ Everything you need to know about Play.
 ## "Fixtures":test#fixtures
 ## "Running the tests":test#running
 ## "Continuous integration":test#continuous
+# "Dependency management":dependency
+## "Dependency format":dependency#format
+## "dependencies.yml":dependency#yml
+## "Conflicts resolution":dependency#conflicts
+## "Adding new repositories":dependency#repositories
 # "Deployment options":deployment
 ## "Standalone Play application":deployment#standalone
 ## "Running on JEE application servers":deployment#appservers
@@ -139,6 +144,7 @@ Everything you need to know about Play.
 ## "Cross-Site Request Forgery":security#csrf
 # "Ajax with JQuery":ajax
 # "OpenID integration":openid
+# "OAuth integration":oauth
 
 
 h2. <a name="modules">Distribution Modules</a>
@@ -153,10 +159,11 @@ h2. <a name="references">References</a>
 Extended references for day-to-day hacking.
 
 # "The missing cheat sheet":http://download.playframework.org/miscellaneous/play-cheat-sheet.pdf
+# "The ultimate Play cheat sheet":http://www.crionics.com/products/opensource/play/TheUltimatePlayCheatSheet.pdf
 # "Browse API documentation":/@api/index.html
 # "Template tags and extensions reference":tags
 # "Java extensions":javaextensions
-
+# "Built-in validations":validation-builtin
 
 h2. <a name="versionnotes">Version notes</a>
 

@@ -1,5 +1,7 @@
 package play.db;
 
+import com.mchange.v2.c3p0.ComboPooledDataSource;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -16,6 +18,7 @@ import javax.naming.InitialContext;
 import javax.sql.DataSource;
 
 import jregex.Matcher;
+import org.apache.commons.lang.StringUtils;
 import play.Logger;
 import play.Play;
 import play.PlayPlugin;
@@ -184,10 +187,20 @@ public class DBPlugin extends PlayPlugin {
         DB.close();
     }
 
+    private static void check(Properties p, String mode, String property) {
+        if (!StringUtils.isEmpty(p.getProperty(property))) {
+            Logger.warn("Ignoring " + property + " because running the in " + mode + " db.");
+        }
+    }
+
     private static boolean changed() {
         Properties p = Play.configuration;
 
         if ("mem".equals(p.getProperty("db"))) {
+            // If db.url or db.user or db.pass or db.driver is set but db=mem warn the user
+            check(p, "memory", "db.driver");
+            check(p, "memory", "db.url");
+
             p.put("db.driver", "org.hsqldb.jdbcDriver");
             p.put("db.url", "jdbc:hsqldb:mem:playembed");
             p.put("db.user", "sa");
@@ -195,6 +208,10 @@ public class DBPlugin extends PlayPlugin {
         }
 
         if ("fs".equals(p.getProperty("db"))) {
+            // If db.url or db.user or db.pass or db.driver is set but db=fs warn the user
+            check(p, "fs", "db.driver");
+            check(p, "fs", "db.url");
+
             p.put("db.driver", "org.hsqldb.jdbcDriver");
             p.put("db.url", "jdbc:hsqldb:file:" + (new File(Play.applicationPath, "db/db").getAbsolutePath()));
             p.put("db.user", "sa");
@@ -256,27 +273,33 @@ public class DBPlugin extends PlayPlugin {
             this.driver = d;
         }
 
-        public boolean acceptsURL(String u) throws SQLException {
+        @Override
+		public boolean acceptsURL(String u) throws SQLException {
             return this.driver.acceptsURL(u);
         }
 
-        public Connection connect(String u, Properties p) throws SQLException {
+        @Override
+		public Connection connect(String u, Properties p) throws SQLException {
             return this.driver.connect(u, p);
         }
 
-        public int getMajorVersion() {
+        @Override
+		public int getMajorVersion() {
             return this.driver.getMajorVersion();
         }
 
-        public int getMinorVersion() {
+        @Override
+		public int getMinorVersion() {
             return this.driver.getMinorVersion();
         }
 
-        public DriverPropertyInfo[] getPropertyInfo(String u, Properties p) throws SQLException {
+        @Override
+		public DriverPropertyInfo[] getPropertyInfo(String u, Properties p) throws SQLException {
             return this.driver.getPropertyInfo(u, p);
         }
 
-        public boolean jdbcCompliant() {
+        @Override
+		public boolean jdbcCompliant() {
             return this.driver.jdbcCompliant();
         }
     }

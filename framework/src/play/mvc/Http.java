@@ -19,10 +19,8 @@ import java.util.regex.Pattern;
 import play.Logger;
 import play.Play;
 import play.exceptions.UnexpectedException;
-import play.jobs.Job;
 import play.libs.Codec;
 import play.libs.Time;
-import play.mvc.results.RenderStatic;
 import play.utils.Utils;
 
 /**
@@ -43,7 +41,7 @@ public class Http {
         public static final int NOT_MODIFIED = 304;
         public static final int BAD_REQUEST = 400;
         public static final int UNAUTHORIZED = 401;
-        public static final int PAYMENT_REQUIERED = 402;
+        public static final int PAYMENT_REQUIRED = 402;
         public static final int FORBIDDEN = 403;
         public static final int NOT_FOUND = 404;
         public static final int INTERNAL_ERROR = 500;

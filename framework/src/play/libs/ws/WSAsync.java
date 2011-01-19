@@ -9,19 +9,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
 
-import org.apache.commons.lang.NotImplementedException;
-
 import oauth.signpost.AbstractOAuthConsumer;
 import oauth.signpost.exception.OAuthCommunicationException;
 import oauth.signpost.exception.OAuthExpectationFailedException;
 import oauth.signpost.exception.OAuthMessageSignerException;
 import oauth.signpost.http.HttpRequest;
+
+import org.apache.commons.lang.NotImplementedException;
+
 import play.Logger;
 import play.Play;
 import play.libs.Codec;
 import play.libs.MimeTypes;
 import play.libs.OAuth.ServiceInfo;
 import play.libs.OAuth.TokenPair;
+import play.libs.WS;
 import play.libs.WS.HttpResponse;
 import play.libs.WS.WSImpl;
 import play.libs.WS.WSRequest;
@@ -33,6 +35,7 @@ import com.ning.http.client.AsyncHttpClient.BoundRequestBuilder;
 import com.ning.http.client.AsyncHttpClientConfig;
 import com.ning.http.client.AsyncHttpClientConfig.Builder;
 import com.ning.http.client.FilePart;
+import com.ning.http.client.PerRequestConfig;
 import com.ning.http.client.ProxyServer;
 import com.ning.http.client.Response;
 import com.ning.http.client.StringPart;
@@ -83,22 +86,21 @@ public class WSAsync implements WSImpl {
         if (userAgent != null) {
             confBuilder.setUserAgent(userAgent);
         }
-        confBuilder.setFollowRedirects(true);
         httpClient = new AsyncHttpClient(confBuilder.build());
     }
 
-    @Override
-	public void stop() {
+    public void stop() {
         Logger.trace("Releasing http client connections...");
         httpClient.close();
     }
 
-    @Override
-	public WSRequest newRequest(String url) {
+    public WSRequest newRequest(String url) {
         return new WSAsyncRequest(url);
     }
 
     public class WSAsyncRequest extends WSRequest {
+
+        protected String type = null;
 
         protected WSAsyncRequest(String url) {
             this.url = url;
@@ -107,7 +109,8 @@ public class WSAsync implements WSImpl {
         /** Execute a GET request synchronously. */
         @Override
         public HttpResponse get() {
-            sign("GET");
+            this.type = "GET";
+            sign();
             try {
                 return new HttpAsyncResponse(prepare(httpClient.prepareGet(url)).execute().get());
             } catch (Exception e) {
@@ -119,14 +122,16 @@ public class WSAsync implements WSImpl {
         /** Execute a GET request asynchronously. */
         @Override
         public Future<HttpResponse> getAsync() {
-            sign("GET");
+            this.type = "GET";
+            sign();
             return execute(httpClient.prepareGet(url));
         }
 
         /** Execute a POST request.*/
         @Override
         public HttpResponse post() {
-            sign("POST");
+            this.type = "POST";
+            sign();
             try {
                 return new HttpAsyncResponse(prepare(httpClient.preparePost(url)).execute().get());
             } catch (Exception e) {
@@ -137,13 +142,15 @@ public class WSAsync implements WSImpl {
         /** Execute a POST request asynchronously.*/
         @Override
         public Future<HttpResponse> postAsync() {
-            sign("POST");
+            this.type = "POST";
+            sign();
             return execute(httpClient.preparePost(url));
         }
 
         /** Execute a PUT request.*/
         @Override
         public HttpResponse put() {
+            this.type = "PUT";
             try {
                 return new HttpAsyncResponse(prepare(httpClient.preparePut(url)).execute().get());
             } catch (Exception e) {
@@ -154,12 +161,14 @@ public class WSAsync implements WSImpl {
         /** Execute a PUT request asynchronously.*/
         @Override
         public Future<HttpResponse> putAsync() {
+            this.type = "PUT";
             return execute(httpClient.preparePut(url));
         }
 
         /** Execute a DELETE request.*/
         @Override
         public HttpResponse delete() {
+            this.type = "DELETE";
             try {
                 return new HttpAsyncResponse(prepare(httpClient.prepareDelete(url)).execute().get());
             } catch (Exception e) {
@@ -170,12 +179,14 @@ public class WSAsync implements WSImpl {
         /** Execute a DELETE request asynchronously.*/
         @Override
         public Future<HttpResponse> deleteAsync() {
+            this.type = "DELETE";
             return execute(httpClient.prepareDelete(url));
         }
 
         /** Execute a OPTIONS request.*/
         @Override
         public HttpResponse options() {
+            this.type = "OPTIONS";
             try {
                 return new HttpAsyncResponse(prepare(httpClient.prepareOptions(url)).execute().get());
             } catch (Exception e) {
@@ -186,12 +197,14 @@ public class WSAsync implements WSImpl {
         /** Execute a OPTIONS request asynchronously.*/
         @Override
         public Future<HttpResponse> optionsAsync() {
+            this.type = "OPTIONS";
             return execute(httpClient.prepareOptions(url));
         }
 
         /** Execute a HEAD request.*/
         @Override
         public HttpResponse head() {
+            this.type = "HEAD";
             try {
                 return new HttpAsyncResponse(prepare(httpClient.prepareHead(url)).execute().get());
             } catch (Exception e) {
@@ -202,26 +215,29 @@ public class WSAsync implements WSImpl {
         /** Execute a HEAD request asynchronously.*/
         @Override
         public Future<HttpResponse> headAsync() {
+            this.type = "HEAD";
             return execute(httpClient.prepareHead(url));
         }
 
         /** Execute a TRACE request.*/
         @Override
         public HttpResponse trace() {
+            this.type = "TRACE";
             throw new NotImplementedException();
         }
 
         /** Execute a TRACE request asynchronously.*/
         @Override
         public Future<HttpResponse> traceAsync() {
+            this.type = "TRACE";
             throw new NotImplementedException();
         }
 
-        private WSRequest sign(String method) {
+        private WSRequest sign() {
             if (this.oauthTokens != null) {
                 WSOAuthConsumer consumer = new WSOAuthConsumer(oauthInfo, oauthTokens);
                 try {
-                    consumer.sign(this, method);
+                    consumer.sign(this, this.type);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -237,6 +253,10 @@ public class WSAsync implements WSImpl {
             for (String key: this.headers.keySet()) {
                 builder.addHeader(key, headers.get(key));
             }
+            builder.setFollowRedirects(this.followRedirects);
+            PerRequestConfig perRequestConfig = new PerRequestConfig();
+            perRequestConfig.setRequestTimeoutInMs(this.timeout * 1000);
+            builder.setPerRequestConfig(perRequestConfig);
             return builder;
         }
 
@@ -282,14 +302,33 @@ public class WSAsync implements WSImpl {
                 return;
             }
             if (this.parameters != null && !this.parameters.isEmpty()) {
-                builder.setHeader("Content-Type", "application/x-www-form-urlencoded");
-                builder.setBody(createQueryString());
+                boolean isPostPut = "POST".equals(this.type) || ("PUT".equals(this.type));
+                for (String key : this.parameters.keySet()) {
+                    Object value = this.parameters.get(key);
+                    if (value == null) continue;
+                    if (value instanceof Collection<?> || value.getClass().isArray()) {
+                        Collection<?> values = value.getClass().isArray() ? Arrays.asList((Object[]) value) : (Collection<?>) value;
+                        for (Object v: values) {
+                            if (isPostPut) builder.addParameter(key, v.toString());
+                            else builder.addQueryParameter(key, WS.encode(v.toString()));
+                        }
+                    } else {
+                        if (isPostPut) builder.addParameter(key, value.toString());
+                        else builder.addQueryParameter(key, WS.encode(value.toString()));
+                    }
+                }
             }
             if (this.body != null) {
                 if (this.parameters != null && !this.parameters.isEmpty()) {
                     throw new RuntimeException("POST or PUT method with parameters AND body are not supported.");
                 }
-                builder.setBody(this.body);
+                if(this.body instanceof InputStream) {
+                    builder.setBody((InputStream)this.body);
+                } else {
+                    if(this.body != null) {
+                        builder.setBody(this.body.toString());
+                    }
+                }
                 if(this.mimeType != null) {
                     builder.setHeader("Content-Type", this.mimeType);
                 }
@@ -306,7 +345,7 @@ public class WSAsync implements WSImpl {
         private Response response;
 
         /**
-         * you shouldn't have to create an HttpResponse yourself
+         * you shouldnt have to create an HttpResponse yourself
          * @param method
          */
         public HttpAsyncResponse(Response response) {
@@ -318,17 +357,17 @@ public class WSAsync implements WSImpl {
          * @return the status code of the http response
          */
         @Override
-		public Integer getStatus() {
+        public Integer getStatus() {
             return this.response.getStatusCode();
         }
 
         @Override
-		public String getHeader(String key) {
+        public String getHeader(String key) {
             return response.getHeader(key);
         }
 
         @Override
-		public List<Header> getHeaders() {
+        public List<Header> getHeaders() {
             Map<String, List<String>> hdrs = response.getHeaders();
             List<Header> result = new ArrayList<Header>();
             for (String key: hdrs.keySet()) {
@@ -342,7 +381,7 @@ public class WSAsync implements WSImpl {
          * @return the body of the http response
          */
         @Override
-		public String getString() {
+        public String getString() {
             try {
                 return response.getResponseBody();
             } catch (Exception e) {
@@ -355,7 +394,7 @@ public class WSAsync implements WSImpl {
          * @return an inputstream
          */
         @Override
-		public InputStream getStream() {
+        public InputStream getStream() {
             try {
                 return response.getResponseBodyAsStream();
             } catch (Exception e) {
@@ -366,9 +405,8 @@ public class WSAsync implements WSImpl {
     }
 
     private static class WSOAuthConsumer extends AbstractOAuthConsumer {
-		private static final long serialVersionUID = 1L;
 
-		public WSOAuthConsumer(String consumerKey, String consumerSecret) {
+        public WSOAuthConsumer(String consumerKey, String consumerSecret) {
             super(consumerKey, consumerSecret);
         }
 
@@ -401,28 +439,23 @@ public class WSAsync implements WSImpl {
                 this.request = request;
             }
 
-            @Override
-			public Map<String, String> getAllHeaders() {
+            public Map<String, String> getAllHeaders() {
                 return request.headers;
             }
 
-            @Override
-			public String getContentType() {
+            public String getContentType() {
                 return request.mimeType;
             }
 
-            @Override
-			public String getHeader(String name) {
+            public String getHeader(String name) {
                 return request.headers.get(name);
             }
 
-            @Override
-			public InputStream getMessagePayload() throws IOException {
+            public InputStream getMessagePayload() throws IOException {
                 return null;
             }
 
-            @Override
-			public String getMethod() {
+            public String getMethod() {
                 return this.method;
             }
 
@@ -430,18 +463,15 @@ public class WSAsync implements WSImpl {
                 this.method = method;
             }
 
-            @Override
-			public String getRequestUrl() {
+            public String getRequestUrl() {
                 return request.url;
             }
 
-            @Override
-			public void setHeader(String name, String value) {
+            public void setHeader(String name, String value) {
                 request.setHeader(name, value);
             }
 
-            @Override
-			public void setRequestUrl(String url) {
+            public void setRequestUrl(String url) {
                 request.url = url;
             }
 

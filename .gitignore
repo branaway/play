@@ -1,3 +1,4 @@
+bin
 framework/classes
 framework/play.jar
 .DS_Store
@@ -12,6 +13,7 @@ framework/src/play/version
 framework/src/play/version
 framework/src/play/version
 framework/tests/test-application/db
+.settings
 .classpath
 .project
 framework/tests/tmp
@@ -119,4 +121,5 @@ samples-and-tests/zencontact/precompiled
 !modules/console
 !modules/grizzly
 !modules/secure
+!modules/testrunner
 !framework/src/play/db
