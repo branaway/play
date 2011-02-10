@@ -1,9 +1,11 @@
 package models;
 
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.concurrent.ArrayBlockingQueue;
 
-import play.libs.*;
+import play.libs.Task;
 
 public class ChatRoom {
     
@@ -69,7 +71,7 @@ public class ChatRoom {
             }
         }
         
-        // If the are messages to dispatch
+        // If there are messages to dispatch
         // we finish the Task
         public boolean invoke() {
             if(messages.isEmpty()) {

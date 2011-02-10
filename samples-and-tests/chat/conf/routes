@@ -10,4 +10,5 @@ GET     /room/messages                          Application.waitMessages
 
 # Map static resources from the /app/public folder to the /public path
 GET     /public/                                staticDir:public
-
+# catch all
+*       /{controller}/{action}                  {controller}.{action}

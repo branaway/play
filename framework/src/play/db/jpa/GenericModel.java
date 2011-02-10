@@ -1,6 +1,8 @@
 package play.db.jpa;
 
 import java.io.File;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
@@ -11,39 +13,41 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
+
 import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.NoResultException;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
+import javax.persistence.PostLoad;
+import javax.persistence.PostPersist;
+import javax.persistence.PostUpdate;
 import javax.persistence.Query;
+
+import play.Logger;
 import play.Play;
 import play.data.binding.BeanWrapper;
 import play.data.binding.Binder;
 import play.data.validation.Validation;
 import play.exceptions.UnexpectedException;
 import play.mvc.Scope.Params;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Constructor;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import javax.persistence.PostLoad;
-import javax.persistence.PostPersist;
-import javax.persistence.PostUpdate;
-import play.Logger;
 import play.utils.Utils;
 
 /**
- * A super class for JPA entities 
+ * A super class for JPA entities
+ * bran: lots of the method used to return <T extends JPABase>, I changed them to <T extends GenericModel>
  */
 @MappedSuperclass
 @SuppressWarnings("unchecked")
 public class GenericModel extends JPABase {
+	private static final long serialVersionUID = -7724080574280776444L;
 
-    public static <T extends JPABase> T create(Class<?> type, String name, Map<String, String[]> params, Annotation[] annotations) {
+	public static <T extends GenericModel> T create(Class<?> type, String name, Map<String, String[]> params, Annotation[] annotations) {
         try {
-            Constructor c = type.getDeclaredConstructor();
+            Constructor<?> c = type.getDeclaredConstructor();
             c.setAccessible(true);
             Object model = c.newInstance();
             return (T) edit(model, name, params, annotations);
@@ -53,12 +57,12 @@ public class GenericModel extends JPABase {
     }
 
     @SuppressWarnings("deprecation")
-    public static <T extends JPABase> T edit(Object o, String name, Map<String, String[]> params, Annotation[] annotations) {
+    public static <T extends GenericModel> T edit(Object o, String name, Map<String, String[]> params, Annotation[] annotations) {
         try {
             BeanWrapper bw = new BeanWrapper(o.getClass());
             // Start with relations
             Set<Field> fields = new HashSet<Field>();
-            Class clazz = o.getClass();
+            Class<?> clazz = o.getClass();
             while (!clazz.equals(Object.class)) {
                 Collections.addAll(fields, clazz.getDeclaredFields());
                 clazz = clazz.getSuperclass();
@@ -73,7 +77,7 @@ public class GenericModel extends JPABase {
                     relation = field.getType().getName();
                 }
                 if (field.isAnnotationPresent(OneToMany.class) || field.isAnnotationPresent(ManyToMany.class)) {
-                    Class fieldType = (Class) ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
+                    Class<?> fieldType = (Class<?>) ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
                     isEntity = true;
                     relation = fieldType.getName();
                     multiple = true;
@@ -84,11 +88,11 @@ public class GenericModel extends JPABase {
                     if (JPABase.class.isAssignableFrom(c)) {
                         String keyName = Model.Manager.factoryFor(c).keyName();
                         if (multiple && Collection.class.isAssignableFrom(field.getType())) {
-                            Collection l = new ArrayList();
+                            Collection<Object> l = new ArrayList<Object>();
                             if (SortedSet.class.isAssignableFrom(field.getType())) {
-                                l = new TreeSet();
+                                l = new TreeSet<Object>();
                             } else if (Set.class.isAssignableFrom(field.getType())) {
-                                l = new HashSet();
+                                l = new HashSet<Object>();
                             }
                             String[] ids = params.get(name + "." + field.getName() + "." + keyName);
                             if (ids != null) {
@@ -164,7 +168,7 @@ public class GenericModel extends JPABase {
     }
 
     public boolean validateAndSave() {
-        if (Validation.current().valid(this.getClass().getName(), this).ok) {
+		if (Validation.valid(this.getClass().getName(), this).ok) {
             save();
             return true;
         }
@@ -172,7 +176,7 @@ public class GenericModel extends JPABase {
     }
 
     public boolean validateAndCreate() {
-        if (Validation.current().valid(this.getClass().getName(), this).ok) {
+		if (Validation.valid(this.getClass().getName(), this).ok) {
             return create();
         }
         return false;
@@ -181,7 +185,7 @@ public class GenericModel extends JPABase {
     /**
      * store (ie insert) the entity.
      */
-    public <T extends JPABase> T save() {
+    public <T extends GenericModel> T save() {
         if (!em().contains(this) && Play.mode.isDev()) {
             StackTraceElement[] callStack = Thread.currentThread().getStackTrace();
             StackTraceElement caller = callStack[2];
@@ -205,15 +209,15 @@ public class GenericModel extends JPABase {
     /**
      * Refresh the entity state.
      */
-    public <T extends JPABase> T refresh() {
+    public <T extends GenericModel> T refresh() {
         em().refresh(this);
         return (T) this;
     }
 
     /**
-     * Merge this object to obtain a managed entity (usefull when the object comes from the Cache).
+     * Merge this object to obtain a managed entity (useful when the object comes from the Cache).
      */
-    public <T extends JPABase> T merge() {
+    public <T extends GenericModel> T merge() {
         return (T) em().merge(this);
     }
 
@@ -221,12 +225,12 @@ public class GenericModel extends JPABase {
      * Delete the entity.
      * @return The deleted entity.
      */
-    public <T extends JPABase> T delete() {
+    public <T extends GenericModel> T delete() {
         _delete();
         return (T) this;
     }
 
-    public static <T extends JPABase> T create(String name, Params params) {
+    public static <T extends GenericModel> T create(String name, Params params) {
         throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
     }
 
@@ -252,7 +256,7 @@ public class GenericModel extends JPABase {
     /**
      * Find all entities of this type
      */
-    public static <T extends JPABase> List<T> findAll() {
+    public static <T extends GenericModel> List<T> findAll() {
         throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
     }
 
@@ -261,7 +265,7 @@ public class GenericModel extends JPABase {
      * @param id The entity id
      * @return The entity
      */
-    public static <T extends JPABase> T findById(Object id) {
+    public static <T extends GenericModel> T findById(Object id) {
         throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
     }
 
@@ -405,7 +409,7 @@ public class GenericModel extends JPABase {
     @PostLoad
     @SuppressWarnings("deprecation")
     public void _setupAttachment() {
-        Class c = this.getClass();
+        Class<?> c = this.getClass();
         while (!c.equals(Object.class)) {
             for (Field field : c.getDeclaredFields()) {
                 if (FileAttachment.class.isAssignableFrom(field.getType())) {
@@ -434,7 +438,7 @@ public class GenericModel extends JPABase {
     @PostUpdate
     @SuppressWarnings("deprecation")
     public void _saveAttachment() {
-        Class c = this.getClass();
+        Class<?> c = this.getClass();
         while (!c.equals(Object.class)) {
             for (Field field : c.getDeclaredFields()) {
                 if (field.getType().equals(FileAttachment.class)) {
