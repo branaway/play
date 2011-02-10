@@ -381,22 +381,22 @@ public class LocalvariablesNamesEnhancer extends Enhancer {
             return locals();
         }
 
-//        public static List<String> getAllLocalVariableNames(Object o) {
-//            List<String> allNames = new ArrayList<String>();
-//            for (String variable : getLocalVariables().keySet()) {
-//                if (getLocalVariables().get(variable) == o) {
-//                    allNames.add(variable);
-//                }
-//                if (o != null && o instanceof Number && o.equals(getLocalVariables().get(variable))) {
-//                    allNames.add(variable);
-//                }
-//            }
-//            return allNames;
-//        }
-//
-//        public static Object getLocalVariable(String variable) {
-//            return getLocalVariables().get(variable);
-//        }
+        public static List<String> getAllLocalVariableNames(Object o) {
+            List<String> allNames = new ArrayList<String>();
+            for (String variable : getLocalVariables().keySet()) {
+                if (getLocalVariables().get(variable) == o) {
+                    allNames.add(variable);
+                }
+                if (o != null && o instanceof Number && o.equals(getLocalVariables().get(variable))) {
+                    allNames.add(variable);
+                }
+            }
+            return allNames;
+        }
+
+        public static Object getLocalVariable(String variable) {
+            return getLocalVariables().get(variable);
+        }
     }
     private static Map<Integer, Integer> storeByCode = new HashMap<Integer, Integer>();
 

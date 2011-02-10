@@ -105,7 +105,8 @@ public class Job<V> extends Invoker.Invocation implements Callable<V> {
         call();
     }
 
-    public V call() {
+    @Override
+	public V call() {
         Monitor monitor = null;
         try {
             if (init()) {

@@ -60,7 +60,7 @@ import play.mvc.results.Stream.ChunkedInput;
  * Application controller support: The controller receives input and initiates a response by making calls on model objects.
  *
  * This is the class that your controllers should extend.
- * 
+ * @deprecated bran: this Groovy based old system is deprecated in favor of JapidController 
  */
 public class Controller implements ControllerSupport, LocalVariablesSupport {
 
@@ -603,17 +603,17 @@ public class Controller implements ControllerSupport, LocalVariablesSupport {
      * @param args The template data
      * bran: disable rendering to groovy
      */
-//    protected static void renderTemplate(String templateName, Object... args) {
-//        // Template datas
-//        Map<String, Object> templateBinding = new HashMap<String, Object>(16);
-//        for (Object o : args) {
-//            List<String> names = LocalVariablesNamesTracer.getAllLocalVariableNames(o);
-//            for (String name : names) {
-//                templateBinding.put(name, o);
-//            }
-//        }
-//        renderTemplate(templateName, templateBinding);
-//    }
+    protected static void renderTemplate(String templateName, Object... args) {
+        // Template datas
+        Map<String, Object> templateBinding = new HashMap<String, Object>(16);
+        for (Object o : args) {
+            List<String> names = LocalVariablesNamesTracer.getAllLocalVariableNames(o);
+            for (String name : names) {
+                templateBinding.put(name, o);
+            }
+        }
+        renderTemplate(templateName, templateBinding);
+    }
 
     /**
      * Render a specific template.
@@ -655,20 +655,21 @@ public class Controller implements ControllerSupport, LocalVariablesSupport {
         renderTemplate(template(), args);
     }
 
-//    /**
-//     * Render the corresponding template (@see <code>template()</code>).
-//     *
-//     * @param args The template data
-//     */
-//    protected static void render(Object... args) {
-//        String templateName = null;
-//        if (args.length > 0 && args[0] instanceof String && LocalVariablesNamesTracer.getAllLocalVariableNames(args[0]).isEmpty()) {
-//            templateName = args[0].toString();
-//        } else {
-//            templateName = template();
-//        }
-//        renderTemplate(templateName, args);
-//    }
+    /**
+     * Render the corresponding template (@see <code>template()</code>).
+     *
+     * @param args The template data
+     * @deprecated bran: this thing is the core of the Groovy based template rendering.  Consider Using JapidController. 
+     */
+    protected static void render(Object... args) {
+        String templateName = null;
+        if (args.length > 0 && args[0] instanceof String && LocalVariablesNamesTracer.getAllLocalVariableNames(args[0]).isEmpty()) {
+            templateName = args[0].toString();
+        } else {
+            templateName = template();
+        }
+        renderTemplate(templateName, args);
+    }
 
     /**
      * Work out the default template to load for the invoked action.

@@ -396,7 +396,8 @@ public class JPAPlugin extends PlayPlugin {
             this.clazz = clazz;
         }
 
-        public Model findById(Object id) {
+        @Override
+		public Model findById(Object id) {
             if (id == null) {
                 return null;
             }
@@ -408,7 +409,8 @@ public class JPAPlugin extends PlayPlugin {
             }
         }
 
-        @SuppressWarnings("unchecked")
+        @Override
+		@SuppressWarnings("unchecked")
         public List<Model> fetch(int offset, int size, String orderBy, String order, List<String> searchFields, String keywords, String where) {
             String q = "from " + clazz.getName();
             if (keywords != null && !keywords.equals("")) {
@@ -440,7 +442,8 @@ public class JPAPlugin extends PlayPlugin {
             return query.getResultList();
         }
 
-        public Long count(List<String> searchFields, String keywords, String where) {
+        @Override
+		public Long count(List<String> searchFields, String keywords, String where) {
             String q = "select count(e) from " + clazz.getName() + " e";
             if (keywords != null && !keywords.equals("")) {
                 String searchQuery = getSearchQuery(searchFields);
@@ -458,11 +461,13 @@ public class JPAPlugin extends PlayPlugin {
             return Long.decode(query.getSingleResult().toString());
         }
 
-        public void deleteAll() {
+        @Override
+		public void deleteAll() {
             JPA.em().createQuery("delete from " + clazz.getName()).executeUpdate();
         }
 
-        public List<Model.Property> listProperties() {
+        @Override
+		public List<Model.Property> listProperties() {
             List<Model.Property> properties = new ArrayList<Model.Property>();
             Set<Field> fields = new LinkedHashSet<Field>();
             Class<?> tclazz = clazz;
@@ -485,15 +490,18 @@ public class JPAPlugin extends PlayPlugin {
             return properties;
         }
 
-        public String keyName() {
+        @Override
+		public String keyName() {
             return keyField().getName();
         }
 
-        public Class<?> keyType() {
+        @Override
+		public Class<?> keyType() {
             return keyField().getType();
         }
 
-        public Object keyValue(Model m) {
+        @Override
+		public Object keyValue(Model m) {
             try {
                 return keyField().get(m);
             } catch (Exception ex) {

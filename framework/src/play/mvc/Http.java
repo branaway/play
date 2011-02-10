@@ -279,6 +279,8 @@ public class Http {
         /**
          * Automatically resolve request format from the Accept header
          * (in this order : html > xml > json > text)
+         * 
+         * bran: the intern() method seems unnecessary since all constants are interned automatically, as explained in the JDK. 
          */
         public void resolveFormat() {
 

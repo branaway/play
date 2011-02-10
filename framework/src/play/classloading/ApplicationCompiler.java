@@ -98,19 +98,23 @@ public class ApplicationCompiler {
             }
         }
 
-        public char[] getFileName() {
+        @Override
+		public char[] getFileName() {
             return fileName.toCharArray();
         }
 
-        public char[] getContents() {
+        @Override
+		public char[] getContents() {
             return applicationClasses.getApplicationClass(clazzName).javaSource.toCharArray();
         }
 
-        public char[] getMainTypeName() {
+        @Override
+		public char[] getMainTypeName() {
             return typeName;
         }
 
-        public char[][] getPackageName() {
+        @Override
+		public char[][] getPackageName() {
             return packageName;
         }
     }
@@ -133,7 +137,8 @@ public class ApplicationCompiler {
          */
         INameEnvironment nameEnvironment = new INameEnvironment() {
 
-            public NameEnvironmentAnswer findType(final char[][] compoundTypeName) {
+            @Override
+			public NameEnvironmentAnswer findType(final char[][] compoundTypeName) {
                 final StringBuffer result = new StringBuffer();
                 for (int i = 0; i < compoundTypeName.length; i++) {
                     if (i != 0) {
@@ -144,7 +149,8 @@ public class ApplicationCompiler {
                 return findType(result.toString());
             }
 
-            public NameEnvironmentAnswer findType(final char[] typeName, final char[][] packageName) {
+            @Override
+			public NameEnvironmentAnswer findType(final char[] typeName, final char[][] packageName) {
                 final StringBuffer result = new StringBuffer();
                 for (int i = 0; i < packageName.length; i++) {
                     result.append(packageName[i]);
@@ -156,7 +162,6 @@ public class ApplicationCompiler {
 
             private NameEnvironmentAnswer findType(final String name) {
                 try {
-
                     if (name.startsWith("play.") || name.startsWith("java.") || name.startsWith("javax.")) {
                         byte[] bytes = Play.classloader.getClassDefinition(name);
                         if (bytes != null) {
@@ -196,7 +201,8 @@ public class ApplicationCompiler {
                 }
             }
 
-            public boolean isPackage(char[][] parentPackageName, char[] packageName) {
+            @Override
+			public boolean isPackage(char[][] parentPackageName, char[] packageName) {
                 // Rebuild something usable
                 StringBuilder sb = new StringBuilder();
                 if (parentPackageName != null) {
@@ -223,7 +229,8 @@ public class ApplicationCompiler {
                 return true;
             }
 
-            public void cleanup() {
+            @Override
+			public void cleanup() {
             }
         };
 
@@ -232,7 +239,8 @@ public class ApplicationCompiler {
          */
         ICompilerRequestor compilerRequestor = new ICompilerRequestor() {
 
-            public void acceptResult(CompilationResult result) {
+            @Override
+			public void acceptResult(CompilationResult result) {
                 // If error
                 if (result.hasErrors()) {
                     for (IProblem problem: result.getErrors()) {
