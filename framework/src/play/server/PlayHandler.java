@@ -1,27 +1,75 @@
 package play.server;
 
+import static org.jboss.netty.buffer.ChannelBuffers.wrappedBuffer;
+import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.CACHE_CONTROL;
+import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
+import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.COOKIE;
+import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.ETAG;
+import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.HOST;
+import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.IF_MODIFIED_SINCE;
+import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.IF_NONE_MATCH;
+import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.LAST_MODIFIED;
+import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.SERVER;
+import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.SET_COOKIE;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.InputStream;
+import java.io.RandomAccessFile;
+import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.InetSocketAddress;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.*;
-import org.jboss.netty.handler.codec.http.*;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.handler.codec.http.Cookie;
+import org.jboss.netty.handler.codec.http.CookieDecoder;
+import org.jboss.netty.handler.codec.http.CookieEncoder;
+import org.jboss.netty.handler.codec.http.DefaultCookie;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpMessage;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.stream.ChunkedFile;
+import org.jboss.netty.handler.stream.ChunkedInput;
 import org.jboss.netty.handler.stream.ChunkedStream;
-
-import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.*;
-import static org.jboss.netty.buffer.ChannelBuffers.*;
+import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 
 import play.Invoker;
 import play.Invoker.InvocationContext;
 import play.Logger;
 import play.Play;
 import play.PlayPlugin;
+import play.data.validation.Validation;
 import play.exceptions.PlayException;
 import play.exceptions.UnexpectedException;
 import play.i18n.Messages;
+import play.libs.F.Action;
 import play.libs.MimeTypes;
 import play.mvc.ActionInvoker;
 import play.mvc.Http;
@@ -32,54 +80,49 @@ import play.mvc.Scope;
 import play.mvc.results.NotFound;
 import play.mvc.results.RenderStatic;
 import play.templates.JavaExtensions;
-import play.templates.TemplateLoader;
 import play.utils.Utils;
 import play.vfs.VirtualFile;
-import play.data.validation.Validation;
-
-import java.io.*;
-import java.net.InetSocketAddress;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.text.ParseException;
-import java.util.*;
-import org.jboss.netty.handler.stream.ChunkedWriteHandler;
-import play.mvc.results.Stream.ChunkedInput;
 
 public class PlayHandler extends SimpleChannelUpstreamHandler {
 
-    final ChunkedWriteHandler chunkedWriteHandler = new ChunkedWriteHandler();
-    private final static String signature = "Play! Framework;" + Play.version + ";" + Play.mode.name().toLowerCase();
     /**
      * If true (the default), Play will send the HTTP header "Server: Play! Framework; ....".
      * This could be a security problem (old versions having publicly known security bugs), so you can
      * disable the header in application.conf: <code>http.exposePlayServer = false</code>
      */
+    private final static String signature = "Play! Framework;" + Play.version + ";" + Play.mode.name().toLowerCase();
     private final static boolean exposePlayServer;
-
     static {
         exposePlayServer = !"false".equals(Play.configuration.getProperty("http.exposePlayServer"));
     }
 
-    public Request processRequest(Request request) {
-        return request;
-    }
-
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+    public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) throws Exception {
         Logger.trace("messageReceived: begin");
-
         final Object msg = e.getMessage();
         if (msg instanceof HttpRequest) {
             final HttpRequest nettyRequest = (HttpRequest) msg;
             try {
-                Request request = parseRequest(ctx, nettyRequest);
-                request = processRequest(request);
+                final Request request = parseRequest(ctx, nettyRequest);
 
                 final Response response = new Response();
-
                 Http.Response.current.set(response);
+
+                // Buffered in memory output
                 response.out = new ByteArrayOutputStream();
+
+                // Direct output (will be set later)
+                response.direct = null;
+
+                // Streamed output (using response.writeChunk)
+                response.onWriteChunk(new Action<Object>() {
+
+                    public void invoke(Object result) {
+                        writeChunk(request, response, ctx, nettyRequest, result);
+                    }
+                });
+
+
                 boolean raw = false;
                 for (PlayPlugin plugin : Play.plugins) {
                     if (plugin.rawInvocation(request, response)) {
@@ -189,7 +232,11 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
         @Override
         public void onSuccess() throws Exception {
             super.onSuccess();
-            copyResponse(ctx, request, response, nettyRequest);
+            if (response.chunked) {
+                closeChunked(request, response, ctx, nettyRequest);
+            } else {
+                copyResponse(ctx, request, response, nettyRequest);
+            }
             Logger.trace("execute: end");
         }
     }
@@ -398,44 +445,7 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
         } else if (stream != null) {
             ChannelFuture writeFuture = ctx.getChannel().write(nettyResponse);
             if (!nettyRequest.getMethod().equals(HttpMethod.HEAD) && !nettyResponse.getStatus().equals(HttpResponseStatus.NOT_MODIFIED)) {
-                final ChunkedInput originalStream = stream;
-
-                org.jboss.netty.handler.stream.ChunkedInput nettyChunkedInput = new org.jboss.netty.handler.stream.ChunkedInput() {
-
-                    public boolean hasNextChunk() throws Exception {
-                        return originalStream.hasNextChunk();
-                    }
-
-                    public Object nextChunk() throws Exception {
-                        Object nextChunk = originalStream.nextChunk();
-                        if (nextChunk == null) {
-                            return null;
-                        }
-                        if (nextChunk instanceof String) {
-                            return wrappedBuffer(((String) nextChunk).getBytes());
-                        }
-                        if (nextChunk instanceof byte[]) {
-                            return wrappedBuffer(((byte[]) nextChunk));
-                        }
-                        return nextChunk;
-                    }
-
-                    public boolean isEndOfInput() throws Exception {
-                        return originalStream.isEndOfInput();
-                    }
-
-                    public void close() throws Exception {
-                        originalStream.close();
-                    }
-                };
-                originalStream.addListener(new ChunkedInput.ChunkedInputListener() {
-
-                    public void onNewChunks() {
-                        chunkedWriteHandler.resumeTransfer();
-                    }
-                });
-
-                writeFuture = ctx.getChannel().write(nettyChunkedInput);
+                writeFuture = ctx.getChannel().write(stream);
             } else {
                 stream.close();
             }
@@ -459,7 +469,7 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
         return fullAddress;
     }
 
-    public static Request parseRequest(ChannelHandlerContext ctx, HttpRequest nettyRequest) throws Exception {
+    public Request parseRequest(ChannelHandlerContext ctx, HttpRequest nettyRequest) throws Exception {
         Logger.trace("parseRequest: begin");
         Logger.trace("parseRequest: URI = " + nettyRequest.getUri());
         int index = nettyRequest.getUri().indexOf("?");
@@ -914,4 +924,69 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
 		nettyResponse.setHeader("Connection", "Keep-Alive");
 	}
 	
+    // Chunked response
+    final ChunkedWriteHandler chunkedWriteHandler = new ChunkedWriteHandler();
+
+    static class LazyChunkedInput implements org.jboss.netty.handler.stream.ChunkedInput {
+
+        private boolean closed = false;
+        private ConcurrentLinkedQueue<Object> nextChunks = new ConcurrentLinkedQueue<Object>();
+
+        @Override
+		public boolean hasNextChunk() throws Exception {
+            return !nextChunks.isEmpty();
+        }
+
+        @Override
+		public Object nextChunk() throws Exception {
+            if (nextChunks.isEmpty()) {
+                return null;
+            }
+            return wrappedBuffer(((String) nextChunks.poll()).getBytes());
+        }
+
+        @Override
+		public boolean isEndOfInput() throws Exception {
+            return closed && nextChunks.isEmpty();
+        }
+
+        @Override
+		public void close() throws Exception {
+            if (!closed) {
+                nextChunks.offer("0\r\n\r\n");
+            }
+            closed = true;
+        }
+
+        public void writeChunk(Object chunk) throws Exception {
+            String message = chunk == null ? "" : chunk.toString();
+            StringWriter writer = new StringWriter();
+            Integer l = message.getBytes("utf-8").length + 2;
+            writer.append(Integer.toHexString(l)).append("\r\n").append(message).append("\r\n\r\n");
+            nextChunks.offer(writer.toString());
+        }
+    }
+
+    public void writeChunk(Request playRequest, Response playResponse, ChannelHandlerContext ctx, HttpRequest nettyRequest, Object chunk) {
+        try {
+            if (playResponse.direct == null) {
+                playResponse.setHeader("Transfer-Encoding", "chunked");
+                playResponse.direct = new LazyChunkedInput();
+                copyResponse(ctx, playRequest, playResponse, nettyRequest);
+            }
+            ((LazyChunkedInput) playResponse.direct).writeChunk(chunk);
+            chunkedWriteHandler.resumeTransfer();
+        } catch (Exception e) {
+            throw new UnexpectedException(e);
+        }
+    }
+
+    public void closeChunked(Request playRequest, Response playResponse, ChannelHandlerContext ctx, HttpRequest nettyRequest) {
+        try {
+            ((LazyChunkedInput) playResponse.direct).close();
+            chunkedWriteHandler.resumeTransfer();
+        } catch (Exception e) {
+            throw new UnexpectedException(e);
+        }
+    }
 }

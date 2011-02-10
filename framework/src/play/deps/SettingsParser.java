@@ -33,6 +33,11 @@ public class SettingsParser {
     }
 
     public void parse(IvySettings settings, File desc) {
+        if(!desc.exists()) {
+            System.out.println("~ !! " + desc.getAbsolutePath() + " does not exist");
+            return;
+        }
+
         try {
             Yaml yaml = new Yaml();
             Object o = null;
@@ -55,7 +60,7 @@ public class SettingsParser {
                 if (data.get("repositories") instanceof List) {
 
                     List repositories = (List) data.get("repositories");
-                    List<Map> modules = new ArrayList<Map>();
+                    List<Map<String, String>> modules = new ArrayList<Map<String, String>>();
                     for (Object dep : repositories) {
                         if (dep instanceof Map) {
                             settings.addResolver(parseRepository((Map) dep, modules));
@@ -83,7 +88,7 @@ public class SettingsParser {
         }
     }
 
-    DependencyResolver parseRepository(Map repoDescriptor, List<Map> modules) throws Oops {
+    DependencyResolver parseRepository(Map repoDescriptor, List<Map<String, String>> modules) throws Oops {
 
         String repName = ((Map) repoDescriptor).keySet().iterator().next().toString().trim();
         Map options = (Map) ((Map) repoDescriptor).values().iterator().next();
@@ -98,6 +103,9 @@ public class SettingsParser {
         if (type.equalsIgnoreCase("iBiblio")) {
             IBiblioResolver iBiblioResolver = new IBiblioResolver();
             iBiblioResolver.setName(repName);
+            if(options.containsKey("root")) {
+                iBiblioResolver.setRoot(get(options, "root", String.class));
+            }
             iBiblioResolver.setM2compatible(get(options, "m2compatible", boolean.class, true));
             iBiblioResolver.getRepository().addTransferListener(logger);
             resolver = iBiblioResolver;
@@ -176,7 +184,7 @@ public class SettingsParser {
                         }
                     }
                 }
-                Map attributes = new HashMap();
+                Map<String, String> attributes = new HashMap<String, String>();
                 attributes.put("organisation", organisation);
                 if (module != null) {
                     attributes.put("module", module);
@@ -192,6 +200,7 @@ public class SettingsParser {
         return resolver;
     }
 
+    @SuppressWarnings("unchecked")
     <T> T get(Map data, String key, Class<T> type) {
         if (data.containsKey(key) && data.get(key) != null) {
             Object o = data.get(key);

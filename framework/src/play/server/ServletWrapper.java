@@ -54,7 +54,8 @@ public class ServletWrapper extends HttpServlet implements ServletContextListene
         Play.frameworkPath = root.getParentFile();
         Play.usePrecompiled = true;
         Play.init(root, playId);
-        Play.Mode mode = Play.Mode.valueOf(Play.configuration.getProperty("application.mode", "DEV").toUpperCase());
+        String mo = Play.configuration.getProperty("application.mode", "DEV").toUpperCase();
+		Play.Mode mode = Play.Mode.valueOf(mo);
         if (mode.isDev()) {
             Logger.info("Forcing PROD mode because deploying as a war file.");
         }

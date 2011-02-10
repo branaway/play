@@ -219,6 +219,18 @@ bc. public static void show(Set<Long> id) {
     ...
 }
 
+Play also handles the special case of binding a Map<String, String> like this:
+
+bc. public static void show(Map<String, String> client) {
+    ...
+}
+
+
+A query string like the following:
+
+bc. ?user.name=John&user.phone=111-1111&user.phone=222-2222
+
+Would bind the client variable to a map with two elements. The first element with key "name" and value "John", and the second with key "phone" and value "111-1111, 222-2222"
 
 h3. POJO object binding
 
@@ -642,6 +654,10 @@ bc. public static void index() {
     }
     render(messages);
 }
+
+The session expires when you close your web browser, unless the **application.session.maxAge** configuration property is set. For example:
+
+bc. application.session.maxAge=7d  # Remember for one week.
 
 The cache has different semantics than the classic Servlet HTTP session object. You can’t assume that these objects will be always in the cache. So it forces you to handle the cache miss cases, and keeps your application fully stateless.
 
