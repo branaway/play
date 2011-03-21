@@ -278,7 +278,11 @@ public class ApplicationClassloader extends ClassLoader {
         // Now check for file modification
         List<ApplicationClass> modifieds = new ArrayList<ApplicationClass>();
         for (ApplicationClass applicationClass : Play.classes.all()) {
-            if (applicationClass.timestamp < applicationClass.javaFile.lastModified()) {
+//        	System.out.println("ApplicationClassLoader: check timestamp: " + applicationClass.name);
+            VirtualFile javaFile = applicationClass.javaFile;
+			Long lastModified = javaFile.lastModified();
+			Long timestamp = applicationClass.timestamp;
+			if (timestamp < lastModified) {
                 applicationClass.refresh();
                 modifieds.add(applicationClass);
             }
@@ -372,7 +376,9 @@ public class ApplicationClassloader extends ClassLoader {
         if (!current.isDirectory()) {
             if (current.getName().endsWith(".java")) {
 				Matcher matcher = classPattern.matcher(current.contentAsString());
-                buf.append(current.getName());
+//                buf.append(current.getName());
+				// bran:  getName is not enough to tell the path change 
+                buf.append(current.getRealFile().getPath());
                 buf.append("(");
                 while (matcher.find()) {
                     buf.append(matcher.group(1));
