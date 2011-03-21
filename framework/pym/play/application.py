@@ -4,6 +4,9 @@ import re
 import shutil
 import socket
 
+from play.utils import *
+
+
 class ModuleNotFound(Exception):
     def __init__(self, value):
         self.value = value
@@ -73,9 +76,9 @@ class PlayApplication:
                     modules.append(mf)
                 else:
                     modules.append(open(mf, 'r').read().strip())
-        if self.play_env["id"] == 'test':
+        if isTestFrameworkId( self.play_env["id"] ):
             modules.append(os.path.normpath(os.path.join(self.play_env["basedir"], 'modules/testrunner')))
-        return modules
+        return set(modules) # Ensure we don't have duplicates
 
     def module_names(self):
         return map(lambda x: x[7:],self.conf.getAllKeys("module."))
@@ -96,7 +99,7 @@ class PlayApplication:
                 print 'Module not found %s' % e
                 sys.exit(-1)
 
-            if play_env["id"] == 'test':
+            if isTestFrameworkId(play_env["id"]):
                 modules.append(os.path.normpath(os.path.join(play_env["basedir"], 'modules/testrunner')))
 
     def override(self, f, t):
@@ -226,6 +229,8 @@ class PlayApplication:
             args += ["--http.port=%s" % self.play_env['http.port']]
         if self.play_env.has_key('https.port'):
             args += ["--https.port=%s" % self.play_env['https.port']]
+            
+        java_args.append('-Dfile.encoding=utf-8')
         
         java_cmd = [self.java_path(), '-javaagent:%s' % self.agent_path()] + java_args + ['-classpath', cp_args, '-Dapplication.path=%s' % self.path, '-Dplay.id=%s' % self.play_env["id"], className] + args
         return java_cmd

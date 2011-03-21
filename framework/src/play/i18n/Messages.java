@@ -9,7 +9,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import play.Play;
-import play.PlayPlugin;
 import play.data.binding.Binder;
 
 /**
@@ -29,7 +28,9 @@ import play.data.binding.Binder;
  */
 public class Messages {
 
-    static public Properties defaults;
+    private static final Object[] NO_ARGS = new Object[]{null};
+
+	static public Properties defaults;
 
     static public Map<String, Properties> locales = new HashMap<String, Properties>();
 
@@ -82,13 +83,12 @@ public class Messages {
 
     public static String getMessage(String locale, Object key, Object... args) {
         // Check if there is a plugin that handles translation
-        for (PlayPlugin plugin : Play.plugins) {
-            String message = plugin.getMessage(locale, key, args);
-            if(message != null) {
-                return message;
-            }
-        }
+        String message = Play.pluginCollection.getMessage(locale, key, args);
 
+        if(message != null) {
+            return message;
+        }
+    
         String value = null;
         if( key == null ) {
             return "";
@@ -121,7 +121,9 @@ public class Messages {
 
     @SuppressWarnings("unchecked")
     static Object[] coolStuff(String pattern, Object[] args) {
-
+    	// when invoked with a null argument we get a null args instead of an array with a null value.
+    	if(args == null)
+    		return NO_ARGS;
         Class<? extends Number>[] conversions = new Class[args.length];
 
         Matcher matcher = formatterPattern.matcher(pattern);
@@ -167,6 +169,8 @@ public class Messages {
      * @return messages as a {@link java.util.Properties java.util.Properties}
      */
     public static Properties all(String locale) {
+        if(locale == null || "".equals(locale))
+            return defaults;
         return locales.get(locale);
     }
 

@@ -5,7 +5,6 @@ import play.Invoker;
 import play.Invoker.InvocationContext;
 import play.Logger;
 import play.Play;
-import play.PlayPlugin;
 import play.data.validation.Validation;
 import play.exceptions.PlayException;
 import play.exceptions.UnexpectedException;
@@ -41,7 +40,23 @@ import java.util.*;
  */
 public class ServletWrapper extends HttpServlet implements ServletContextListener {
 
+	/**
+	 * Constant for accessing the underlying HttpServletRequest from Play's Request
+	 * in a Servlet based deployment.
+	 * <p>Sample usage:</p>
+	 * <p> {@code HttpServletRequest req = Request.current().args.get(ServletWrapper.SERVLET_REQ);}</p>
+	 */
+	public static final String SERVLET_REQ = "__SERVLET_REQ";
+	/**
+	 * Constant for accessing the underlying HttpServletResponse from Play's Request
+	 * in a Servlet based deployment.
+	 * <p>Sample usage:</p>
+	 * <p> {@code HttpServletResponse res = Request.current().args.get(ServletWrapper.SERVLET_RES);}</p>
+	 */
+	public static final String SERVLET_RES = "__SERVLET_RES";
+	
     private volatile boolean routerInitializedWithContext = false;
+
 
     public void contextInitialized(ServletContextEvent e) {
         String appDir = e.getServletContext().getRealPath("/WEB-INF/application");
@@ -106,13 +121,7 @@ public class ServletWrapper extends HttpServlet implements ServletContextListene
             Response.current.set(response);
             request = parseRequest(httpServletRequest);
             Logger.trace("ServletWrapper>service, request: " + request);
-            boolean raw = false;
-            for (PlayPlugin plugin : Play.plugins) {
-                if (plugin.rawInvocation(request, response)) {
-                    raw = true;
-                    break;
-                }
-            }
+            boolean raw = Play.pluginCollection.rawInvocation(request, response);
             if (raw) {
                 copyResponse(Request.current(), Response.current(), httpServletRequest, httpServletResponse);
             } else {
@@ -138,13 +147,7 @@ public class ServletWrapper extends HttpServlet implements ServletContextListene
             serve404(servletRequest, servletResponse, new NotFound("The file " + renderStatic.file + " does not exist"));
         } else {
             servletResponse.setContentType(MimeTypes.getContentType(file.getName()));
-            boolean raw = false;
-            for (PlayPlugin plugin : Play.plugins) {
-                if (plugin.serveStatic(file, Request.current(), Response.current())) {
-                    raw = true;
-                    break;
-                }
-            }
+            boolean raw = Play.pluginCollection.serveStatic(file, Request.current(), Response.current());
             if (raw) {
                 copyResponse(Request.current(), Response.current(), servletRequest, servletResponse);
             } else {
@@ -463,6 +466,8 @@ public class ServletWrapper extends HttpServlet implements ServletContextListene
             this.httpServletResponse = httpServletResponse;
             this.request = request;
             this.response = response;
+            request.args.put(ServletWrapper.SERVLET_REQ, httpServletRequest);
+            request.args.put(ServletWrapper.SERVLET_RES, httpServletResponse);
         }
 
         @Override

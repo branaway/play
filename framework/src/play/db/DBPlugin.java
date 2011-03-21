@@ -1,9 +1,6 @@
 package play.db;
 
-import com.mchange.v2.c3p0.ComboPooledDataSource;
-
 import java.io.File;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.sql.Connection;
@@ -18,13 +15,16 @@ import javax.naming.InitialContext;
 import javax.sql.DataSource;
 
 import jregex.Matcher;
+
 import org.apache.commons.lang.StringUtils;
+
 import play.Logger;
 import play.Play;
 import play.PlayPlugin;
 import play.exceptions.DatabaseException;
-import play.libs.IO;
-import play.vfs.VirtualFile;
+import play.mvc.Http;
+import play.mvc.Http.Request;
+import play.mvc.Http.Response;
 
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 
@@ -34,6 +34,17 @@ import com.mchange.v2.c3p0.ComboPooledDataSource;
 public class DBPlugin extends PlayPlugin {
 
     public static String url = "";
+    org.h2.tools.Server h2Server;
+
+    @Override
+    public boolean rawInvocation(Request request, Response response) throws Exception {
+        if(Play.mode.isDev() && request.path.equals("/@db")) {
+            response.status = Http.StatusCode.MOVED;
+            response.setHeader("Location", "http://localhost:8082/");
+            return true;
+        }
+        return false;
+    }
 
     @Override
     public void onApplicationStart() {
@@ -99,6 +110,15 @@ public class DBPlugin extends PlayPlugin {
                     }
                     Logger.info("Connected to %s", ds.getJdbcUrl());
 
+                    // For H2 embeded database, we'll also start the Web console
+                    if(Play.mode.isDev() && "org.h2.Driver".equals(p.get("db.driver"))) {
+                        if(h2Server != null) {
+                            h2Server.stop();
+                        }
+                        h2Server = org.h2.tools.Server.createWebServer();
+                        h2Server.start();
+                    }
+
                 }
 
             } catch (Exception e) {
@@ -110,52 +130,6 @@ public class DBPlugin extends PlayPlugin {
                 throw new DatabaseException("Cannot connected to the database, " + e.getMessage(), e);
             }
         }
-    }
-
-    /**
-     * patched to read c3p0 properties https://bugs.launchpad.net/play/+bug/540180
-     * @return
-     * @throws java.beans.PropertyVetoException
-     */
-    private ComboPooledDataSource createPooledDataSource() throws java.beans.PropertyVetoException {
-
-	    Properties p = Play.configuration;
-
-    	System.setProperty("com.mchange.v2.log.MLog", "com.mchange.v2.log.FallbackMLog");
-    	System.setProperty("com.mchange.v2.log.FallbackMLog.DEFAULT_CUTOFF_LEVEL", "OFF");
-
-        ComboPooledDataSource ds = new ComboPooledDataSource();
-        ds.setProperties(c3p0Properties());
-
-        ds.setDriverClass(p.getProperty("db.driver"));
-        ds.setJdbcUrl(p.getProperty("db.url"));
-        ds.setUser(p.getProperty("db.user"));
-        ds.setPassword(p.getProperty("db.pass"));
-        ds.setCheckoutTimeout(Integer.parseInt(p.getProperty("db.pool.timeout", "5000")));
-        ds.setMaxPoolSize(Integer.parseInt(p.getProperty("db.pool.maxSize", "30")));
-        ds.setMinPoolSize(Integer.parseInt(p.getProperty("db.pool.minSize", "1")));
-        
-        ds.setAcquireRetryAttempts(100);
-        ds.setAcquireRetryDelay(1000);
-        ds.setIdleConnectionTestPeriod(10);
-        ds.setTestConnectionOnCheckin(true);
-        ds.setBreakAfterAcquireFailure(false);
-        
-        return ds;
-    }
-
-    private Properties c3p0Properties() {
-		VirtualFile appRoot = VirtualFile.open(Play.applicationPath);
-        VirtualFile conf = appRoot.child("conf/c3p0.properties");
-        Properties properties = new Properties();
-        try {
-            properties = IO.readUtf8Properties(conf.inputstream());
-        } catch (RuntimeException e) {
-            if (e.getCause() instanceof IOException) {
-                Logger.warn("Cannot read conf/c3p0.properties");
-            }
-        }
-        return properties;
     }
 
     @Override
@@ -202,7 +176,7 @@ public class DBPlugin extends PlayPlugin {
             check(p, "memory", "db.url");
 
             p.put("db.driver", "org.h2.Driver");
-            p.put("db.url", "jdbc:h2:mem:play;MODE=MYSQL");
+            p.put("db.url", "jdbc:h2:mem:play;MODE=MYSQL;DB_CLOSE_ON_EXIT=FALSE");
             p.put("db.user", "sa");
             p.put("db.pass", "");
         }

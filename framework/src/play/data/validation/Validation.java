@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import net.sf.oval.configuration.annotation.AbstractAnnotationCheck;
+import play.Play;
 import play.classloading.enhancers.LocalvariablesNamesEnhancer.LocalVariablesNamesTracer;
 import play.exceptions.UnexpectedException;
 
@@ -23,7 +24,7 @@ public class Validation {
     static ThreadLocal<Validation> current = new ThreadLocal<Validation>();
     List<Error> errors = new ArrayList<Error>();
     boolean keep = false;
-    
+
     protected Validation() {
     }
 
@@ -37,18 +38,17 @@ public class Validation {
     /**
      * @return The list of all errors
      */
-    @SuppressWarnings({"serial",  "unused"})
+    @SuppressWarnings({"serial", "unused"})
     public static List<Error> errors() {
         return new ArrayList<Error>(current.get().errors) {
-            
+
             public Error forKey(String key) {
                 return Validation.error(key);
             }
-            
+
             public List<Error> allForKey(String key) {
                 return Validation.errors(key);
             }
-            
         };
     }
 
@@ -70,7 +70,7 @@ public class Validation {
      * @param variables Message variables
      */
     public static void addError(String field, String message, String... variables) {
-        if(error(field) == null || !error(field).message.equals(message)) {
+        if (error(field) == null || !error(field).message.equals(message)) {
             Validation.current().errors.add(new Error(field, message, variables));
         }
     }
@@ -128,125 +128,121 @@ public class Validation {
         current.get().errors.clear();
         ValidationPlugin.keys.get().clear();
     }
-    
+
     // ~~~~ Integration helper
-    
-    public static Map<String,List<Validator>> getValidators(Class<?> clazz, String name) {
-        Map<String,List<Validator>> result = new HashMap<String,List<Validator>>();
+    public static Map<String, List<Validator>> getValidators(Class<?> clazz, String name) {
+        Map<String, List<Validator>> result = new HashMap<String, List<Validator>>();
         searchValidator(clazz, name, result);
         return result;
     }
-    
+
     public static List<Validator> getValidators(Class<?> clazz, String property, String name) {
         try {
             List<Validator> validators = new ArrayList<Validator>();
-            while(!clazz.equals(Object.class)) {
+            while (!clazz.equals(Object.class)) {
                 try {
                     Field field = clazz.getDeclaredField(property);
-                    for(Annotation annotation : field.getDeclaredAnnotations()) {
-                        if(annotation.annotationType().getName().startsWith("play.data.validation")) {
+                    for (Annotation annotation : field.getDeclaredAnnotations()) {
+                        if (annotation.annotationType().getName().startsWith("play.data.validation")) {
                             Validator validator = new Validator(annotation);
                             validators.add(validator);
-                            if(annotation.annotationType().equals(Equals.class)) {
-                                validator.params.put("equalsTo", name + "." + ((Equals)annotation).value());
+                            if (annotation.annotationType().equals(Equals.class)) {
+                                validator.params.put("equalsTo", name + "." + ((Equals) annotation).value());
                             }
-                            if(annotation.annotationType().equals(InFuture.class)) {
-                                validator.params.put("reference", ((InFuture)annotation).value());
+                            if (annotation.annotationType().equals(InFuture.class)) {
+                                validator.params.put("reference", ((InFuture) annotation).value());
                             }
-                            if(annotation.annotationType().equals(InPast.class)) {
-                                validator.params.put("reference", ((InPast)annotation).value());
+                            if (annotation.annotationType().equals(InPast.class)) {
+                                validator.params.put("reference", ((InPast) annotation).value());
                             }
                         }
                     }
                     break;
-                } catch(NoSuchFieldException e) {
+                } catch (NoSuchFieldException e) {
                     clazz = clazz.getSuperclass();
                 }
-            }            
+            }
             return validators;
-        } catch(Exception e) {
+        } catch (Exception e) {
             return new ArrayList<Validator>();
         }
     }
-    
-    static void searchValidator(Class<?> clazz, String name, Map<String,List<Validator>> result) {
-        for(Field field : clazz.getDeclaredFields()) {
-            
+
+    static void searchValidator(Class<?> clazz, String name, Map<String, List<Validator>> result) {
+        for (Field field : clazz.getDeclaredFields()) {
+
             List<Validator> validators = new ArrayList<Validator>();
             String key = name + "." + field.getName();
             boolean containsAtValid = false;
-            for(Annotation annotation : field.getDeclaredAnnotations()) {
-                if(annotation.annotationType().getName().startsWith("play.data.validation")) {
+            for (Annotation annotation : field.getDeclaredAnnotations()) {
+                if (annotation.annotationType().getName().startsWith("play.data.validation")) {
                     Validator validator = new Validator(annotation);
                     validators.add(validator);
-                    if(annotation.annotationType().equals(Equals.class)) {
-                        validator.params.put("equalsTo", name + "." + ((Equals)annotation).value());
+                    if (annotation.annotationType().equals(Equals.class)) {
+                        validator.params.put("equalsTo", name + "." + ((Equals) annotation).value());
                     }
-                    if(annotation.annotationType().equals(InFuture.class)) {
-                        validator.params.put("reference", ((InFuture)annotation).value());
+                    if (annotation.annotationType().equals(InFuture.class)) {
+                        validator.params.put("reference", ((InFuture) annotation).value());
                     }
-                    if(annotation.annotationType().equals(InPast.class)) {
-                        validator.params.put("reference", ((InPast)annotation).value());
+                    if (annotation.annotationType().equals(InPast.class)) {
+                        validator.params.put("reference", ((InPast) annotation).value());
                     }
-                    
+
                 }
-                if(annotation.annotationType().equals(Valid.class)) {
+                if (annotation.annotationType().equals(Valid.class)) {
                     containsAtValid = true;
                 }
             }
-            if(!validators.isEmpty()) {
+            if (!validators.isEmpty()) {
                 result.put(key, validators);
             }
-            if(containsAtValid) {
+            if (containsAtValid) {
                 searchValidator(field.getType(), key, result);
             }
         }
     }
-    
+
     public static class Validator {
-        
+
         public Annotation annotation;
-        public Map<String,Object> params = new HashMap<String,Object>();
-        
+        public Map<String, Object> params = new HashMap<String, Object>();
+
         public Validator(Annotation annotation) {
             this.annotation = annotation;
         }
-        
     }
-    
+
     // ~~~~ Validations
-    
     public static class ValidationResult {
-        
+
         public boolean ok = false;
         public Error error;
-        
+
         public ValidationResult message(String message) {
-            if(error != null) {
+            if (error != null) {
                 error.message = message;
             }
             return this;
         }
-        
+
         public ValidationResult key(String key) {
-            if(error != null) {
+            if (error != null) {
                 error.key = key;
             }
             return this;
         }
-        
     }
-    
+
     public static ValidationResult required(String key, Object o) {
         RequiredCheck check = new RequiredCheck();
         return applyCheck(check, key, o);
     }
 
-//    public ValidationResult required(Object o) {
-//        String key = getLocalName(o);
-//        return Validation.required(key, o);
-//    }
-    
+    public ValidationResult required(Object o) {
+        String key = getLocalName(o);
+        return Validation.required(key, o);
+    }
+
     public static ValidationResult min(String key, Object o, double min) {
         MinCheck check = new MinCheck();
         check.min = min;
@@ -264,44 +260,44 @@ public class Validation {
         return applyCheck(check, key, o);
     }
 
-//    public ValidationResult max(Object o, double max) {
-//        String key = getLocalName(o);
-//        return Validation.max(key, o, max);
-//    }
-    
+    public ValidationResult max(Object o, double max) {
+        String key = getLocalName(o);
+        return Validation.max(key, o, max);
+    }
+
     public static ValidationResult future(String key, Object o, Date reference) {
         InFutureCheck check = new InFutureCheck();
         check.reference = reference;
         return applyCheck(check, key, o);
     }
 
-//    public ValidationResult future(Object o, Date reference) {
-//        String key = getLocalName(o);
-//        return Validation.future(key, o, reference);
-//    }
-    
+    public ValidationResult future(Object o, Date reference) {
+        String key = getLocalName(o);
+        return Validation.future(key, o, reference);
+    }
+
     public static ValidationResult future(String key, Object o) {
         InFutureCheck check = new InFutureCheck();
         check.reference = new Date();
         return applyCheck(check, key, o);
     }
 
-//    public ValidationResult future(Object o) {
-//        String key = getLocalName(o);
-//        return Validation.future(key, o, new Date());
-//    }
-    
+    public ValidationResult future(Object o) {
+        String key = getLocalName(o);
+        return Validation.future(key, o, new Date());
+    }
+
     public static ValidationResult past(String key, Object o, Date reference) {
         InPastCheck check = new InPastCheck();
         check.reference = reference;
         return applyCheck(check, key, o);
     }
 
-//    public ValidationResult past(Object o, Date reference) {
-//        String key = getLocalName(o);
-//        return Validation.past(key, o, reference);
-//    }
-    
+    public ValidationResult past(Object o, Date reference) {
+        String key = getLocalName(o);
+        return Validation.past(key, o, reference);
+    }
+
     public static ValidationResult past(String key, Object o) {
         InPastCheck check = new InPastCheck();
         check.reference = new Date();
@@ -319,11 +315,11 @@ public class Validation {
         return applyCheck(check, key, o);
     }
 
-//    public ValidationResult match(Object o, String pattern) {
-//        String key = getLocalName(o);
-//        return Validation.match(key, o, pattern);
-//    }
-    
+    public ValidationResult match(Object o, String pattern) {
+        String key = getLocalName(o);
+        return Validation.match(key, o, pattern);
+    }
+
     public static ValidationResult email(String key, Object o) {
         EmailCheck check = new EmailCheck();
         return applyCheck(check, key, o);
@@ -353,7 +349,7 @@ public class Validation {
         String key = getLocalName(o);
         return Validation.phone(key, o);
     }
-    
+
     public static ValidationResult ipv4Address(String key, Object o) {
         IPv4AddressCheck check = new IPv4AddressCheck();
         return applyCheck(check, key, o);
@@ -363,7 +359,7 @@ public class Validation {
         String key = getLocalName(o);
         return Validation.ipv4Address(key, o);
     }
-    
+
     public static ValidationResult ipv6Address(String key, Object o) {
         IPv6AddressCheck check = new IPv6AddressCheck();
         return applyCheck(check, key, o);
@@ -379,12 +375,11 @@ public class Validation {
         return applyCheck(check, key, o);
     }
 
-//    public ValidationResult isTrue(Object o) {
-//        String key = getLocalName(o);
-//        return Validation.isTrue(key, o);
-//    }
-    
-    
+    public ValidationResult isTrue(Object o) {
+        String key = getLocalName(o);
+        return Validation.isTrue(key, o);
+    }
+
     public static ValidationResult equals(String key, Object o, String otherName, Object to) {
         EqualsCheck check = new EqualsCheck();
         check.otherKey = otherName;
@@ -392,12 +387,12 @@ public class Validation {
         return applyCheck(check, key, o);
     }
 
-//    public ValidationResult equals(Object o, Object to) {
-//        String key = getLocalName(o);
-//        String otherKey = getLocalName(to);
-//        return Validation.equals(key, o, otherKey, to);
-//    }
-    
+    public ValidationResult equals(Object o, Object to) {
+        String key = getLocalName(o);
+        String otherKey = getLocalName(to);
+        return Validation.equals(key, o, otherKey, to);
+    }
+
     public static ValidationResult range(String key, Object o, double min, double max) {
         RangeCheck check = new RangeCheck();
         check.min = min;
@@ -405,22 +400,22 @@ public class Validation {
         return applyCheck(check, key, o);
     }
 
-//    public ValidationResult range(Object o, double min, double max) {
-//        String key = getLocalName(o);
-//        return Validation.range(key, o, min, max);
-//    }
-    
+    public ValidationResult range(Object o, double min, double max) {
+        String key = getLocalName(o);
+        return Validation.range(key, o, min, max);
+    }
+
     public static ValidationResult minSize(String key, Object o, int minSize) {
         MinSizeCheck check = new MinSizeCheck();
         check.minSize = minSize;
         return applyCheck(check, key, o);
     }
 
-//    public ValidationResult minSize(Object o, int minSize) {
-//        String key = getLocalName(o);
-//        return Validation.minSize(key, o, minSize);
-//    }
-//    
+    public ValidationResult minSize(Object o, int minSize) {
+        String key = getLocalName(o);
+        return Validation.minSize(key, o, minSize);
+    }
+
     public static ValidationResult maxSize(String key, Object o, int maxSize) {
         MaxSizeCheck check = new MaxSizeCheck();
         check.maxSize = maxSize;
@@ -467,11 +462,14 @@ public class Validation {
      * @return
      */
     static String getLocalName(Object o) {
-    	// return empty string for now.
-//        List<String> names = LocalVariablesNamesTracer.getAllLocalVariableNames(o);
-//        if(names.size() > 0) {
-//            return names.get(0);
-//        }
+        List<String> names = LocalVariablesNamesTracer.getAllLocalVariableNames(o);
+        if (names.size() > 0) {
+            return names.get(0);
+        }
         return "";
+    }
+
+    public static Object willBeValidated(Object value) {
+        return Play.pluginCollection.willBeValidated(value);
     }
 }

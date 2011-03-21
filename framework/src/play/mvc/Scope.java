@@ -57,6 +57,10 @@ public class Scope {
         }
 
         void save() {
+            if (Http.Response.current() == null) {
+                // Some request like WebSocket don't have any response
+                return;
+            }
             try {
                 StringBuilder flash = new StringBuilder();
                 for (String key : out.keySet()) {
@@ -72,7 +76,6 @@ public class Scope {
                 throw new UnexpectedException("Flash serializationProblem", e);
             }
         }        // ThreadLocal access
-
         static ThreadLocal<Flash> current = new ThreadLocal<Flash>();
 
         public static Flash current() {
@@ -143,6 +146,7 @@ public class Scope {
             return data.containsKey(key);
         }
 
+        @Override
         public String toString() {
             return data.toString();
         }
@@ -193,7 +197,6 @@ public class Scope {
                 throw new UnexpectedException("Corrupted HTTP session from " + Http.Request.current().remoteAddress, e);
             }
         }
-
         Map<String, String> data = new HashMap<String, String>(); // ThreadLocal access
         public static ThreadLocal<Session> current = new ThreadLocal<Session>();
 
@@ -214,9 +217,13 @@ public class Scope {
         }
 
         void save() {
+            if (Http.Response.current() == null) {
+                // Some request like WebSocket don't have any response
+                return;
+            }
             try {
                 StringBuilder session = new StringBuilder();
-                for (String key: data.keySet()) {
+                for (String key : data.keySet()) {
                     session.append("\u0000");
                     session.append(key);
                     session.append(":");
@@ -239,7 +246,7 @@ public class Scope {
             if (key.contains(":")) {
                 throw new IllegalArgumentException("Character ':' is invalid in a session key.");
             }
-            if(value == null) {
+            if (value == null) {
                 data.remove(key);
             } else {
                 data.put(key, value);
@@ -279,7 +286,6 @@ public class Scope {
         public String toString() {
             return data.toString();
         }
-
     }
 
     /**
@@ -287,12 +293,12 @@ public class Scope {
      */
     public static class Params {
         // ThreadLocal access
+
         public static ThreadLocal<Params> current = new ThreadLocal<Params>();
 
         public static Params current() {
             return current.get();
         }
-
         boolean requestIsParsed;
         private Map<String, String[]> data = new HashMap<String, String[]>();
 
@@ -305,7 +311,7 @@ public class Scope {
                     if (dataParser != null) {
                         _mergeWith(dataParser.parse(request.body));
                     } else {
-                        if(contentType.startsWith("text/")) {
+                        if (contentType.startsWith("text/")) {
                             _mergeWith(new TextParser().parse(request.body));
                         }
                     }
@@ -320,14 +326,17 @@ public class Scope {
         }
 
         public void put(String key, String value) {
+            checkAndParse();
             data.put(key, new String[]{value});
         }
 
         public void put(String key, String[] values) {
+            checkAndParse();
             data.put(key, values);
         }
 
         public void remove(String key) {
+            checkAndParse();
             data.remove(key);
         }
 
@@ -412,7 +421,7 @@ public class Scope {
 
         public String urlEncode() {
             checkAndParse();
-            StringBuffer ue = new StringBuffer();
+            StringBuilder ue = new StringBuilder();
             for (String key : data.keySet()) {
                 if (key.equals("body")) {
                     continue;
@@ -436,7 +445,9 @@ public class Scope {
                         StringBuilder sb = new StringBuilder();
                         boolean coma = false;
                         for (String d : data.get(key)) {
-                            if (coma) sb.append(",");
+                            if (coma) {
+                                sb.append(",");
+                            }
                             sb.append(d);
                             coma = true;
                         }
@@ -451,7 +462,9 @@ public class Scope {
                         StringBuilder sb = new StringBuilder();
                         boolean coma = false;
                         for (String d : data.get(key)) {
-                            if (coma) sb.append(",");
+                            if (coma) {
+                                sb.append(",");
+                            }
                             sb.append(d);
                             coma = true;
                         }
@@ -467,7 +480,6 @@ public class Scope {
         public String toString() {
             return data.toString();
         }
-
     }
 
     /**
@@ -499,7 +511,6 @@ public class Scope {
         public String toString() {
             return data.toString();
         }
-
     }
 
     /**
@@ -526,7 +537,5 @@ public class Scope {
         public String toString() {
             return data.toString();
         }
-
     }
-
 }

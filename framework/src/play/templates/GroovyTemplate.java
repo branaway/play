@@ -6,6 +6,7 @@ import groovy.lang.Binding;
 import groovy.lang.Closure;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyObjectSupport;
+import groovy.lang.GroovyShell;
 import groovy.lang.MissingPropertyException;
 import groovy.lang.Script;
 import java.io.File;
@@ -58,6 +59,10 @@ import play.utils.HTML;
  * A template
  */
 public class GroovyTemplate extends BaseTemplate {
+
+    static {
+        new GroovyShell().evaluate("java.lang.String.metaClass.if = { condition -> if(condition) delegate; else '' }");
+    }
 
     public GroovyTemplate(String name, String source) {
         super(name, source);
@@ -246,6 +251,8 @@ public class GroovyTemplate extends BaseTemplate {
     Throwable cleanStackTrace(Throwable e) {
         List<StackTraceElement> cleanTrace = new ArrayList<StackTraceElement>();
         for (StackTraceElement se : e.getStackTrace()) {
+            //Here we are parsing the classname to find the file on disk the template was generated from.
+            //See GroovyTemplateCompiler.head() for more info.
             if (se.getClassName().startsWith("Template_")) {
                 String tn = se.getClassName().substring(9);
                 if (tn.indexOf("$") > -1) {
@@ -346,14 +353,14 @@ public class GroovyTemplate extends BaseTemplate {
             }
         }
 
-        public String __safe(Object val) {
+        public String __safe(Object val, String stringValue) {
             if (val instanceof RawData) {
                 return ((RawData) val).data;
             }
             if (!template.name.endsWith(".html") || TagContext.hasParentTag("verbatim")) {
-                return val.toString();
+                return stringValue;
             }
-            return HTML.htmlEscape(val.toString());
+            return HTML.htmlEscape(stringValue);
         }
 
         public Object get(String key) {
@@ -387,6 +394,7 @@ public class GroovyTemplate extends BaseTemplate {
             }
 
             @Override
+            @SuppressWarnings("unchecked")
             public Object invokeMethod(String name, Object param) {
                 try {
                     if (controller == null) {
@@ -401,19 +409,23 @@ public class GroovyTemplate extends BaseTemplate {
                         Method actionMethod = (Method) ActionInvoker.getActionMethod(action)[1];
                         String[] names = (String[]) actionMethod.getDeclaringClass().getDeclaredField("$" + actionMethod.getName() + LocalVariablesNamesTracer.computeMethodHash(actionMethod.getParameterTypes())).get(null);
                         if (param instanceof Object[]) {
-                            // too many parameters versus action, possibly a developer error. we must warn him.
-                            if (names.length < ((Object[]) param).length) {
-                                throw new NoRouteFoundException(action, null);
-                            }
-                            for (int i = 0; i < ((Object[]) param).length; i++) {
-                                if (((Object[]) param)[i] instanceof Router.ActionDefinition && ((Object[]) param)[i] != null) {
-                                    Unbinder.unBind(r, ((Object[]) param)[i].toString(), i < names.length ? names[i] : "");
-                                } else if (isSimpleParam(actionMethod.getParameterTypes()[i])) {
-                                    if (((Object[]) param)[i] != null) {
+                            if(((Object[])param).length == 1 && ((Object[])param)[0] instanceof Map) {
+                                r = (Map<String,Object>)((Object[])param)[0];
+                            } else {
+                                // too many parameters versus action, possibly a developer error. we must warn him.
+                                if (names.length < ((Object[]) param).length) {
+                                    throw new NoRouteFoundException(action, null);
+                                }
+                                for (int i = 0; i < ((Object[]) param).length; i++) {
+                                    if (((Object[]) param)[i] instanceof Router.ActionDefinition && ((Object[]) param)[i] != null) {
                                         Unbinder.unBind(r, ((Object[]) param)[i].toString(), i < names.length ? names[i] : "");
+                                    } else if (isSimpleParam(actionMethod.getParameterTypes()[i])) {
+                                        if (((Object[]) param)[i] != null) {
+                                            Unbinder.unBind(r, ((Object[]) param)[i].toString(), i < names.length ? names[i] : "");
+                                        }
+                                    } else {
+                                        Unbinder.unBind(r, ((Object[]) param)[i], i < names.length ? names[i] : "");
                                     }
-                                } else {
-                                    Unbinder.unBind(r, ((Object[]) param)[i], i < names.length ? names[i] : "");
                                 }
                             }
                         }
@@ -421,7 +433,7 @@ public class GroovyTemplate extends BaseTemplate {
                         if (absolute) {
                             def.absolute();
                         }
-                        if (template.template.name.endsWith(".html") || template.template.name.endsWith(".xml")) {
+                        if (template.template.name.endsWith(".xml")) {
                             def.url = def.url.replace("&", "&amp;");
                         }
                         return def;

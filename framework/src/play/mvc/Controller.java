@@ -53,6 +53,7 @@ import play.vfs.VirtualFile;
 
 import com.google.gson.JsonSerializer;
 import com.thoughtworks.xstream.XStream;
+import java.lang.reflect.Type;
 import org.apache.commons.javaflow.Continuation;
 import org.apache.commons.javaflow.bytecode.StackRecorder;
 import play.libs.F;
@@ -325,6 +326,15 @@ public class Controller implements ControllerSupport, LocalVariablesSupport {
     }
 
     /**
+     * Render a 200 OK application/json response
+     * @param o The Java object to serialize
+     * @param type The Type informations for complex generic types
+     */
+    protected static void renderJSON(Object o, Type type) {
+        throw new RenderJson(o, type);
+    }
+
+    /**
      * Render a 200 OK application/json response.
      * @param o The Java object to serialize
      * @param adapters A set of GSON serializers/deserializers/instance creator to use
@@ -378,7 +388,7 @@ public class Controller implements ControllerSupport, LocalVariablesSupport {
     }
 
     /**
-     * Send a TODO response
+     * Send a todo response
      */
     protected static void todo() {
         notFound("This action has not been implemented Yet (" + request.action + ")");
@@ -591,6 +601,15 @@ public class Controller implements ControllerSupport, LocalVariablesSupport {
                 throw (PlayException) e;
             }
             throw new UnexpectedException(e);
+        }
+    }
+
+    protected static boolean templateExists(String templateName) {
+        try {
+            TemplateLoader.load(template(templateName));
+            return true;
+        } catch (TemplateNotFoundException ex) {
+            return false;
         }
     }
 
@@ -882,6 +901,7 @@ public class Controller implements ControllerSupport, LocalVariablesSupport {
         throw new Suspend(millis);
     }
 
+    @SuppressWarnings("unchecked")
     protected static <T> T await(Future<T> future) {
         if(future != null) {
             Request.current().args.put(ActionInvoker.F, future);

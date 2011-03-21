@@ -17,7 +17,6 @@ import org.apache.commons.lang.StringUtils;
 import play.Logger;
 import play.Play;
 import play.Play.Mode;
-import play.PlayPlugin;
 import play.vfs.VirtualFile;
 import play.exceptions.NoRouteFoundException;
 import play.exceptions.UnexpectedException;
@@ -31,7 +30,7 @@ import play.utils.Default;
  */
 public class Router {
 
-    static Pattern routePattern = new Pattern("^({method}GET|POST|PUT|DELETE|OPTIONS|HEAD|\\*)[(]?({headers}[^)]*)(\\))?\\s+({path}.*/[^\\s]*)\\s+({action}[^\\s(]+)({params}.+)?(\\s*)$");
+    static Pattern routePattern = new Pattern("^({method}GET|POST|PUT|DELETE|OPTIONS|HEAD|WS|\\*)[(]?({headers}[^)]*)(\\))?\\s+({path}.*/[^\\s]*)\\s+({action}[^\\s(]+)({params}.+)?(\\s*)$");
     /**
      * Pattern used to locate a method override instruction in request.querystring
      */
@@ -51,9 +50,7 @@ public class Router {
         parse(Play.routes, prefix);
         lastLoading = System.currentTimeMillis();
         // Plugins
-        for (PlayPlugin plugin : Play.plugins) {
-            plugin.onRoutesLoaded();
-        }
+        Play.pluginCollection.onRoutesLoaded();
     }
 
     /**
@@ -321,7 +318,11 @@ public class Router {
     }
 
     public static String getFullUrl(String action, Map<String, Object> args) {
-        return Http.Request.current().getBase() + reverse(action, args);
+        ActionDefinition actionDefinition = reverse(action, args);
+        if(actionDefinition.method.equals("WS")) {
+            return Http.Request.current().getBase().replaceFirst("https?", "ws") + actionDefinition;
+        }
+        return Http.Request.current().getBase() + actionDefinition;
     }
 
     public static String getFullUrl(String action) {
@@ -582,6 +583,9 @@ public class Router {
                     url = Http.Request.current().getBase() + url;
                 } else {
                     url = (Http.Request.current().secure ? "https://" : "http://") + host + url;
+                }
+                if(method.equals("WS")) {
+                    url = url.replaceFirst("https?", "ws");
                 }
             }
         }

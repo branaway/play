@@ -16,7 +16,6 @@ import java.util.Map;
 import org.apache.commons.lang.StringUtils;
 import play.Logger;
 import play.Play;
-import play.PlayPlugin;
 import play.cache.CacheFor;
 import play.classloading.enhancers.ControllersEnhancer.ControllerInstrumentation;
 import play.classloading.enhancers.ControllersEnhancer.ControllerSupport;
@@ -40,7 +39,6 @@ import java.util.concurrent.Future;
 import org.apache.commons.javaflow.Continuation;
 import org.apache.commons.javaflow.bytecode.StackRecorder;
 import play.Invoker.Suspend;
-import play.classloading.enhancers.LocalvariablesNamesEnhancer;
 import play.mvc.results.NotFound;
 
 /**
@@ -70,13 +68,9 @@ public class ActionInvoker {
 
         // Route and resolve format if not already done
         if (request.action == null) {
-            for (PlayPlugin plugin : Play.plugins) {
-                plugin.routeRequest(request);
-            }
+            Play.pluginCollection.routeRequest(request);
             Route route = Router.route(request);
-            for (PlayPlugin plugin : Play.plugins) {
-                plugin.onRequestRouting(route);
-            }
+            Play.pluginCollection.onRequestRouting(route);
         }
         request.resolveFormat();
 
@@ -103,6 +97,7 @@ public class ActionInvoker {
 
     public static void invoke(Http.Request request, Http.Response response) {
         Monitor monitor = null;
+
         try {
 
             resolve(request, response);
@@ -128,9 +123,7 @@ public class ActionInvoker {
             }
 
             ControllerInstrumentation.stopActionCall();
-            for (PlayPlugin plugin : Play.plugins) {
-                plugin.beforeActionInvocation(actionMethod);
-            }
+            Play.pluginCollection.beforeActionInvocation(actionMethod);
 
             // Monitoring
             monitor = MonitorFactory.start(request.action + "()");
@@ -234,9 +227,7 @@ public class ActionInvoker {
 
         } catch (Result result) {
 
-            for (PlayPlugin plugin : Play.plugins) {
-                plugin.onActionInvocationResult(result);
-            }
+            Play.pluginCollection.onActionInvocationResult(result);
 
             // OK there is a result to apply
             // Save session & flash scope now
@@ -246,28 +237,16 @@ public class ActionInvoker {
 
             result.apply(request, response);
 
-            for (PlayPlugin plugin : Play.plugins) {
-                plugin.afterActionInvocation();
-            }
+            Play.pluginCollection.afterActionInvocation();
 
             // @Finally
-            if (Controller.getControllerClass() != null) {
-                try {
-                    handleFinallies(request);
-                } catch (InvocationTargetException ex) {
-                    StackTraceElement element = PlayException.getInterestingStrackTraceElement(ex.getTargetException());
-                    if (element != null) {
-                        throw new JavaExecutionException(Play.classes.getApplicationClass(element.getClassName()), element.getLineNumber(), ex.getTargetException());
-                    }
-                    throw new JavaExecutionException(Http.Request.current().action, ex);
-                } catch (Exception e) {
-                    throw new UnexpectedException("Exception while doing @Finally", e);
-                }
-            }
+            handleFinallies(request, null);
 
         } catch (PlayException e) {
+            handleFinallies(request, e);
             throw e;
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            handleFinallies(request, e);
             throw new UnexpectedException(e);
         } finally {
             if (monitor != null) {
@@ -360,45 +339,77 @@ public class ActionInvoker {
         }
     }
 
-    private static void handleFinallies(Http.Request request) throws Exception {
-        List<Method> allFinally = Java.findAllAnnotatedMethods(Controller.getControllerClass(), Finally.class);
-        Collections.sort(allFinally, new Comparator<Method>() {
+    /**
+     * Checks and calla all methods in controller annotated with @Finally.
+     * The caughtException-value is sent as argument to @Finally-method if method has one argument which is Throwable
+     * @param request
+     * @param caughtException If @Finally-methods are called after an error, this variable holds the caught error
+     * @throws PlayException
+     */
+    static void handleFinallies(Http.Request request, Throwable caughtException) throws PlayException {
 
-            public int compare(Method m1, Method m2) {
-                Finally finally1 = m1.getAnnotation(Finally.class);
-                Finally finally2 = m2.getAnnotation(Finally.class);
-                return finally1.priority() - finally2.priority();
-            }
-        });
-        ControllerInstrumentation.stopActionCall();
-        for (Method aFinally : allFinally) {
-            String[] unless = aFinally.getAnnotation(Finally.class).unless();
-            String[] only = aFinally.getAnnotation(Finally.class).only();
-            boolean skip = false;
-            for (String un : only) {
-                if (!un.contains(".")) {
-                    un = aFinally.getDeclaringClass().getName().substring(12) + "." + un;
+        if (Controller.getControllerClass() == null) {
+            //skip it
+            return ;
+        }
+
+        try{
+            List<Method> allFinally = Java.findAllAnnotatedMethods(Controller.getControllerClass(), Finally.class);
+            Collections.sort(allFinally, new Comparator<Method>() {
+
+                public int compare(Method m1, Method m2) {
+                    Finally finally1 = m1.getAnnotation(Finally.class);
+                    Finally finally2 = m2.getAnnotation(Finally.class);
+                    return finally1.priority() - finally2.priority();
                 }
-                if (un.equals(request.action)) {
-                    skip = false;
-                    break;
-                } else {
-                    skip = true;
+            });
+            ControllerInstrumentation.stopActionCall();
+            for (Method aFinally : allFinally) {
+                String[] unless = aFinally.getAnnotation(Finally.class).unless();
+                String[] only = aFinally.getAnnotation(Finally.class).only();
+                boolean skip = false;
+                for (String un : only) {
+                    if (!un.contains(".")) {
+                        un = aFinally.getDeclaringClass().getName().substring(12) + "." + un;
+                    }
+                    if (un.equals(request.action)) {
+                        skip = false;
+                        break;
+                    } else {
+                        skip = true;
+                    }
+                }
+                for (String un : unless) {
+                    if (!un.contains(".")) {
+                        un = aFinally.getDeclaringClass().getName().substring(12) + "." + un;
+                    }
+                    if (un.equals(request.action)) {
+                        skip = true;
+                        break;
+                    }
+                }
+                if (!skip) {
+                    aFinally.setAccessible(true);
+
+                    //check if method accepts Throwable as only parameter
+                    Class[] parameterTypes = aFinally.getParameterTypes();
+                    if( parameterTypes.length == 1 && parameterTypes[0] == Throwable.class ){
+                        //invoking @Finally method with caughtException as parameter
+                        invokeControllerMethod(aFinally, new Object[]{caughtException});
+                    } else {
+                        //invoce @Finally-method the regular way without caughtException
+                        invokeControllerMethod(aFinally, null);
+                    }
                 }
             }
-            for (String un : unless) {
-                if (!un.contains(".")) {
-                    un = aFinally.getDeclaringClass().getName().substring(12) + "." + un;
-                }
-                if (un.equals(request.action)) {
-                    skip = true;
-                    break;
-                }
+        } catch (InvocationTargetException ex) {
+            StackTraceElement element = PlayException.getInterestingStrackTraceElement(ex.getTargetException());
+            if (element != null) {
+                throw new JavaExecutionException(Play.classes.getApplicationClass(element.getClassName()), element.getLineNumber(), ex.getTargetException());
             }
-            if (!skip) {
-                aFinally.setAccessible(true);
-                invokeControllerMethod(aFinally, null);
-            }
+            throw new JavaExecutionException(Http.Request.current().action, ex);
+        } catch (Exception e) {
+            throw new UnexpectedException("Exception while doing @Finally", e);
         }
     }
 
@@ -460,11 +471,7 @@ public class ActionInvoker {
     }
 
     static Object invoke(Method method, Object instance, Object[] realArgs) throws Exception {
-        if (true) {
-            return invokeWithContinuation(method, instance, realArgs);
-        } else {
-            return method.invoke(instance, realArgs);
-        }
+        return invokeWithContinuation(method, instance, realArgs);
     }
     static final String C = "__continuation";
     static final String A = "__callback";

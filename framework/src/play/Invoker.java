@@ -20,7 +20,7 @@ import play.classloading.enhancers.LocalvariablesNamesEnhancer.LocalVariablesNam
 import play.exceptions.PlayException;
 import play.exceptions.UnexpectedException;
 import play.libs.F;
-import play.libs.Task;
+import play.libs.F.Promise;
 import play.utils.PThreadFactory;
 
 /**
@@ -182,9 +182,7 @@ public class Invoker {
          */
         public void before() {
             Thread.currentThread().setContextClassLoader(Play.classloader);
-            for (PlayPlugin plugin : Play.plugins) {
-                plugin.beforeInvocation();
-            }
+            Play.pluginCollection.beforeInvocation();
         }
 
         /**
@@ -192,9 +190,7 @@ public class Invoker {
          * (if the Invocation code has not thrown any exception)
          */
         public void after() {
-            for (PlayPlugin plugin : Play.plugins) {
-                plugin.afterInvocation();
-            }
+            Play.pluginCollection.afterInvocation();
             LocalVariablesNamesTracer.checkEmpty(); // detect bugs ....
         }
 
@@ -202,21 +198,14 @@ public class Invoker {
          * Things to do when the whole invocation has succeeded (before + execute + after)
          */
         public void onSuccess() throws Exception {
-            for (PlayPlugin plugin : Play.plugins) {
-                plugin.onInvocationSuccess();
-            }
+            Play.pluginCollection.onInvocationSuccess();
         }
 
         /**
          * Things to do if the Invocation code thrown an exception
          */
         public void onException(Throwable e) {
-            for (PlayPlugin plugin : Play.plugins) {
-                try {
-                    plugin.onInvocationException(e);
-                } catch (Throwable ex) {
-                }
-            }
+            Play.pluginCollection.onInvocationException(e);
             if (e instanceof PlayException) {
                 throw (PlayException) e;
             }
@@ -239,9 +228,7 @@ public class Invoker {
          * Things to do in all cases after the invocation.
          */
         public void _finally() {
-            for (PlayPlugin plugin : Play.plugins) {
-                plugin.invocationFinally();
-            }
+            Play.pluginCollection.invocationFinally();
         }
 
         /**
@@ -348,13 +335,13 @@ public class Invoker {
             setDaemon(true);
         }
 
-		public static <V> void waitFor(Future<V> task, final Invocation invocation) {
 
-            if (task instanceof Task) {
-                Task<V> smartFuture = (Task<V>)task;
-                smartFuture.onCompletion(new F.Action<V>() {
+        public static <V> void waitFor(Future<V> task, final Invocation invocation) {
+            if (task instanceof Promise) {
+                Promise<V> smartFuture = (Promise<V>) task;
+                smartFuture.onRedeem(new F.Action<F.Promise<V>>() {
                     @Override
-					public void invoke(V result) {
+                    public void invoke(Promise<V> result) {
                         executor.submit(invocation);
                     }
                 });
