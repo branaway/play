@@ -153,7 +153,9 @@ public class Scope {
      */
     public static class Session {
 
-        static Pattern sessionParser = Pattern.compile("\u0000([^:]*):([^\u0000]*)\u0000");
+        private static final String TIMESTAMP = "___TS";
+		private static final String ID_TOKEN = "___ID";
+		static Pattern sessionParser = Pattern.compile("\u0000([^:]*):([^\u0000]*)\u0000");
 
         static Session restore() {
             try {
@@ -172,19 +174,19 @@ public class Scope {
                     }
                     if (COOKIE_EXPIRE != null) {
                         // Verify that the session contains a timestamp, and that it's not expired
-                        if (!session.contains("___TS")) {
+                        if (!session.contains(TIMESTAMP)) {
                             session = new Session();
                         } else {
-                            if (Long.parseLong(session.get("___TS")) < System.currentTimeMillis()) {
+                            if (Long.parseLong(session.get(TIMESTAMP)) < System.currentTimeMillis()) {
                                 // Session expired
                                 session = new Session();
                             }
                         }
-                        session.put("___TS", System.currentTimeMillis() + (Time.parseDuration(COOKIE_EXPIRE) * 1000));
+                        session.put(TIMESTAMP, System.currentTimeMillis() + (Time.parseDuration(COOKIE_EXPIRE) * 1000));
                     }
                 }
-                if (!session.contains("___ID")) {
-                    session.put("___ID", Codec.UUID());
+                if (!session.contains(ID_TOKEN)) {
+                    session.put(ID_TOKEN, Codec.UUID());
                 }
                 return session;
             } catch (Exception e) {
@@ -200,7 +202,7 @@ public class Scope {
         }
 
         public String getId() {
-            return data.get("___ID");
+            return data.get(ID_TOKEN);
         }
 
         public Map<String, String> all() {

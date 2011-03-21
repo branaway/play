@@ -10,6 +10,11 @@ import play.Play;
 import play.db.jpa.GenericModel.JPAQuery;
 import play.mvc.Scope.Params;
 
+/**
+ * bran: I changed some of the returned type of the added method from JPABase to GenericModel, 
+ * to match the change I have made to the GenericModel.
+ *
+ */
 public class JPQL {
 
     public EntityManager em() {
@@ -30,8 +35,8 @@ public class JPQL {
         return em().createQuery("select e from " + entity + " e").getResultList();
     }
 
-    public JPABase findById(String entity, Object id) throws Exception {
-        return (JPABase) em().find(Play.classloader.loadClass(entity), id);
+    public GenericModel findById(String entity, Object id) throws Exception {
+        return (GenericModel) em().find(Play.classloader.loadClass(entity), id);
     }
 
     public List findBy(String entity, String query, Object[] params) {
@@ -73,17 +78,17 @@ public class JPQL {
         return bindParameters(q).executeUpdate();
     }
 
-    public JPABase findOneBy(String entity, String query, Object[] params) {
+    public GenericModel findOneBy(String entity, String query, Object[] params) {
         Query q = em().createQuery(
                 createFindByQuery(entity, entity, query, params));
         List results = bindParameters(q, params).getResultList();
         if (results.size() == 0) {
             return null;
         }
-        return (JPABase) results.get(0);
+        return (GenericModel) results.get(0);
     }
 
-    public JPABase create(String entity, String name, Params params) throws Exception {
+    public GenericModel create(String entity, String name, Params params) throws Exception {
         Object o = Play.classloader.loadClass(entity).newInstance();
         return ((GenericModel) o).edit(name, params.all());
     }

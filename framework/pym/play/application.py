@@ -82,7 +82,7 @@ class PlayApplication:
 
     def load_modules(self):
         if os.environ.has_key('MODULES'):
-            if os.name == 'nt':
+            if os.name == 'nt' or sys.platform == 'cygwin':
                 modules = os.environ['MODULES'].split(';')
             else:
                 modules = os.environ['MODULES'].split(':')
@@ -158,7 +158,7 @@ class PlayApplication:
     def cp_args(self):
         classpath = self.getClasspath()
         cp_args = ':'.join(classpath)
-        if os.name == 'nt':
+        if os.name == 'nt' or sys.platform == 'cygwin':
             cp_args = ';'.join(classpath)
         return cp_args
 

@@ -770,7 +770,8 @@ public class Play {
 			case 404:
 				return "URL not found";
 			case 500:
-				return "System error";
+				Object e = params.get("exception");
+				return "System error 500: " + e;
 			default:
 				return "";
 			}

@@ -433,12 +433,14 @@ public class ApplicationClassloader extends ClassLoader {
                     }
                 }
                 
-                System.out.println("start compiling all " + classNames.size() + " classes. ");
+                if (classNames.size() > 0) {
+	                System.out.println("start compiling all " + classNames.size() + " classes. ");
+	                
+	                t= System.currentTimeMillis();
+	                Play.classes.compiler.compile(classNames.toArray(new String[classNames.size()]));
+	                System.out.println("compiling took(ms): " + (System.currentTimeMillis() - t));
+                }
                 
-                t= System.currentTimeMillis();
-                Play.classes.compiler.compile(classNames.toArray(new String[classNames.size()]));
-                System.out.println("compiling took(ms): " + (System.currentTimeMillis() - t));
-
                 System.out.println("start loading all " + classNames.size() + " classes. ");
                 t= System.currentTimeMillis();
                 for (ApplicationClass applicationClass : Play.classes.all()) {

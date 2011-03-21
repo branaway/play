@@ -216,6 +216,7 @@ public class GenericModel extends JPABase {
 
     /**
      * Merge this object to obtain a managed entity (useful when the object comes from the Cache).
+     * <em>Note</em>: must use the returned object to invoke any further methods, such as save(). The original object remain detached. 
      */
     public <T extends GenericModel> T merge() {
         return (T) em().merge(this);
