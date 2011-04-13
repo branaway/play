@@ -26,6 +26,7 @@ import java.util.regex.Pattern;
 
 import play.Logger;
 import play.Play;
+import play.classloading.hash.ClassStateHashCreator;
 import play.vfs.VirtualFile;
 import play.cache.Cache;
 import play.classloading.ApplicationClasses.ApplicationClass;
@@ -37,6 +38,15 @@ import play.libs.IO;
  * Load the classes from the application Java sources files.
  */
 public class ApplicationClassloader extends ClassLoader {
+
+
+    private final ClassStateHashCreator classStateHashCreator = new ClassStateHashCreator();
+
+    /**
+     * A representation of the current state of the ApplicationClassloader.
+     * It gets a new value each time the state of the classloader changes.
+     */
+    public ApplicationClassloaderState currentState = new ApplicationClassloaderState();
 
     /**
      * This protection domain applies to all loaded classes.
@@ -294,6 +304,7 @@ public class ApplicationClassloader extends ClassLoader {
         }
         List<ClassDefinition> newDefinitions = new ArrayList<ClassDefinition>();
         boolean dirtySig = false;
+
         if (modifiedWithDependencies.size() > 0) {
 			Logger.info("start compiling %s modified classes", modifiedWithDependencies.size());
 			long compileTime = 0;
@@ -304,6 +315,7 @@ public class ApplicationClassloader extends ClassLoader {
 				compileTime += (System.currentTimeMillis() - compt);
 				if (compile == null) {
 					Play.classes.classes.remove(applicationClass.name);
+					 currentState = new ApplicationClassloaderState();//show others that we have changed..
 				} else {
 					int sigChecksum = applicationClass.sigChecksum;
 					
@@ -316,6 +328,7 @@ public class ApplicationClassloader extends ClassLoader {
 					}
 					BytecodeCache.cacheBytecode(applicationClass.enhancedByteCode, applicationClass.name, applicationClass.javaSource);
 					newDefinitions.add(new ClassDefinition(applicationClass.javaClass, applicationClass.enhancedByteCode));
+					currentState = new ApplicationClassloaderState();//show others that we have changed..
 				}
 			}
 			Logger.info("Finished compiling and enhancing. Took  %s (ms) to compile, %s (ms) to enhance ", compileTime, enhanceTime);
@@ -337,6 +350,7 @@ public class ApplicationClassloader extends ClassLoader {
         if (dirtySig) {
             throw new RuntimeException("Signature change !");
         }
+
         // Now check if there is new classes or removed classes
         int hash = computePathHash();
         if (hash != this.pathHash) {
@@ -344,9 +358,11 @@ public class ApplicationClassloader extends ClassLoader {
             for (ApplicationClass applicationClass : Play.classes.all()) {
                 if (!applicationClass.javaFile.exists()) {
                     Play.classes.classes.remove(applicationClass.name);
+                    currentState = new ApplicationClassloaderState();//show others that we have changed..
                 }
                 if (applicationClass.name.contains("$")) {
                     Play.classes.classes.remove(applicationClass.name);
+                    currentState = new ApplicationClassloaderState();//show others that we have changed..
                     // Ok we have to remove all classes from the same file ...
                     VirtualFile vf = applicationClass.javaFile;
                     for (ApplicationClass ac : Play.classes.all()) {
@@ -365,32 +381,7 @@ public class ApplicationClassloader extends ClassLoader {
     int pathHash = 0;
 
     int computePathHash() {
-        StringBuffer buf = new StringBuffer();
-        for (VirtualFile virtualFile : Play.javaPath) {
-            scan(buf, virtualFile);
-        }
-        return buf.toString().hashCode();
-    }
-
-    void scan(StringBuffer buf, VirtualFile current) {
-        if (!current.isDirectory()) {
-            if (current.getName().endsWith(".java")) {
-				Matcher matcher = classPattern.matcher(current.contentAsString());
-//                buf.append(current.getName());
-				// bran:  getName is not enough to tell the path change 
-                buf.append(current.getRealFile().getPath());
-                buf.append("(");
-                while (matcher.find()) {
-                    buf.append(matcher.group(1));
-                    buf.append(",");
-                }
-                buf.append(")");
-            }
-        } else if (!current.getName().startsWith(".")) {
-            for (VirtualFile virtualFile : current.list()) {
-                scan(buf, virtualFile);
-            }
-        }
+        return classStateHashCreator.computePathHash(Play.javaPath);
     }
 
     /**

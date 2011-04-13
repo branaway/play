@@ -5,6 +5,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -294,7 +295,7 @@ public class JPAPlugin extends PlayPlugin {
     public void beforeInvocation() {
 
         if(InvocationContext.current().getAnnotation(NoTransaction.class) != null ) {
-            //Called method is annotated with @NoTransaction telling us that
+            //Called method or class is annotated with @NoTransaction telling us that
             //we should not start a transaction
             return ;
         }
@@ -326,16 +327,15 @@ public class JPAPlugin extends PlayPlugin {
      * initialize the JPA context and starts a JPA transaction
      * 
      * @param readonly true for a readonly transaction
+     * @param autoCommit true to automatically commit the DB transaction after each JPA statement
      */
     public static void startTx(boolean readonly) {
         if (!JPA.isEnabled()) {
             return;
         }
         EntityManager manager = JPA.entityManagerFactory.createEntityManager();
-        //if(Play.configuration.getProperty("future.bindJPAObjects", "false").equals("true")) {
         manager.setFlushMode(FlushModeType.COMMIT);
         manager.setProperty("org.hibernate.readOnly", readonly);
-        //}
         if (autoTxs) {
             manager.getTransaction().begin();
         }
@@ -353,6 +353,13 @@ public class JPAPlugin extends PlayPlugin {
         EntityManager manager = JPA.get().entityManager;
         try {
             if (autoTxs) {
+                // Be sure to set the connection is non-autoCommit mode as some driver will complain about COMMIT statement
+                try {
+                    DB.getConnection().setAutoCommit(false);
+                } catch(Exception e) {
+                    Logger.error(e, "Why the driver complains here?");
+                }
+                // Commit the transaction
                 if (manager.getTransaction().isActive()) {
                     if (JPA.get().readonly || rollback || manager.getTransaction().getRollbackOnly()) {
                         manager.getTransaction().rollback();

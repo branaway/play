@@ -24,6 +24,7 @@ import play.classloading.ApplicationClassloader;
 import play.exceptions.PlayException;
 import play.exceptions.UnexpectedException;
 import play.libs.IO;
+import play.mvc.Http;
 import play.mvc.Router;
 import play.plugins.PluginCollection;
 import play.templates.TemplateLoader;
@@ -226,6 +227,7 @@ public class Play {
         if( !Logger.configuredManually) {
             Logger.setUp(logLevel);
         }
+        Logger.recordCaller = Boolean.parseBoolean(configuration.getProperty("application.log.recordCaller", "false"));
 
         Logger.info("Starting %s", root.getAbsolutePath());
 
@@ -256,6 +258,9 @@ public class Play {
         if (usePrecompiled || forceProd) {
             mode = Mode.PROD;
         }
+
+        // Context path
+        ctxPath = configuration.getProperty("http.path", ctxPath);
 
         // Build basic java source path
         VirtualFile appRoot = VirtualFile.open(applicationPath);
@@ -292,6 +297,12 @@ public class Play {
             Play.ctxPath = "";
         }
 
+        // Default cookie domain
+        Http.Cookie.defaultDomain = configuration.getProperty("application.defaultCookieDomain", null);
+        if (Http.Cookie.defaultDomain!=null) {
+            Logger.info("Using default cookie domain: " + Http.Cookie.defaultDomain);
+        }
+
         // Plugins
         pluginCollection.loadPlugins();
 
@@ -314,7 +325,7 @@ public class Play {
     /**
      * Read application.conf and resolve overridden key using the play id mechanism.
      */
-    static void readConfiguration() {
+    public static void readConfiguration() {
         VirtualFile appRoot = VirtualFile.open(applicationPath);
         conf = appRoot.child("conf/application.conf");
         try {
@@ -402,11 +413,16 @@ public class Play {
                 //our plugins that we're going down when some calls ctrl+c or just kills our process..
                 shutdownHookEnabled = true;
 
-                Runtime.getRuntime().addShutdownHook( new Thread() {
-                    public void run(){
-                        Play.stop();
-                    }
-                 });
+                // Try to register shutdown-hook
+                try{
+                    Runtime.getRuntime().addShutdownHook( new Thread() {
+                        public void run(){
+                            Play.stop();
+                        }
+                    });
+                } catch(Exception e) {
+                    Logger.trace("Got error while trying to register JVM-shutdownHook. Probably using GAE");
+                }
             }
 
             if (mode == Mode.DEV) {
@@ -426,6 +442,7 @@ public class Play {
             if( !Logger.configuredManually) {
                 Logger.setUp(logLevel);
             }
+            Logger.recordCaller = Boolean.parseBoolean(configuration.getProperty("application.log.recordCaller", "false"));
 
             // Locales
             langs = new ArrayList<String>(Arrays.asList(configuration.getProperty("application.langs", "").split(",")));

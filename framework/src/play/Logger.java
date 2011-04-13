@@ -64,9 +64,9 @@ public class Logger {
             PropertyConfigurator.configure(shutUp);
         } else if (Logger.log4j == null) {
 
-            // The log4j configuration file is outside of the framework,
-            // so it's probably a custom configuration file
-            if(log4jConf.getFile().indexOf(Play.frameworkPath.getAbsolutePath()) == -1) {
+            if(log4jConf.getFile().indexOf(Play.applicationPath.getAbsolutePath()) == 0 ) {
+                // The log4j configuration file is located somewhere in the application folder,
+                // so it's probably a custom configuration file
                 configuredManually = true;
             }
 
@@ -107,9 +107,6 @@ public class Logger {
                 activeHandler.setLevel(juliLevel);
                 rootLogger.addHandler(activeHandler);
                 rootLogger.setLevel(juliLevel);
-            }
-            if (Play.configuration != null) {
-                recordCaller = Boolean.parseBoolean(Play.configuration.getProperty("application.log.recordCaller", "false"));
             }
         }
     }
@@ -152,6 +149,18 @@ public class Logger {
     }
 
     /**
+     * @return true if log4j.trace / jul.finest logging is enabled
+     */
+    public static boolean isTraceEnabled() {
+        if (forceJuli || log4j == null) {
+            return juli.isLoggable(java.util.logging.Level.FINEST);
+        } else {
+            return log4j.isTraceEnabled();
+        }
+    }
+
+
+    /**
      *
      * @param level string representation of Logging-levels as used in log4j
      * @return true if specified logging-level is enabled
@@ -187,8 +196,7 @@ public class Logger {
         } else {
             try {
                 if (recordCaller) {
-                    CallInfo ci = getCallerInformations(3);
-                    org.apache.log4j.Logger.getLogger(ci.className).trace(format(message, args));
+                    org.apache.log4j.Logger.getLogger(getCallerClassName()).trace(format(message, args));
                 } else {
                     log4j.trace(format(message, args));
                 }
@@ -213,8 +221,7 @@ public class Logger {
         } else {
             try {
                 if (recordCaller) {
-                    CallInfo ci = getCallerInformations(3);
-                    org.apache.log4j.Logger.getLogger(ci.className).debug(format(message, args));
+                    org.apache.log4j.Logger.getLogger(getCallerClassName()).debug(format(message, args));
                 } else {
                     log4j.debug(format(message, args));
                 }
@@ -243,8 +250,7 @@ public class Logger {
             try {
                 if (!niceThrowable(org.apache.log4j.Level.DEBUG, e, message, args)) {
                     if (recordCaller) {
-                        CallInfo ci = getCallerInformations(3);
-                        org.apache.log4j.Logger.getLogger(ci.className).debug(format(message, args), e);
+                        org.apache.log4j.Logger.getLogger(getCallerClassName()).debug(format(message, args), e);
                     } else {
                         log4j.debug(format(message, args), e);
                     }
@@ -270,8 +276,9 @@ public class Logger {
         } else {
             try {
                 if (recordCaller) {
-                    CallInfo ci = getCallerInformations(3);
-                    org.apache.log4j.Logger.getLogger(ci.className).info(format(message, args));
+                    // TODO: It is expensive to extract caller-info
+                    // we should only do it if we know the message is being logged (level)
+                    org.apache.log4j.Logger.getLogger(getCallerClassName()).info(format(message, args));
                 } else {
                     log4j.info(format(message, args));
                 }
@@ -300,8 +307,7 @@ public class Logger {
             try {
                 if (!niceThrowable(org.apache.log4j.Level.INFO, e, message, args)) {
                     if (recordCaller) {
-                        CallInfo ci = getCallerInformations(3);
-                        org.apache.log4j.Logger.getLogger(ci.className).info(format(message, args), e);
+                        org.apache.log4j.Logger.getLogger(getCallerClassName()).info(format(message, args), e);
                     } else {
                         log4j.info(format(message, args), e);
                     }
@@ -327,8 +333,7 @@ public class Logger {
         } else {
             try {
                 if (recordCaller) {
-                    CallInfo ci = getCallerInformations(3);
-                    org.apache.log4j.Logger.getLogger(ci.className).warn(format(message, args));
+                    org.apache.log4j.Logger.getLogger(getCallerClassName()).warn(format(message, args));
                 } else {
                     log4j.warn(format(message, args));
                 }
@@ -357,8 +362,7 @@ public class Logger {
             try {
                 if (!niceThrowable(org.apache.log4j.Level.WARN, e, message, args)) {
                     if (recordCaller) {
-                        CallInfo ci = getCallerInformations(3);
-                        org.apache.log4j.Logger.getLogger(ci.className).warn(format(message, args), e);
+                        org.apache.log4j.Logger.getLogger(getCallerClassName()).warn(format(message, args), e);
                     } else {
                         log4j.warn(format(message, args), e);
                     }
@@ -384,8 +388,7 @@ public class Logger {
         } else {
             try {
                 if (recordCaller) {
-                    CallInfo ci = getCallerInformations(3);
-                    org.apache.log4j.Logger.getLogger(ci.className).error(format(message, args));
+                    org.apache.log4j.Logger.getLogger(getCallerClassName()).error(format(message, args));
                 } else {
                     log4j.error(format(message, args));
                 }
@@ -414,8 +417,7 @@ public class Logger {
             try {
                 if (!niceThrowable(org.apache.log4j.Level.ERROR, e, message, args)) {
                     if (recordCaller) {
-                        CallInfo ci = getCallerInformations(3);
-                        org.apache.log4j.Logger.getLogger(ci.className).error(format(message, args), e);
+                        org.apache.log4j.Logger.getLogger(getCallerClassName()).error(format(message, args), e);
                     } else {
                         log4j.error(format(message, args), e);
                     }
@@ -441,8 +443,7 @@ public class Logger {
         } else {
             try {
                 if (recordCaller) {
-                    CallInfo ci = getCallerInformations(3);
-                    org.apache.log4j.Logger.getLogger(ci.className).fatal(format(message, args));
+                    org.apache.log4j.Logger.getLogger(getCallerClassName()).fatal(format(message, args));
                 } else {
                     log4j.fatal(format(message, args));
                 }
@@ -471,8 +472,7 @@ public class Logger {
             try {
                 if (!niceThrowable(org.apache.log4j.Level.FATAL, e, message, args)) {
                     if (recordCaller) {
-                        CallInfo ci = getCallerInformations(3);
-                        org.apache.log4j.Logger.getLogger(ci.className).fatal(format(message, args), e);
+                        org.apache.log4j.Logger.getLogger(getCallerClassName()).fatal(format(message, args), e);
                     } else {
                         log4j.fatal(format(message, args), e);
                     }
@@ -593,6 +593,15 @@ public class Logger {
             this.className = className;
             this.methodName = methodName;
         }
+    }
+
+    /**
+     * @return the className of the class actually logging the message
+     */
+    static String getCallerClassName() {
+        final int level = 4;
+        CallInfo ci = getCallerInformations(level);
+        return ci.className;
     }
 
     /**

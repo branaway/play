@@ -268,16 +268,21 @@ public abstract class FunctionalTest extends BaseTest {
             @Override
             public InvocationContext getInvocationContext() {
                 ActionInvoker.resolve(request, response);
-                return new InvocationContext(request.invokedMethod.getAnnotations(), request.invokedMethod.getDeclaringClass().getAnnotations());
+                return new InvocationContext(Http.invocationType,
+                        request.invokedMethod.getAnnotations(),
+                        request.invokedMethod.getDeclaringClass().getAnnotations());
             }
 
         });
         try {
             invocationResult.get(30, TimeUnit.SECONDS);
             if (savedCookies == null) {
-                savedCookies = response.cookies;
-            } else {
-                savedCookies.putAll(response.cookies);
+                savedCookies = new HashMap<String, Http.Cookie>();
+            }
+            for(Map.Entry<String,Http.Cookie> e : response.cookies.entrySet()) {
+                if(e.getValue().maxAge != null && e.getValue().maxAge > 0) {
+                    savedCookies.put(e.getKey(), e.getValue());
+                }
             }
             response.out.flush();
         } catch (Exception ex) {
@@ -298,12 +303,22 @@ public abstract class FunctionalTest extends BaseTest {
     }
 
     public static Request newRequest() {
-        Request request = new Request();
-        request.domain = "localhost";
-        request.port = 80;
-        request.method = "GET";
-        request.path = "/";
-        request.querystring = "";
+        Request request = Request.createRequest(
+                null,
+                "GET",
+                "/",
+                "",
+                null,
+                null,
+                null,
+                null,
+                false,
+                80,
+                "localhost",
+                false,
+                null,
+                null
+        );
         return request;
     }
 

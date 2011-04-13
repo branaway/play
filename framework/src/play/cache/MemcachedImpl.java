@@ -20,6 +20,8 @@ import play.exceptions.ConfigurationException;
 
 /**
  * Memcached implementation (using http://code.google.com/p/spymemcached/)
+ *
+ * expiration is specified in seconds
  */
 public class MemcachedImpl implements CacheImpl {
 
@@ -167,12 +169,12 @@ public class MemcachedImpl implements CacheImpl {
 
 	@Override
     public long incr(String key, int by) {
-		return client.incr(clean(key), by);
+		return client.incr(clean(key), by, 0);
     }
 
 	@Override
     public long decr(String key, int by) {
-		return client.decr(clean(key), by);
+		return client.decr(clean(key), by, 0);
     }
 
 	@Override
