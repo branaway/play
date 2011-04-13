@@ -33,6 +33,11 @@ public class Invoker {
      */
     public static ScheduledThreadPoolExecutor executor = null;
 
+    static {
+        int core = Integer.parseInt(Play.configuration.getProperty("play.pool", Play.mode == Mode.DEV ? "1" : ((Runtime.getRuntime().availableProcessors() + 1) + "")));
+        executor = new ScheduledThreadPoolExecutor(core, new PThreadFactory("play"), new ThreadPoolExecutor.AbortPolicy());
+    }
+
     /**
      * Run the code in a new thread took from a thread pool.
      * @param invocation The code to run
@@ -234,7 +239,8 @@ public class Invoker {
         /**
          * It's time to execute.
          */
-        public void run() {
+        @Override
+		public void run() {
             if (waitInQueue != null) {
                 waitInQueue.stop();
             }
@@ -275,13 +281,6 @@ public class Invoker {
         }
     }
 
-    /**
-     * Init executor at load time.
-     */
-    static {
-        int core = Integer.parseInt(Play.configuration.getProperty("play.pool", Play.mode == Mode.DEV ? "1" : ((Runtime.getRuntime().availableProcessors() + 1) + "")));
-        executor = new ScheduledThreadPoolExecutor(core, new PThreadFactory("play"), new ThreadPoolExecutor.AbortPolicy());
-    }
 
     /**
      * Throwable to indicate that the request must be suspended
@@ -375,7 +374,7 @@ public class Invoker {
                             }
                         }
                     }
-                    Thread.sleep(50);
+                    Thread.sleep(10);
                 } catch (InterruptedException ex) {
                     Logger.warn(ex, "While waiting for task completions");
                 }

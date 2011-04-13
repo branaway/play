@@ -4,23 +4,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.mail.*;
-import play.Logger;
-import play.classloading.enhancers.LocalvariablesNamesEnhancer.LocalVariablesNamesTracer;
+import org.apache.commons.mail.EmailAttachment;
+
 import play.classloading.enhancers.LocalvariablesNamesEnhancer.LocalVariablesSupport;
-import play.exceptions.MailException;
-import play.exceptions.TemplateNotFoundException;
 import play.exceptions.UnexpectedException;
-import play.libs.Mail;
-import play.templates.Template;
-import play.templates.TemplateLoader;
-
-import javax.mail.internet.InternetAddress;
 
 /**
  * Application mailer support

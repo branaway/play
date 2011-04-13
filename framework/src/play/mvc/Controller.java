@@ -62,7 +62,7 @@ import play.libs.F;
  * Application controller support: The controller receives input and initiates a response by making calls on model objects.
  *
  * This is the class that your controllers should extend.
- * @deprecated bran: this Groovy based old system is deprecated in favor of JapidController 
+ * bran: this Groovy based old system is deprecated in favor of JapidController 
  */
 public class Controller implements ControllerSupport, LocalVariablesSupport {
 

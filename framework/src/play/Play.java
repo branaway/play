@@ -139,6 +139,8 @@ public class Play {
      */
     public static String secretKey;
 
+    // bran
+    public static boolean invokeDirect; 
 
     /**
      * pluginCollection that holds all loaded plugins and all enabled plugins..
@@ -470,6 +472,18 @@ public class Play {
                 Logger.info("Application '%s' is now started !", configuration.getProperty("application.name", ""));
                 firstStart = false;
             }
+
+            // bran added option to invoke the invocation directly
+        	String invokeDirectConfig = Play.configuration.getProperty("action.invocation.direct", "false");
+            if (invokeDirectConfig.equals("false") || invokeDirectConfig.equals("no")) {
+            	invokeDirect = false;
+            }
+            else {
+            	invokeDirect = true;
+            }
+            
+            Logger.info("Shall we skip the executor in invoking actions? %1$s ", invokeDirect);
+
 
             // We made it
             started = true;

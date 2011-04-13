@@ -21,7 +21,9 @@ public class RenderTemplate extends Result {
         if (args.containsKey("out")) {
             throw new RuntimeException("Assertion failed! args shouldn't contain out");
         }
+        long t = System.currentTimeMillis();
         this.content = template.render(args);
+//        System.out.println("render Goovy template " + template.name + " took: " + (System.currentTimeMillis() - t));
     }
 
     public void apply(Request request, Response response) {

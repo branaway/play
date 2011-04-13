@@ -151,8 +151,8 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
 
                 // Streamed output (using response.writeChunk)
                 response.onWriteChunk(new Action<Object>() {
-
-                    public void invoke(Object result) {
+                    @Override
+					public void invoke(Object result) {
                         writeChunk(request, response, ctx, nettyRequest, result);
                     }
                 });
@@ -162,10 +162,13 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
                 if (raw) {
                     copyResponse(ctx, request, response, nettyRequest);
                 } else {
-
-                    // Deleguate to Play framework
-                    Invoker.invoke(new NettyInvocation(request, response, ctx, nettyRequest, e));
-
+                	if (Play.invokeDirect) {
+                		new NettyInvocation(request, response, ctx, nettyRequest, e).run();
+                    }
+                    else {
+                    	// Delegate to Play framework
+                    	Invoker.invoke(new NettyInvocation(request, response, ctx, nettyRequest, e));
+                    }
                 }
 
             } catch (Exception ex) {
