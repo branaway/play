@@ -26,15 +26,18 @@ public class F {
         final CountDownLatch taskLock = new CountDownLatch(1);
         boolean cancelled = false;
 
-        public boolean cancel(boolean mayInterruptIfRunning) {
+        @Override
+		public boolean cancel(boolean mayInterruptIfRunning) {
             return false;
         }
 
-        public boolean isCancelled() {
+        @Override
+		public boolean isCancelled() {
             return false;
         }
 
-        public boolean isDone() {
+        @Override
+		public boolean isDone() {
             return invoked;
         }
 
@@ -42,12 +45,14 @@ public class F {
             return result;
         }
 
-        public V get() throws InterruptedException, ExecutionException {
+        @Override
+		public V get() throws InterruptedException, ExecutionException {
             taskLock.await();
             return result;
         }
 
-        public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+        @Override
+		public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
             taskLock.await(timeout, unit);
             return result;
         }
@@ -55,7 +60,8 @@ public class F {
         boolean invoked = false;
         V result = null;
 
-        public void invoke(V result) {
+        @Override
+		public void invoke(V result) {
             synchronized (this) {
                 if (!invoked) {
                     invoked = true;
@@ -134,7 +140,8 @@ public class F {
             };
             final F.Action<Promise<T>> action = new F.Action<Promise<T>>() {
 
-                public void invoke(Promise<T> completed) {
+                @Override
+				public void invoke(Promise<T> completed) {
                     waitAllLock.countDown();
                     if (waitAllLock.getCount() == 0) {
                         try {
@@ -156,7 +163,8 @@ public class F {
             final Promise<List<Object>> t = waitAll(new Promise[]{tA, tB});
             t.onRedeem(new F.Action<Promise<List<Object>>>() {
 
-                public void invoke(Promise<List<Object>> completed) {
+                @Override
+				public void invoke(Promise<List<Object>> completed) {
                     List<Object> values = completed.getOrNull();
                     result.invoke(new F.Tuple((A) values.get(0), (B) values.get(1)));
                 }
@@ -169,7 +177,8 @@ public class F {
             final Promise<List<Object>> t = waitAll(new Promise[]{tA, tB, tC});
             t.onRedeem(new F.Action<Promise<List<Object>>>() {
 
-                public void invoke(Promise<List<Object>> completed) {
+                @Override
+				public void invoke(Promise<List<Object>> completed) {
                     List<Object> values = completed.getOrNull();
                     result.invoke(new F.T3((A) values.get(0), (B) values.get(1), (C) values.get(2)));
                 }
@@ -182,7 +191,8 @@ public class F {
             final Promise<List<Object>> t = waitAll(new Promise[]{tA, tB, tC, tD});
             t.onRedeem(new F.Action<Promise<List<Object>>>() {
 
-                public void invoke(Promise<List<Object>> completed) {
+                @Override
+				public void invoke(Promise<List<Object>> completed) {
                     List<Object> values = completed.getOrNull();
                     result.invoke(new F.T4((A) values.get(0), (B) values.get(1), (C) values.get(2), (D) values.get(3)));
                 }
@@ -195,7 +205,8 @@ public class F {
             final Promise<List<Object>> t = waitAll(new Promise[]{tA, tB, tC, tD, tE});
             t.onRedeem(new F.Action<Promise<List<Object>>>() {
 
-                public void invoke(Promise<List<Object>> completed) {
+                @Override
+				public void invoke(Promise<List<Object>> completed) {
                     List<Object> values = completed.getOrNull();
                     result.invoke(new F.T5((A) values.get(0), (B) values.get(1), (C) values.get(2), (D) values.get(3), (E) values.get(4)));
                 }
@@ -209,7 +220,8 @@ public class F {
                 final int index = i + 1;
                 ((Promise<Object>) futures[i]).onRedeem(new F.Action<Promise<Object>>() {
 
-                    public void invoke(Promise<Object> completed) {
+                    @Override
+					public void invoke(Promise<Object> completed) {
                         result.invoke(new F.Tuple(index, completed));
                     }
                 });
@@ -223,7 +235,8 @@ public class F {
 
             t.onRedeem(new F.Action<Promise<F.Tuple<Integer, Promise<Object>>>>() {
 
-                public void invoke(Promise<F.Tuple<Integer, Promise<Object>>> completed) {
+                @Override
+				public void invoke(Promise<F.Tuple<Integer, Promise<Object>>> completed) {
                     F.Tuple<Integer, Promise<Object>> value = completed.getOrNull();
                     switch (value._1) {
                         case 1:
@@ -246,7 +259,8 @@ public class F {
 
             t.onRedeem(new F.Action<Promise<F.Tuple<Integer, Promise<Object>>>>() {
 
-                public void invoke(Promise<F.Tuple<Integer, Promise<Object>>> completed) {
+                @Override
+				public void invoke(Promise<F.Tuple<Integer, Promise<Object>>> completed) {
                     F.Tuple<Integer, Promise<Object>> value = completed.getOrNull();
                     switch (value._1) {
                         case 1:
@@ -272,7 +286,8 @@ public class F {
 
             t.onRedeem(new F.Action<Promise<F.Tuple<Integer, Promise<Object>>>>() {
 
-                public void invoke(Promise<F.Tuple<Integer, Promise<Object>>> completed) {
+                @Override
+				public void invoke(Promise<F.Tuple<Integer, Promise<Object>>> completed) {
                     F.Tuple<Integer, Promise<Object>> value = completed.getOrNull();
                     switch (value._1) {
                         case 1:
@@ -301,7 +316,8 @@ public class F {
 
             t.onRedeem(new F.Action<Promise<F.Tuple<Integer, Promise<Object>>>>() {
 
-                public void invoke(Promise<F.Tuple<Integer, Promise<Object>>> completed) {
+                @Override
+				public void invoke(Promise<F.Tuple<Integer, Promise<Object>>> completed) {
                     F.Tuple<Integer, Promise<Object>> value = completed.getOrNull();
                     switch (value._1) {
                         case 1:
@@ -333,7 +349,8 @@ public class F {
 
             final F.Action<Promise<T>> action = new F.Action<Promise<T>>() {
 
-                public void invoke(Promise<T> completed) {
+                @Override
+				public void invoke(Promise<T> completed) {
                     synchronized (this) {
                         if (result.isDone()) {
                             return;
