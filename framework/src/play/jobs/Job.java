@@ -64,7 +64,8 @@ public class Job<V> extends Invoker.Invocation implements Callable<V> {
     public Promise<V> now() {
         final Promise<V> smartFuture = new Promise<V>();
         JobsPlugin.executor.submit(new Callable<V>() {
-            public V call() throws Exception {
+            @Override
+			public V call() throws Exception {
                 V result =  Job.this.call();
                 smartFuture.invoke(result);
                 return result;
@@ -92,7 +93,8 @@ public class Job<V> extends Invoker.Invocation implements Callable<V> {
 
         JobsPlugin.executor.schedule(new Callable<V>() {
 
-            public V call() throws Exception {
+            @Override
+			public V call() throws Exception {
                 V result =  Job.this.call();
                 smartFuture.invoke(result);
                 return result;
@@ -191,7 +193,8 @@ public class Job<V> extends Invoker.Invocation implements Callable<V> {
         // To archieve this we create a lazy proxy for our FakeRequestCreator.
         // Our initialization is executed the first time any code tries to access our request..
         final Http.Request lazyRequest = (Http.Request)Enhancer.create(Http.Request.class, new LazyLoader() {
-            public Object loadObject() throws Exception {
+            @Override
+			public Object loadObject() throws Exception {
                 // someone is trying to access our Request-object. We must
                 // initialize it..
                 String applicationBaseUrl = Play.configuration.getProperty(

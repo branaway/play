@@ -913,7 +913,7 @@ public class Controller implements ControllerSupport, LocalVariablesSupport {
         if(future != null) {
             Request.current().args.put(ActionInvoker.F, future);
         } else if(Request.current().args.containsKey(ActionInvoker.F)) {
-            // Since the continuation will restart in this code that isn't intstrumented by javaflow,
+            // Since the continuation will restart in this code that isn't instrumented by javaflow,
             // we need to reset the state manually.
             StackRecorder.get().isCapturing = false;
             StackRecorder.get().isRestoring = false;

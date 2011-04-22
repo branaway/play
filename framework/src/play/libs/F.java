@@ -455,7 +455,7 @@ public class F {
 
         void notifyNewEvent() {
             T value = events.peek();
-            System.out.println("VALUE :" + value);
+//            System.out.println("VALUE :" + value);
             for (Promise<T> task : waiting) {
                 task.invoke(value);
             }

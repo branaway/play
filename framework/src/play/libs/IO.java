@@ -11,6 +11,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.io.Reader;
 import java.io.StringWriter;
 import java.util.List;
 import java.util.Properties;
@@ -32,13 +33,9 @@ public class IO {
     public static Properties readUtf8Properties(InputStream is) {
         Properties properties = new OrderSafeProperties();
         try {
-            properties.load(is);
-            for (Object key : properties.keySet()) {
-                String value = properties.getProperty(key.toString());
-                String goodValue = new String(value.getBytes("iso8859-1"), "utf-8");
-                properties.setProperty(key.toString(), goodValue);
-            }
-            is.close();
+        	Reader r = new InputStreamReader(is, "UTF-8");
+            properties.load(r);
+            r.close();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

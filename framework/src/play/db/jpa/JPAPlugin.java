@@ -57,6 +57,7 @@ import play.utils.Utils;
 public class JPAPlugin extends PlayPlugin {
 
     public static boolean autoTxs = true;
+	private boolean enabled = true;
 
     @Override
     @SuppressWarnings("unchecked")
@@ -98,6 +99,14 @@ public class JPAPlugin extends PlayPlugin {
 
     @Override
     public void onApplicationStart() {
+    	// bran: added check for db=null 
+    	String dbprop = Play.configuration.getProperty("db");
+    	if ("null".equals(dbprop)) {
+    		this.enabled  = false;
+    		System.out.println("null db configured. JPAPlugin disabled.");
+    		return;
+    	}
+    	
         if (JPA.entityManagerFactory == null) {
             List<Class> classes = Play.classloader.getAnnotatedClasses(Entity.class);
             if (classes.isEmpty() && Play.configuration.getProperty("jpa.entities", "").equals("")) {
@@ -293,7 +302,9 @@ public class JPAPlugin extends PlayPlugin {
 
     @Override
     public void beforeInvocation() {
-
+    	if (!enabled)
+    		return;
+    	
         if(InvocationContext.current().getAnnotation(NoTransaction.class) != null ) {
             //Called method or class is annotated with @NoTransaction telling us that
             //we should not start a transaction
