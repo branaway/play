@@ -33,9 +33,8 @@ public class IO {
     public static Properties readUtf8Properties(InputStream is) {
         Properties properties = new OrderSafeProperties();
         try {
-        	Reader r = new InputStreamReader(is, "UTF-8");
-            properties.load(r);
-            r.close();
+            properties.load(is);
+            is.close();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

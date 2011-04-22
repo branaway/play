@@ -35,6 +35,22 @@ import play.exceptions.UnexpectedException;
 @MappedSuperclass
 public class JPABase implements Serializable, play.db.Model {
 	private static final long serialVersionUID = -8484463844661198826L;
+    
+    private transient JPAConfig _jpaConfig = null;
+
+    public JPAContext getJPAContext() {
+        if (_jpaConfig==null) {
+            _jpaConfig = getJPAConfig(getClass());
+        }
+        return _jpaConfig.getJPAContext();
+    }
+
+    /**
+     * Returns the correct JPAConfig used to manage this entity-class
+     */
+    public static JPAConfig getJPAConfig(Class clazz) {
+        return JPA.getJPAConfig( Entity2JPAConfigResolver.getJPAConfigNameForEntityClass(clazz));
+    }
 
 	@Override
 	public void _save() {
@@ -198,12 +214,12 @@ public class JPABase implements Serializable, play.db.Model {
      * Retrieve the current entityManager
      * @return the current entityManager
      */
-    public static EntityManager em() {
-        return JPA.em();
+    public EntityManager em() {
+        return getJPAContext().em();
     }
 
     public boolean isPersistent() {
-        return JPA.em().contains(this);
+        return em().contains(this);
     }
 
     /**

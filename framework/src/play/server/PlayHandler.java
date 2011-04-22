@@ -102,6 +102,7 @@ import play.mvc.WebSocketInvoker;
 import play.mvc.results.NotFound;
 import play.mvc.results.RenderStatic;
 import play.templates.JavaExtensions;
+import play.utils.HTTP;
 import play.utils.Utils;
 import play.vfs.VirtualFile;
 
@@ -397,9 +398,9 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
         }
 
         if (response.contentType != null) {
-            nettyResponse.setHeader(CONTENT_TYPE, response.contentType + (response.contentType.startsWith("text/") && !response.contentType.contains("charset") ? "; charset=utf-8" : ""));
+            nettyResponse.setHeader(CONTENT_TYPE, response.contentType + (response.contentType.startsWith("text/") && !response.contentType.contains("charset") ? "; charset="+response.encoding : ""));
         } else {
-            nettyResponse.setHeader(CONTENT_TYPE, "text/plain; charset=utf-8");
+            nettyResponse.setHeader(CONTENT_TYPE, "text/plain; charset="+response.encoding);
         }
 
         addToResponse(response, nettyResponse);
@@ -526,21 +527,25 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
             uri = uri.substring(uri.indexOf("/", 9));
         }
 
-        String path = URLDecoder.decode(uri, "UTF-8");
+        String contentType = nettyRequest.getHeader(CONTENT_TYPE);
+
+        // need to get the encoding now - before the Http.Request is created
+        String encoding = Play.defaultWebEncoding;
+        if( contentType != null ) {
+            HTTP.ContentTypeWithEncoding contentTypeEncoding = HTTP.parseContentType( contentType );
+            if( contentTypeEncoding.encoding != null ) {
+                encoding = contentTypeEncoding.encoding;
+            }
+        }
+
+        String path = URLDecoder.decode(uri, encoding);
         if (index != -1) {
-            path = URLDecoder.decode(uri.substring(0, index), "UTF-8");
+            path = URLDecoder.decode(uri.substring(0, index), encoding);
             querystring = uri.substring(index + 1);
         }
 
         String remoteAddress = getRemoteIPAddress(ctx);
         String method = nettyRequest.getMethod().getName();
-        final String nettyContentType = nettyRequest.getHeader(CONTENT_TYPE);
-        String contentType = null;
-        if (nettyContentType != null) {
-            contentType = nettyContentType.split(";")[0].trim().toLowerCase();
-        } else {
-            contentType = "text/html";
-        }
 
         if (nettyRequest.getHeader("X-HTTP-Method-Override") != null) {
             method = nettyRequest.getHeader("X-HTTP-Method-Override").intern();
@@ -676,13 +681,13 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
         String errorHtml = Play.getErrorPage(404, Play.PageFormat.from(format), binding);        
         
         try {
-            ChannelBuffer buf = ChannelBuffers.copiedBuffer(errorHtml.getBytes("utf-8"));
+            ChannelBuffer buf = ChannelBuffers.copiedBuffer(errorHtml.getBytes( Response.current().encoding));
             setContentLength(nettyResponse, errorHtml.length());
             nettyResponse.setContent(buf);
             ChannelFuture writeFuture = ctx.getChannel().write(nettyResponse);
             writeFuture.addListener(ChannelFutureListener.CLOSE);
         } catch (UnsupportedEncodingException fex) {
-            Logger.error(fex, "(utf-8 ?)");
+            Logger.error(fex, "(encoding ?)");
         }
         Logger.trace("serve404: end");
     }
@@ -720,6 +725,8 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
         Request request = Request.current();
         Response response = Response.current();
 
+        String encoding = response.encoding;
+
         try {
             if (!(e instanceof PlayException)) {
                 e = new play.exceptions.UnexpectedException(e);
@@ -756,12 +763,13 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
                 format = "txt";
             }
 
+
             nettyResponse.setHeader("Content-Type", (MimeTypes.getContentType("500." + format, "text/plain")));
             try {
 //                String errorHtml = TemplateLoader.load("errors/500." + format).render(binding);
                 String errorHtml = Play.getErrorPage(500, Play.PageFormat.from(format), binding);
 
-                ChannelBuffer buf = ChannelBuffers.copiedBuffer(errorHtml.getBytes("utf-8"));
+                ChannelBuffer buf = ChannelBuffers.copiedBuffer(errorHtml.getBytes(encoding));
                 setContentLength(nettyResponse, errorHtml.length());
                 nettyResponse.setContent(buf);
                 ChannelFuture writeFuture = ctx.getChannel().write(nettyResponse);
@@ -772,25 +780,25 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
                 Logger.error(ex, "Error during the 500 response generation");
                 try {
                     final String errorHtml = "Internal Error (check logs)";
-                    ChannelBuffer buf = ChannelBuffers.copiedBuffer(errorHtml.getBytes("utf-8"));
+                    ChannelBuffer buf = ChannelBuffers.copiedBuffer(errorHtml.getBytes(encoding));
                     setContentLength(nettyResponse, errorHtml.length());
                     nettyResponse.setContent(buf);
                     ChannelFuture writeFuture = ctx.getChannel().write(nettyResponse);
                     writeFuture.addListener(ChannelFutureListener.CLOSE);
                 } catch (UnsupportedEncodingException fex) {
-                    Logger.error(fex, "(utf-8 ?)");
+                    Logger.error(fex, "(encoding ?)");
                 }
             }
         } catch (Throwable exxx) {
             try {
                 final String errorHtml = "Internal Error (check logs)";
-                ChannelBuffer buf = ChannelBuffers.copiedBuffer(errorHtml.getBytes("utf-8"));
+                ChannelBuffer buf = ChannelBuffers.copiedBuffer(errorHtml.getBytes(encoding));
                 setContentLength(nettyResponse, errorHtml.length());
                 nettyResponse.setContent(buf);
                 ChannelFuture writeFuture = ctx.getChannel().write(nettyResponse);
                 writeFuture.addListener(ChannelFutureListener.CLOSE);
             } catch (Exception fex) {
-                Logger.error(fex, "(utf-8 ?)");
+                Logger.error(fex, "(encoding ?)");
             }
             if (exxx instanceof RuntimeException) {
                 throw (RuntimeException) exxx;
@@ -889,8 +897,8 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
             try {
                 HttpResponse errorResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR);
                 final String errorHtml = "Internal Error (check logs)";
-                ChannelBuffer buf = ChannelBuffers.copiedBuffer(errorHtml.getBytes("utf-8"));
-                 setContentLength(nettyResponse, errorHtml.length());
+                ChannelBuffer buf = ChannelBuffers.copiedBuffer(errorHtml.getBytes(response.encoding));
+                setContentLength(nettyResponse, errorHtml.length());
                 errorResponse.setContent(buf);
                 ChannelFuture future = ctx.getChannel().write(errorResponse);
                 future.addListener(ChannelFutureListener.CLOSE);
@@ -1015,7 +1023,7 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
         public void writeChunk(Object chunk) throws Exception {
             String message = chunk == null ? "" : chunk.toString();
             StringWriter writer = new StringWriter();
-            Integer l = message.getBytes("utf-8").length + 2;
+            Integer l = message.getBytes(Response.current().encoding).length + 2;
             writer.append(Integer.toHexString(l)).append("\r\n").append(message).append("\r\n\r\n");
             nextChunks.offer(writer.toString());
         }

@@ -176,6 +176,11 @@ public class Play {
     public static boolean lazyLoadTemplates = false;
 
     /**
+     * This is used as default encoding everywhere related to the web: request, response, WS
+     */
+    public static String defaultWebEncoding = "utf-8";
+
+    /**
      * Init the framework
      *
 	 * @param root
@@ -459,6 +464,20 @@ public class Play {
                 Logger.warn("No secret key defined. Sessions will not be encrypted");
             }
 
+            // Default web encoding
+            String _defaultWebEncoding = configuration.getProperty("application.web_encoding");
+            if( _defaultWebEncoding != null ) {
+                Logger.info("Using custom default web encoding: " + _defaultWebEncoding);
+                defaultWebEncoding = _defaultWebEncoding;
+                // Must update current response also, since the request/response triggering
+                // this configuration-loading in dev-mode have already been
+                // set up with the previous encoding
+                if( Http.Response.current() != null ) {
+                    Http.Response.current().encoding = _defaultWebEncoding;
+                }
+            }
+
+
             // Try to load all classes
 			Logger.info("Play.start(): start loading all classes.");
 			long t = System.currentTimeMillis();
@@ -704,7 +723,7 @@ public class Play {
             }
         }
         // Auto add special modules
-        if (Play.runingInTestMode()) {
+        if (Play.runningInTestMode()) {
             addModule("_testrunner", new File(Play.frameworkPath, "modules/testrunner"));
         }
         if (Play.mode == Mode.DEV) {
@@ -830,14 +849,14 @@ public class Play {
 		String getErrorPage(int code, PageFormat format, Map<String, Object> params);
 	}
     /**
-     * Returns true if application is runing in test-mode.
+     * Returns true if application is running in test-mode.
      * Test-mode is resolved from the framework id.
      *
      * Your app is running in test-mode if the framwork id (Play.id)
      * is 'test' or 'test-?.*'
      * @return true if testmode
      */
-    public static boolean runingInTestMode(){
+    public static boolean runningInTestMode(){
         return id.matches("test|test-?.*");
     }
 }

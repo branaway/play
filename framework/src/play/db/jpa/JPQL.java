@@ -7,6 +7,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
 import play.Play;
+import play.db.DBConfig;
 import play.db.jpa.GenericModel.JPAQuery;
 import play.mvc.Scope.Params;
 
@@ -17,8 +18,29 @@ import play.mvc.Scope.Params;
  */
 public class JPQL {
 
+    /**
+     * Use JPAConfig.jpql instead
+     */
+    @Deprecated
+    public static JPQL instance = null;
+
+    private final JPAConfig jpaConfig;
+
+    protected JPQL() {
+        // get the default config
+        jpaConfig = JPA.getJPAConfig( DBConfig.defaultDbConfigName);
+    }
+
+    protected JPQL(JPAConfig jpaConfig) {
+        this.jpaConfig = jpaConfig;
+    }
+
+    protected static void createSingleton() {
+        instance = new JPQL();
+    }
+
     public EntityManager em() {
-        return JPA.em();
+        return jpaConfig.getJPAContext().em();
     }
 
     public long count(String entity) {
@@ -244,5 +266,5 @@ public class JPQL {
         prop = (prop.charAt(0) + "").toLowerCase() + prop.substring(1);
         return prop;
     }
-    public static JPQL instance = null;
+
 }
