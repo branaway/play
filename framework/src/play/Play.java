@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -250,7 +251,7 @@ public class Play {
         // Build basic java source path
         VirtualFile appRoot = VirtualFile.open(applicationPath);
         roots.add(appRoot);
-        javaPath = new ArrayList<VirtualFile>(2);
+        javaPath = new CopyOnWriteArrayList<VirtualFile>();
         javaPath.add(appRoot.child("app"));
         javaPath.add(appRoot.child("conf"));
 
@@ -338,8 +339,17 @@ public class Play {
      */
     public static void readConfiguration() {
         configuration = readOneConfigurationFile("application.conf", new HashSet<String>());
+        extractHttpPort();
         // Plugins
         pluginCollection.onConfigurationRead();
+     }
+
+    private static void extractHttpPort() {
+        final String javaCommand = System.getProperty("sun.java.command", "");
+        jregex.Matcher m = new jregex.Pattern(".* --http.port=({port}\\d+)").matcher(javaCommand);
+        if (m.matches()) {
+            configuration.setProperty("http.port", m.group("port"));
+        }
     }
 
 
@@ -707,6 +717,10 @@ public class Play {
         if (localModules.exists() && localModules.isDirectory()) {
             for (File module : localModules.listFiles()) {
                 String moduleName = module.getName();
+		if (moduleName.startsWith(".")) {
+			Logger.info("Module %s is ignored, name starts with a dot", moduleName);
+			continue;
+		}
                 if (moduleName.contains("-")) {
                     moduleName = moduleName.substring(0, moduleName.indexOf("-"));
                 }

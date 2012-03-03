@@ -3,6 +3,7 @@ package play.data.validation;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -17,7 +18,7 @@ import play.exceptions.UnexpectedException;
 
 public class Validation {
 
-    static ThreadLocal<Validation> current = new ThreadLocal<Validation>();
+    public static ThreadLocal<Validation> current = new ThreadLocal<Validation>();
     List<Error> errors = new ArrayList<Error>();
     boolean keep = false;
 
@@ -464,8 +465,12 @@ public class Validation {
         }
     }
 
+    // This does not make a lot of sense to not use Object
+    // And this not backward compatible as previously is was returning an empty
+    // string instead of the object name.
     static String getLocalName(Object o) {
         String[] names = LVEnhancerRuntime.getParamNames().params;
+        System.out.println("getLocalName " + Arrays.toString(names));
         if(names.length > 0 && names[0] != null)
             return names[0];
         return "";

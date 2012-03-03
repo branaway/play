@@ -1,10 +1,24 @@
 package play.libs;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
+import java.io.File;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
 import org.apache.commons.lang.NotImplementedException;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
+
 import play.Logger;
 import play.Play;
 import play.PlayPlugin;
@@ -17,13 +31,8 @@ import play.mvc.Http.Header;
 import play.utils.HTTP;
 import play.utils.NoOpEntityResolver;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.File;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.URLEncoder;
-import java.util.*;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 
 /**
  * Simple HTTP client to make webservices requests.
@@ -236,11 +245,7 @@ public class WS extends PlayPlugin {
         }
 
         public WSRequest(String url, String encoding) {
-            try {
-                this.url = new URI(url).toASCIIString();
-            } catch (Exception e) {
-                this.url = url;
-            }
+            this.url = url;
             this.encoding = encoding;
         }
 
@@ -353,7 +358,7 @@ public class WS extends PlayPlugin {
          * @return the WSRequest for chaining.
          */
         public WSRequest setHeader(String name, String value) {
-            this.headers.put(name, value);
+            this.headers.put( HTTP.fixCaseForHttpHeader(name), value);
             return this;
         }
 
@@ -545,7 +550,7 @@ public class WS extends PlayPlugin {
          * @return the content type of the http response
          */
         public String getContentType() {
-            return getHeader("Content-Type");
+            return getHeader("content-type");
         }
 
         public String getEncoding() {

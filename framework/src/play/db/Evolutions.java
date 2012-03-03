@@ -263,11 +263,12 @@ public class Evolutions extends PlayPlugin {
                     }
                     // Execute script
                     if (runScript) {
-                        for (String sql : (evolution.applyUp ? evolution.sql_up : evolution.sql_down).split(";")) {
-                            if (StringUtils.isEmpty(sql.trim())) {
+                       for (CharSequence sql : new SQLSplitter((evolution.applyUp ? evolution.sql_up : evolution.sql_down))) {
+                            final String s = sql.toString().trim();
+                            if (StringUtils.isEmpty(s)) {
                                 continue;
                             }
-                            execute(sql);
+                            execute(s);
                         }
                     }
                     // Insert into logs
@@ -397,7 +398,7 @@ public class Evolutions extends PlayPlugin {
                     StringBuffer sql_up = new StringBuffer();
                     StringBuffer sql_down = new StringBuffer();
                     StringBuffer current = new StringBuffer();
-                    for (String line : sql.split("\n")) {
+                    for (String line : sql.split("\r?\n")) {
                         if (line.trim().matches("^#.*[!]Ups")) {
                             current = sql_up;
                         } else if (line.trim().matches("^#.*[!]Downs")) {

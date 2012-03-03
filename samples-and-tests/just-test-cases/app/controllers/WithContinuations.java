@@ -16,6 +16,8 @@ import models.*;
 import play.jobs.*;
 
 import play.exceptions.*;
+import play.utils.*;
+import play.data.validation.*;
 
 public class WithContinuations extends Controller {
     
@@ -429,5 +431,51 @@ public class WithContinuations extends Controller {
             }
         });
     }
+
+    public static void echoParamsAfterAwait(String a, Integer b) {
+        String beforeString = "before await: " + getEchoString(a,b);
+        await(1);
+        String afterString = "after await: " + getEchoString(a,b);
+        
+        System.out.println("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n" + beforeString + "\n" + afterString);
+        renderText(beforeString + "\n" + afterString);
+    }
+
+    private static String getEchoString(String a, Integer b) {
+        return "a: " + a + " b: " + b + " params[a]: " + Utils.join(params.getAll("a"),",") + " params[b]: " + Utils.join(params.getAll("b"), ",");
+    }
+    
+    
+    private static List<String> getErrorStringList(List<play.data.validation.Error> errorList) {
+        List<String> list = new ArrayList<String>();
+        for ( play.data.validation.Error e : errorList ) {
+            list.add(e.getKey()+"="+e.message());
+        }
+        return list;
+    }
+    
+    public static class SomeBean {
+        @Required
+        public String prop;
+    }
+    
+    public static void validationAndAwait(@Required String a, Integer b) {
+        validation.addError("b", "someError");
+        String beforeErrors = Utils.join(getErrorStringList(validation.errors()), ",");
+        await(1);
+        SomeBean sb = new SomeBean();
+        validation.valid(sb);
+        String afterErrors = Utils.join(getErrorStringList(validation.errors()), ",");
+        renderText("beforeErrors: " + beforeErrors + " afterErrors: " + afterErrors);
+    }
+    
+    public static void paramsLocalVariableTracerAndAwait(int a) {
+        int aa = a;
+        await("1s");
+        render(a,aa);
+        
+    }
+    
+    
 }
 

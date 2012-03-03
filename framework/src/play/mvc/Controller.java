@@ -25,6 +25,7 @@ import play.classloading.enhancers.LVEnhancer.LVEnhancerRuntime;
 import play.classloading.enhancers.LVEnhancer.MethodExecution;
 import play.data.binding.Unbinder;
 import play.data.validation.Validation;
+import play.data.validation.ValidationPlugin;
 import play.exceptions.*;
 import play.libs.Time;
 import play.mvc.Http.Request;
@@ -939,6 +940,18 @@ public class Controller implements ControllerSupport {
             Scope.RenderArgs renderArgs = (Scope.RenderArgs) Request.current().args.remove(ActionInvoker.CONTINUATIONS_STORE_RENDER_ARGS);
             Scope.RenderArgs.current.set( renderArgs);
 
+            // Params
+            // We know that the params are partially reprocessed during awake(Before now), but here we restore the correct values as
+            // they where when we performed the await();
+            Map params = (Map) Request.current().args.remove(ActionInvoker.CONTINUATIONS_STORE_PARAMS);
+            Scope.Params.current().all().clear();
+            Scope.Params.current().all().putAll(params);
+
+            // Validations
+            Validation validation = (Validation) Request.current().args.remove(ActionInvoker.CONTINUATIONS_STORE_VALIDATIONS);
+            Validation.current.set(validation);
+            ValidationPlugin.keys.set( (Map<Object, String>) Request.current().args.remove(ActionInvoker.CONTINUATIONS_STORE_VALIDATIONPLUGIN_KEYS) );
+
         } else {
             // we are storing before suspend
 
@@ -949,6 +962,16 @@ public class Controller implements ControllerSupport {
 
             // renderArgs
             Request.current().args.put(ActionInvoker.CONTINUATIONS_STORE_RENDER_ARGS, Scope.RenderArgs.current());
+
+             // Params
+             // Store the actual params values so we can restore the exact same state when awaking.
+             Request.current().args.put(ActionInvoker.CONTINUATIONS_STORE_PARAMS, new HashMap(Scope.Params.current().data));
+
+            // Validations
+            Request.current().args.put(ActionInvoker.CONTINUATIONS_STORE_VALIDATIONS, Validation.current());
+            Request.current().args.put(ActionInvoker.CONTINUATIONS_STORE_VALIDATIONPLUGIN_KEYS, ValidationPlugin.keys.get());
+
+
         }
     }
 

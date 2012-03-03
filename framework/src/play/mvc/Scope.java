@@ -1,6 +1,7 @@
 package play.mvc;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.HashMap;
@@ -66,7 +67,9 @@ public class Scope {
                 return;
             }
             if (out.isEmpty()) {
-                Http.Response.current().setCookie(COOKIE_PREFIX + "_FLASH", "", null, "/", 0, COOKIE_SECURE);
+                if(Http.Request.current().cookies.containsKey(COOKIE_PREFIX + "_FLASH") || !SESSION_SEND_ONLY_IF_CHANGED) {
+                    Http.Response.current().setCookie(COOKIE_PREFIX + "_FLASH", "", null, "/", 0, COOKIE_SECURE);
+                }
                 return;
             }
             try {
@@ -254,7 +257,9 @@ public class Scope {
             }
             if (isEmpty()) {
                 // The session is empty: delete the cookie
-                Http.Response.current().setCookie(COOKIE_PREFIX + "_SESSION", "", null, "/", 0, COOKIE_SECURE, SESSION_HTTPONLY);
+                if(Http.Request.current().cookies.containsKey(COOKIE_PREFIX + "_SESSION") || !SESSION_SEND_ONLY_IF_CHANGED) {
+                    Http.Response.current().setCookie(COOKIE_PREFIX + "_SESSION", "", null, "/", 0, COOKIE_SECURE, SESSION_HTTPONLY);
+                }
                 return;
             }
             try {
@@ -353,7 +358,7 @@ public class Scope {
             return current.get();
         }
         boolean requestIsParsed;
-        private Map<String, String[]> data = new HashMap<String, String[]>();
+        public Map<String, String[]> data = new HashMap<String, String[]>();
 
         boolean rootParamsNodeIsGenerated = false;
         private RootParamNode rootParamNode = null;
@@ -365,6 +370,10 @@ public class Scope {
                 rootParamsNodeIsGenerated = true;
             }
             return rootParamNode;
+        }
+
+        public RootParamNode getRootParamNodeFromRequest() {
+            return ParamNode.convert(data);
         }
 
         public void checkAndParse() {
@@ -423,10 +432,9 @@ public class Scope {
 
         @SuppressWarnings("unchecked")
         public <T> T get(String key, Class<T> type) {
-            checkAndParse();
             try {
                 // TODO: This is used by the test, but this is not the most convenient.
-                return (T) Binder.bind(rootParamNode, key, type, type, null);
+                return (T) Binder.bind(getRootParamNode(), key, type, type, null);
             } catch (Exception e) {
                 Validation.addError(key, "validation.invalid");
                 return null;
@@ -435,15 +443,12 @@ public class Scope {
 
         @SuppressWarnings("unchecked")
         public <T> T get(Annotation[] annotations, String key, Class<T> type) {
-            throw new RuntimeException("method not yet supported after refactoring Binding-code");
-            /**
             try {
                 return (T) Binder.directBind(annotations, get(key), type, null);
             } catch (Exception e) {
                 Validation.addError(key, "validation.invalid");
                 return null;
             }
-             */
         }
 
         public boolean _contains(String key) {
