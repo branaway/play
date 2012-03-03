@@ -1,4 +1,16 @@
-note: this fork contains a few patches that I believe would make using Play in dev mode faster and better in showing errors. -- branaway
+Note: this fork contains a few patches that I believe would make using Play in dev mode faster and better in showing errors. -- branaway
+
+To synch with the original play repo, I have added a remote called upstream that is mapped to git://github.com/playframework/play, which is the play 1.x repo. 
+
+then:
+
+$ git fetch upstream
+$ git merge upstream/master
+
+After a successful merge, 
+
+$ git push origin master
+
 
 
 h1. Welcome to Play framework
