@@ -34,6 +34,11 @@ import java.util.Stack;
  */
 public class Evolutions extends PlayPlugin {
 
+	/**
+	 * Indicates if evolutions is disabled in application.conf ("evolutions.enabled" property)
+	 */
+	private boolean disabled = false;
+	
     protected static ComboPooledDataSource getDatasource() {
         DBConfig dbConfig = DB.getDBConfig(DBConfig.defaultDbConfigName, true);
         if (dbConfig==null) {
@@ -54,6 +59,7 @@ public class Evolutions extends PlayPlugin {
         /** Start the DB plugin **/
         Play.id = System.getProperty("play.id");
         Play.applicationPath = new File(System.getProperty("application.path"));
+        Play.guessFrameworkPath();
         Play.readConfiguration();
         Play.javaPath = new ArrayList<VirtualFile>();
         Play.classes = new ApplicationClasses();
@@ -193,6 +199,9 @@ public class Evolutions extends PlayPlugin {
 
     @Override
     public void beforeInvocation() {
+        if(disabled || Play.mode.isProd()) {
+            return;
+        }
         try {
             checkEvolutionsState();
         } catch (InvalidDatabaseRevision e) {
@@ -207,7 +216,9 @@ public class Evolutions extends PlayPlugin {
 
     @Override
     public void onApplicationStart() {
-        if (Play.mode.isProd()) {
+    	disabled = "false".equals(Play.configuration.getProperty("evolutions.enabled", "true"));
+    	
+        if (! disabled && Play.mode.isProd()) {
             try {
                 checkEvolutionsState();
             } catch (InvalidDatabaseRevision e) {
@@ -218,7 +229,7 @@ public class Evolutions extends PlayPlugin {
             }
         }
     }
-
+    
     public static synchronized void resolve(int revision) {
         try {
             execute("update play_evolutions set state = 'applied' where state = 'applying_up' and id = " + revision);
@@ -252,11 +263,12 @@ public class Evolutions extends PlayPlugin {
                     }
                     // Execute script
                     if (runScript) {
-                        for (String sql : (evolution.applyUp ? evolution.sql_up : evolution.sql_down).split(";")) {
-                            if (StringUtils.isEmpty(sql.trim())) {
+                       for (CharSequence sql : new SQLSplitter((evolution.applyUp ? evolution.sql_up : evolution.sql_down))) {
+                            final String s = sql.toString().trim();
+                            if (StringUtils.isEmpty(s)) {
                                 continue;
                             }
-                            execute(sql);
+                            execute(s);
                         }
                     }
                     // Insert into logs
@@ -377,13 +389,16 @@ public class Evolutions extends PlayPlugin {
         if (evolutionsDirectory.exists()) {
             for (File evolution : evolutionsDirectory.listFiles()) {
                 if (evolution.getName().matches("^[0-9]+[.]sql$")) {
-                    Logger.trace("Loading evolution %s", evolution);
+                    if (Logger.isTraceEnabled()) {
+                        Logger.trace("Loading evolution %s", evolution);
+                    }
+
                     int version = Integer.parseInt(evolution.getName().substring(0, evolution.getName().indexOf(".")));
                     String sql = IO.readContentAsString(evolution);
                     StringBuffer sql_up = new StringBuffer();
                     StringBuffer sql_down = new StringBuffer();
                     StringBuffer current = new StringBuffer();
-                    for (String line : sql.split("\n")) {
+                    for (String line : sql.split("\r?\n")) {
                         if (line.trim().matches("^#.*[!]Ups")) {
                             current = sql_up;
                         } else if (line.trim().matches("^#.*[!]Downs")) {

@@ -48,24 +48,41 @@ public class F {
         @Override
 		public V get() throws InterruptedException, ExecutionException {
             taskLock.await();
+            if (exception != null) {
+                // The result of the promise is an exception - throw it
+                throw new ExecutionException(exception);
+            }
             return result;
         }
 
         @Override
 		public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
             taskLock.await(timeout, unit);
+            if (exception != null) {
+                // The result of the promise is an exception - throw it
+                throw new ExecutionException(exception);
+            }
             return result;
         }
         List<F.Action<Promise<V>>> callbacks = new ArrayList<F.Action<Promise<V>>>();
         boolean invoked = false;
         V result = null;
+        Throwable exception = null;
 
-        @Override
-		public void invoke(V result) {
+        public void invoke(V result) {
+            invokeWithResultOrException(result, null);
+        }
+
+        public void invokeWithException(Throwable t) {
+            invokeWithResultOrException(null, t);
+        }
+
+        protected void invokeWithResultOrException(V result, Throwable t) {
             synchronized (this) {
                 if (!invoked) {
                     invoked = true;
                     this.result = result;
+                    this.exception = t;
                     taskLock.countDown();
                 } else {
                     return;
@@ -455,7 +472,6 @@ public class F {
 
         void notifyNewEvent() {
             T value = events.peek();
-//            System.out.println("VALUE :" + value);
             for (Promise<T> task : waiting) {
                 task.invoke(value);
             }
@@ -578,7 +594,6 @@ public class F {
                 }
                 if (filter.trigger()) {
                     it.remove();
-                    break;
                 }
             }
         }

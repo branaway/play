@@ -7,7 +7,9 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import play.classloading.ApplicationClasses.ApplicationClass;
+import play.data.binding.RootParamNode;
 import play.db.Model;
 import play.mvc.Http.Request;
 import play.mvc.Http.Response;
@@ -35,22 +37,53 @@ public abstract class PlayPlugin implements Comparable<PlayPlugin> {
     public void onLoad() {
     }
 
+    public boolean compileSources() {
+        return false;
+    }
+
+    /**
+     * Run a test class
+     */
     public TestResults runTest(Class<BaseTest> clazz) {
         return null;
     }
 
     /**
-     * Called when play need to bind a Java object from HTTP params
+     * Use method using RootParamNode instead
+     * @return
      */
+    @Deprecated
     public Object bind(String name, Class clazz, Type type, Annotation[] annotations, Map<String, String[]> params) {
         return null;
     }
 
     /**
-     * Called when play need to bind an existing Java object from HTTP params
+     * Called when play need to bind a Java object from HTTP params.
+     *
+     * When overriding this method, do not call super impl.. super impl is calling old bind method
+     * to be backward compatible.
      */
+    public Object bind( RootParamNode rootParamNode, String name, Class<?> clazz, Type type, Annotation[] annotations) {
+        // call old method to be backward compatible
+        return bind(name, clazz, type, annotations, rootParamNode.originalParams);
+    }
+
+    /**
+     * Use bindBean instead
+     */
+    @Deprecated
     public Object bind(String name, Object o, Map<String, String[]> params) {
         return null;
+    }
+
+    /**
+     * Called when play need to bind an existing Java object from HTTP params.
+     * When overriding this method, DO NOT call the super method, since its default impl is to
+     * call the old bind method to be backward compatible.
+     */
+    public Object bindBean(RootParamNode rootParamNode, String name, Object bean) {
+        // call old method to be backward compatible.
+        return bind(name, bean, rootParamNode.originalParams);
     }
 
     public Map<String, Object> unBind(Object src, String name) {
@@ -67,14 +100,14 @@ public abstract class PlayPlugin implements Comparable<PlayPlugin> {
     }
 
     /**
-     * Retun the plugin status
+     * Return the plugin status
      */
     public String getStatus() {
         return null;
     }
 
     /**
-     * Retun the plugin status in JSON format
+     * Return the plugin status in JSON format
      */
     public JsonObject getJsonStatus() {
         return null;
@@ -107,7 +140,7 @@ public abstract class PlayPlugin implements Comparable<PlayPlugin> {
     }
 
     /**
-     * Let a chance to this plugin to manage a static ressource
+     * Let a chance to this plugin to manage a static resource
      * @param request The Play request
      * @param response The Play response
      * @return true if this plugin has managed this request
@@ -131,8 +164,16 @@ public abstract class PlayPlugin implements Comparable<PlayPlugin> {
     }
 
     /**
+     * It's time for the plugin to detect changes.
+     * Throw an exception is the application must be reloaded.
+     */
+    public boolean detectClassesChange() {
+        return false;
+    }
+
+    /**
      * Called at application start (and at each reloading)
-     * Time to start statefull things.
+     * Time to start stateful things.
      */
     public void onApplicationStart() {
     }
@@ -145,7 +186,7 @@ public abstract class PlayPlugin implements Comparable<PlayPlugin> {
 
     /**
      * Called at application stop (and before each reloading)
-     * Time to shutdown statefull things.
+     * Time to shutdown stateful things.
      */
     public void onApplicationStop() {
     }
@@ -211,7 +252,7 @@ public abstract class PlayPlugin implements Comparable<PlayPlugin> {
     }
 
     /**
-     * Called when the application.cond has been read.
+     * Called when the application.conf has been read.
      */
     public void onConfigurationRead() {
     }
@@ -239,9 +280,19 @@ public abstract class PlayPlugin implements Comparable<PlayPlugin> {
     }
 
     /**
+     * Override to provide additional mime types from your plugin. These mimetypes get priority over
+     * the default framework mimetypes but not over the application's configuration.
+     * @return a Map from extensions (without dot) to mimetypes
+     */
+    public Map<String, String> addMimeTypes() {
+        return new HashMap<String, String>();
+    }
+
+    /**
      * Let a chance to the plugin to compile it owns classes.
      * Must be added to the mutable list.
      */
+    @Deprecated
     public void compileAll(List<ApplicationClass> classes) {
     }
 

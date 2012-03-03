@@ -125,4 +125,48 @@ public class RestTest extends UnitTest {
         
     }
 
+    @Test
+    public void testEncodingEcho() {
+        // verify that we have no encoding regression bugs related to raw urls and params
+        if ( play.Play.defaultWebEncoding.equalsIgnoreCase("utf-8") ) {
+            assertEquals("æøå|id|æøå|body||b|æøå|a|æøå|a|x", WS.url("http://localhost:9003/encoding/echo/%C3%A6%C3%B8%C3%A5?a=%C3%A6%C3%B8%C3%A5&a=x&b=%C3%A6%C3%B8%C3%A5").get().getString());
+        }
+        assertEquals("abc|id|abc|body||b|æøå|a|æøå|a|x", WS.url("http://localhost:9003/encoding/echo/abc?a=æøå&a=x&b=æøå").get().getString());
+        assertEquals("æøå|id|æøå|body||b|æøå|a|æøå|a|x", WS.url("http://localhost:9003/encoding/echo/%s?a=æøå&a=x&b=æøå", "æøå").get().getString());
+        assertEquals("æøå|id|æøå|body||b|æøå|a|æøå|a|x", WS.url("http://localhost:9003/encoding/echo/%s?", "æøå").setParameter("a",new String[]{"æøå","x"}).setParameter("b","æøå").get().getString());
+        // test with value including '='
+        assertEquals("abc|id|abc|body||b|æøå=|a|æøå|a|x", WS.url("http://localhost:9003/encoding/echo/abc?a=æøå&a=x&b=æøå=").get().getString());
+        //test with 'flag'
+        assertEquals("abc|id|abc|body||b|flag|a|flag", WS.url("http://localhost:9003/encoding/echo/abc?a&b=").get().getString());
+        
+        // verify url ending with only ? or none
+        assertEquals("abc|id|abc|body|", WS.url("http://localhost:9003/encoding/echo/abc?").get().getString());
+        assertEquals("abc|id|abc|body|", WS.url("http://localhost:9003/encoding/echo/abc").get().getString());
+    }
+
+    @Test
+    public void testWSAsyncWithException() {
+        String url = "http://localhost:9003/SlowResponseTestController/testWSAsyncWithException";
+        String res = WS.url(url).get().getString();
+        assertEquals("ok", res);
+    }
+
+    // Test our "Denial of Service through hash table multi-collisions"-protection
+    @Test
+    public void testPostHashCollisionProtection() {
+        // generate some post data with 1000 params
+        // PS: these keys does not have hash-colition, but our protection is only looking at the count
+        Map<String, Object> manyParams = new HashMap<String, Object>();
+        for ( int i=0; i < 1000; i++) {
+            manyParams.put("a"+i, ""+i);
+        }
+
+        assertEquals("POST", WS.url("http://localhost:9003/Rest/echoHttpMethod").params(manyParams).post().getString());
+
+        // now add one more to push the limit
+        manyParams.put("anotherone", "x");
+        // 413 Request Entity Too Large
+        assertEquals(413, (int)WS.url("http://localhost:9003/Rest/echoHttpMethod").params(manyParams).post().getStatus());
+    }
+
 }

@@ -7,8 +7,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Stack;
 import java.util.concurrent.Future;
 
 import org.w3c.dom.Document;
@@ -16,16 +16,17 @@ import org.w3c.dom.Document;
 import play.Invoker.Suspend;
 import play.Logger;
 import play.Play;
+import play.classloading.ApplicationClasses;
+import play.classloading.enhancers.ContinuationEnhancer;
 import play.classloading.enhancers.ControllersEnhancer.ControllerInstrumentation;
 import play.classloading.enhancers.ControllersEnhancer.ControllerSupport;
-import play.classloading.enhancers.LocalvariablesNamesEnhancer.LocalVariablesNamesTracer;
-import play.classloading.enhancers.LocalvariablesNamesEnhancer.LocalVariablesSupport;
+import play.classloading.enhancers.LVEnhancer;
+import play.classloading.enhancers.LVEnhancer.LVEnhancerRuntime;
+import play.classloading.enhancers.LVEnhancer.MethodExecution;
 import play.data.binding.Unbinder;
 import play.data.validation.Validation;
-import play.exceptions.NoRouteFoundException;
-import play.exceptions.PlayException;
-import play.exceptions.TemplateNotFoundException;
-import play.exceptions.UnexpectedException;
+import play.data.validation.ValidationPlugin;
+import play.exceptions.*;
 import play.libs.Time;
 import play.mvc.Http.Request;
 import play.mvc.Router.ActionDefinition;
@@ -58,13 +59,15 @@ import org.apache.commons.javaflow.Continuation;
 import org.apache.commons.javaflow.bytecode.StackRecorder;
 import play.libs.F;
 
+import javax.management.RuntimeErrorException;
+
 /**
  * Application controller support: The controller receives input and initiates a response by making calls on model objects.
  *
  * This is the class that your controllers should extend.
  * bran: this Groovy based old system is deprecated in favor of JapidController 
  */
-public class Controller implements ControllerSupport, LocalVariablesSupport {
+public class Controller implements ControllerSupport {
 
     /**
      * The current HTTP request: the message sent by the client to the server.
@@ -550,7 +553,7 @@ public class Controller implements ControllerSupport, LocalVariablesSupport {
         try {
             Map<String, Object> newArgs = new HashMap<String, Object>(args.length);
             Method actionMethod = (Method) ActionInvoker.getActionMethod(action)[1];
-            String[] names = (String[]) actionMethod.getDeclaringClass().getDeclaredField("$" + actionMethod.getName() + LocalVariablesNamesTracer.computeMethodHash(actionMethod.getParameterTypes())).get(null);
+            String[] names = (String[]) actionMethod.getDeclaringClass().getDeclaredField("$" + actionMethod.getName() + LVEnhancer.computeMethodHash(actionMethod.getParameterTypes())).get(null);
             for (int i = 0; i < names.length && i < args.length; i++) {
                 Annotation[] annotations = actionMethod.getParameterAnnotations()[i];
                 boolean isDefault = false;
@@ -629,11 +632,11 @@ public class Controller implements ControllerSupport, LocalVariablesSupport {
     protected static void renderTemplate(String templateName, Object... args) {
         // Template datas
         Map<String, Object> templateBinding = new HashMap<String, Object>(16);
-        for (Object o : args) {
-            List<String> names = LocalVariablesNamesTracer.getAllLocalVariableNames(o);
-            for (String name : names) {
-                templateBinding.put(name, o);
-            }
+        String[] names = LVEnhancerRuntime.getParamNames().varargs;
+        if(args != null && args.length > 0 && names == null)
+            throw new UnexpectedException("no varargs names while args.length > 0 !");
+        for(int i = 0; i < args.length; i++) {
+            templateBinding.put(names[i], args[i]);
         }
         renderTemplate(templateName, templateBinding);
     }
@@ -686,7 +689,7 @@ public class Controller implements ControllerSupport, LocalVariablesSupport {
      */
     protected static void render(Object... args) {
         String templateName = null;
-        if (args.length > 0 && args[0] instanceof String && LocalVariablesNamesTracer.getAllLocalVariableNames(args[0]).isEmpty()) {
+        if (args.length > 0 && args[0] instanceof String && LVEnhancerRuntime.getParamNames().mergeParamsAndVarargs()[0] == null) {
             templateName = args[0].toString();
         } else {
             templateName = template();
@@ -778,20 +781,17 @@ public class Controller implements ControllerSupport, LocalVariablesSupport {
         return Http.Request.current().controllerClass;
     }
 
-//    /**
-//     * Call the parent action adding this objects to the params scope
-//     */
-//    @Deprecated
-//    protected static void parent(Object... args) {
-//        Map<String, Object> map = new HashMap<String, Object>(16);
-//        for (Object o : args) {
-//            List<String> names = LocalVariablesNamesTracer.getAllLocalVariableNames(o);
-//            for (String name : names) {
-//                map.put(name, o);
-//            }
-//        }
-//        parent(map);
-//    }
+    /**
+     * Call the parent action adding this objects to the params scope
+     */
+    @Deprecated
+    protected static void parent(Object... args) {
+        Map<String, Object> map = new HashMap<String, Object>(16);
+        String[] names = LVEnhancerRuntime.getParamNames().mergeParamsAndVarargs();
+        for(int i = 0; i < names.length; i++)
+            map.put(names[i], args[i]);
+        parent(map);
+    }
 
     /**
      * Call the parent method
@@ -899,17 +899,94 @@ public class Controller implements ControllerSupport, LocalVariablesSupport {
 
     protected static void await(int millis) {
         Request.current().isNew = false;
+        verifyContinuationsEnhancement();
+        storeOrRestoreDataStateForContinuations(null);
         Continuation.suspend(millis);
+    }
+
+    /**
+     * Used to store data before Continuation suspend and restore after.
+     *
+     * If isRestoring == null, the method will try to resolve it.
+     *
+     * important: when using isRestoring == null you have to KNOW that continuation suspend
+     * is going to happen and that this method is called twice for this single
+     * continuation suspend operation for this specific request.
+     *
+     * @param isRestoring true if restoring, false if storing, and null if you don't know
+     */
+    private static void storeOrRestoreDataStateForContinuations(Boolean isRestoring) {
+
+        if (isRestoring==null) {
+            // Sometimes, due to how continuations suspends/restarts the code, we do not
+            // know when calling this method if we're suspending or restoring.
+
+            final String continuationStateKey = "__storeOrRestoreDataStateForContinuations_started";
+            if ( Http.Request.current().args.remove(continuationStateKey)!=null ) {
+                isRestoring = true;
+            } else {
+                Http.Request.current().args.put(continuationStateKey, true);
+                isRestoring = false;
+            }
+        }
+
+        if (isRestoring) {
+            //we are restoring after suspend
+
+            // localVariablesState
+            Stack<MethodExecution> currentMethodExecutions = (Stack<MethodExecution>) Request.current().args.get(ActionInvoker.CONTINUATIONS_STORE_LOCAL_VARIABLE_NAMES);
+            if(currentMethodExecutions != null)
+                LVEnhancer.LVEnhancerRuntime.reinitRuntime(currentMethodExecutions);
+
+            // renderArgs
+            Scope.RenderArgs renderArgs = (Scope.RenderArgs) Request.current().args.remove(ActionInvoker.CONTINUATIONS_STORE_RENDER_ARGS);
+            Scope.RenderArgs.current.set( renderArgs);
+
+            // Params
+            // We know that the params are partially reprocessed during awake(Before now), but here we restore the correct values as
+            // they where when we performed the await();
+            Map params = (Map) Request.current().args.remove(ActionInvoker.CONTINUATIONS_STORE_PARAMS);
+            Scope.Params.current().all().clear();
+            Scope.Params.current().all().putAll(params);
+
+            // Validations
+            Validation validation = (Validation) Request.current().args.remove(ActionInvoker.CONTINUATIONS_STORE_VALIDATIONS);
+            Validation.current.set(validation);
+            ValidationPlugin.keys.set( (Map<Object, String>) Request.current().args.remove(ActionInvoker.CONTINUATIONS_STORE_VALIDATIONPLUGIN_KEYS) );
+
+        } else {
+            // we are storing before suspend
+
+            // localVariablesState
+            Stack<MethodExecution> currentMethodExecutions = new Stack<LVEnhancer.MethodExecution>();
+            currentMethodExecutions.addAll(LVEnhancer.LVEnhancerRuntime.getCurrentMethodParams());
+            Request.current().args.put(ActionInvoker.CONTINUATIONS_STORE_LOCAL_VARIABLE_NAMES, currentMethodExecutions);
+
+            // renderArgs
+            Request.current().args.put(ActionInvoker.CONTINUATIONS_STORE_RENDER_ARGS, Scope.RenderArgs.current());
+
+             // Params
+             // Store the actual params values so we can restore the exact same state when awaking.
+             Request.current().args.put(ActionInvoker.CONTINUATIONS_STORE_PARAMS, new HashMap(Scope.Params.current().data));
+
+            // Validations
+            Request.current().args.put(ActionInvoker.CONTINUATIONS_STORE_VALIDATIONS, Validation.current());
+            Request.current().args.put(ActionInvoker.CONTINUATIONS_STORE_VALIDATIONPLUGIN_KEYS, ValidationPlugin.keys.get());
+
+
+        }
     }
 
     protected static void await(int millis, F.Action0 callback) {
         Request.current().isNew = false;
         Request.current().args.put(ActionInvoker.A, callback);
+        Request.current().args.put(ActionInvoker.CONTINUATIONS_STORE_RENDER_ARGS, Scope.RenderArgs.current());
         throw new Suspend(millis);
     }
 
     @SuppressWarnings("unchecked")
     protected static <T> T await(Future<T> future) {
+
         if(future != null) {
             Request.current().args.put(ActionInvoker.F, future);
         } else if(Request.current().args.containsKey(ActionInvoker.F)) {
@@ -919,8 +996,10 @@ public class Controller implements ControllerSupport, LocalVariablesSupport {
             StackRecorder.get().isRestoring = false;
             StackRecorder.get().value = null;
             future = (Future<T>)Request.current().args.get(ActionInvoker.F);
+
             // Now reset the Controller invocation context
             ControllerInstrumentation.stopActionCall();
+            storeOrRestoreDataStateForContinuations( true );
         } else {
             throw new UnexpectedException("Lost promise for " + Http.Request.current() + "!");
         }
@@ -933,8 +1012,49 @@ public class Controller implements ControllerSupport, LocalVariablesSupport {
             }
         } else {
             Request.current().isNew = false;
+            verifyContinuationsEnhancement();
+            storeOrRestoreDataStateForContinuations( false );
             Continuation.suspend(future);
             return null;
+        }
+    }
+
+    /**
+     * Verifies that all application-code is properly enhanched.
+     * "application code" is the code on the callstack after leaving actionInvoke into the app, and before reentering Controller.await
+     */
+    private static void verifyContinuationsEnhancement() {
+        // only check in dev mode..
+        if (Play.mode == Play.Mode.PROD) {
+            return;
+        }
+        
+        try {
+            throw new Exception();
+        } catch (Exception e) {
+            boolean haveSeenFirstApplicationClass = false;
+            for (StackTraceElement ste : e.getStackTrace() ) {
+                String className = ste.getClassName();
+
+                if (!haveSeenFirstApplicationClass) {
+                    haveSeenFirstApplicationClass = Play.classes.getApplicationClass(className) != null;
+                    // when haveSeenFirstApplicationClass is set to true, we are entering the user application code..
+                }
+
+                if (haveSeenFirstApplicationClass) {
+                    if (className.startsWith("sun.") || className.startsWith("play.")) {
+                        // we're back into the play framework code...
+                        return ; // done checking
+                    } else {
+                        // is this class enhanched?
+                        boolean enhanced = ContinuationEnhancer.isEnhanced(className);
+                        if (!enhanced) {
+                            throw new ContinuationsException("Cannot use await/continuations when not all application classes on the callstack are properly enhanced. The following class is not enhanced: " + className);
+                        }
+                    }
+                }
+            }
+
         }
     }
 
@@ -942,6 +1062,7 @@ public class Controller implements ControllerSupport, LocalVariablesSupport {
         Request.current().isNew = false;
         Request.current().args.put(ActionInvoker.F, future);
         Request.current().args.put(ActionInvoker.A, callback);
+        Request.current().args.put(ActionInvoker.CONTINUATIONS_STORE_RENDER_ARGS, Scope.RenderArgs.current());
         throw new Suspend(future);
     }
 

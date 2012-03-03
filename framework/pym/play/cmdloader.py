@@ -24,7 +24,7 @@ class CommandLoader:
                     mod = load_python_module(name, self.path)
                     self._load_cmd_from(mod)
                 except:
-                    warnings.warn("!! Warning: could not load core command file" + filename, RuntimeWarning)
+                    warnings.warn("!! Warning: could not load core command file " + filename, RuntimeWarning)
 
     def load_play_module(self, modname):
         commands = os.path.join(modname, "commands.py")
@@ -35,20 +35,21 @@ class CommandLoader:
                 self._load_cmd_from(mod)
             except Exception, e:
                 print '~'
-                print '~ !! Error whileloading %s: %s' % (commands, e)
+                print '~ !! Error while loading %s: %s' % (commands, e)
                 print '~'
                 pass # No command to load in this module
 
     def _load_cmd_from(self, mod):
-        try:
+        if 'COMMANDS' in dir(mod):
             for name in mod.COMMANDS:
-                if name in self.commands:
-                    print "~ Warning: conflict on command " + name
-                self.commands[name] = mod
-            if 'MODULE' in dir(mod):
-                self.modules[mod.MODULE] = mod
-        except Exception:
-            warnings.warn("Warning: error loading command " + name)
+                try:
+                    if name in self.commands:
+                        warnings.warn("Warning: conflict on command " + name)
+                    self.commands[name] = mod
+                except Exception:
+                    warnings.warn("Warning: error loading command " + name)
+        if 'MODULE' in dir(mod):
+            self.modules[mod.MODULE] = mod
 
 def load_python_module(name, location):
     mod_desc = imp.find_module(name, [location])

@@ -94,6 +94,12 @@ public class ApplicationClassloader extends ClassLoader {
 
     // ~~~~~~~~~~~~~~~~~~~~~~~
     public Class<?> loadApplicationClass(String name) {
+
+        Class maybeAlreadyLoaded = findLoadedClass(name);
+        if(maybeAlreadyLoaded != null) {
+            return maybeAlreadyLoaded;
+        }
+
         if (Play.usePrecompiled) {
             try {
                 File file = Play.getFile("precompiled/java/" + name.replace(".", "/") + ".class");
@@ -130,7 +136,11 @@ public class ApplicationClassloader extends ClassLoader {
                 return applicationClass.javaClass;
             }
             byte[] bc = BytecodeCache.getBytecode(name, applicationClass.javaSource);
-            Logger.trace("Compiling code for %s", name);
+
+            if (Logger.isTraceEnabled()) {
+                Logger.trace("Compiling code for %s", name);
+            }
+
             if (!applicationClass.isClass()) {
                 definePackage(applicationClass.getPackage(), null, null, null, null, null, null, null);
             } else {
@@ -143,7 +153,11 @@ public class ApplicationClassloader extends ClassLoader {
                 if (!applicationClass.isClass()) {
                     applicationClass.javaPackage = applicationClass.javaClass.getPackage();
                 }
-                Logger.trace("%sms to load class %s from cache", System.currentTimeMillis() - start, name);
+
+                if (Logger.isTraceEnabled()) {
+                    Logger.trace("%sms to load class %s from cache", System.currentTimeMillis() - start, name);
+                }
+
                 return applicationClass.javaClass;
             }
             if (applicationClass.javaByteCode != null || applicationClass.compile() != null) {
@@ -154,7 +168,11 @@ public class ApplicationClassloader extends ClassLoader {
                 if (!applicationClass.isClass()) {
                     applicationClass.javaPackage = applicationClass.javaClass.getPackage();
                 }
-                Logger.trace("%sms to load class %s", System.currentTimeMillis() - start, name);
+
+                if (Logger.isTraceEnabled()) {
+                    Logger.trace("%sms to load class %s", System.currentTimeMillis() - start, name);
+                }
+
                 return applicationClass.javaClass;
             }
             Play.classes.classes.remove(name);
@@ -405,34 +423,40 @@ public class ApplicationClassloader extends ClassLoader {
                 }
 
             } else {
-                List<ApplicationClass> all = new ArrayList<ApplicationClass>();
 
                 long t= System.currentTimeMillis();
                 
-                // Let's plugins play
-                Play.pluginCollection.compileAll(all);
+                if(!Play.pluginCollection.compileSources()) {
 
-                for (VirtualFile virtualFile : Play.javaPath) {
-                    all.addAll(getAllClasses(virtualFile));
-                }
-                List<String> classNames = new ArrayList<String>();
-                for (int i = 0; i < all.size(); i++) {
-                	ApplicationClass applicationClass = all.get(i);
-                    if (applicationClass != null && !applicationClass.compiled && applicationClass.isClass()) {
-                        classNames.add(all.get(i).name);
+                    List<ApplicationClass> all = new ArrayList<ApplicationClass>();
+
+                    for (VirtualFile virtualFile : Play.javaPath) {
+                        all.addAll(getAllClasses(virtualFile));
                     }
-                }
-                
-                if (classNames.size() > 0) {
-	                System.out.println("start compiling all " + classNames.size() + " classes. ");
+                    List<String> classNames = new ArrayList<String>();
+                    for (int i = 0; i < all.size(); i++) {
+                            ApplicationClass applicationClass = all.get(i);
+                        if (applicationClass != null && !applicationClass.compiled && applicationClass.isClass()) {
+                            classNames.add(all.get(i).name);
+                        }
+                    }
+
+                    // bran: display compilation time
+                    if (classNames.size() > 0) {
+		                System.out.println("start compiling all " + classNames.size() + " classes. ");
+		                
+		                t= System.currentTimeMillis();
+		                Play.classes.compiler.compile(classNames.toArray(new String[classNames.size()]));
+		                System.out.println("compiling took(ms): " + (System.currentTimeMillis() - t));
+	                }
 	                
+	                System.out.println("start loading all " + classNames.size() + " classes. ");
 	                t= System.currentTimeMillis();
-	                Play.classes.compiler.compile(classNames.toArray(new String[classNames.size()]));
-	                System.out.println("compiling took(ms): " + (System.currentTimeMillis() - t));
+
+//                    Play.classes.compiler.compile(classNames.toArray(new String[classNames.size()]));
+
                 }
-                
-                System.out.println("start loading all " + classNames.size() + " classes. ");
-                t= System.currentTimeMillis();
+
                 for (ApplicationClass applicationClass : Play.classes.all()) {
                     Class clazz = loadApplicationClass(applicationClass.name);
                     if (clazz != null) {

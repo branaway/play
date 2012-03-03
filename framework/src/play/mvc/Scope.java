@@ -1,6 +1,7 @@
 package play.mvc;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.HashMap;
@@ -12,6 +13,8 @@ import java.util.regex.Pattern;
 import play.Logger;
 import play.Play;
 import play.data.binding.Binder;
+import play.data.binding.ParamNode;
+import play.data.binding.RootParamNode;
 import play.data.parsing.DataParser;
 import play.data.parsing.TextParser;
 import play.data.validation.Validation;
@@ -30,6 +33,7 @@ public class Scope {
     public static final boolean COOKIE_SECURE = Play.configuration.getProperty("application.session.secure", "false").toLowerCase().equals("true");
     public static final String COOKIE_EXPIRE = Play.configuration.getProperty("application.session.maxAge");
     public static final boolean SESSION_HTTPONLY = Play.configuration.getProperty("application.session.httpOnly", "false").toLowerCase().equals("true");
+    public static final boolean SESSION_SEND_ONLY_IF_CHANGED = Play.configuration.getProperty("application.session.sendOnlyIfChanged", "false").toLowerCase().equals("true");
 
     /**
      * Flash scope
@@ -63,7 +67,9 @@ public class Scope {
                 return;
             }
             if (out.isEmpty()) {
-                Http.Response.current().setCookie(COOKIE_PREFIX + "_FLASH", "", null, "/", 0, COOKIE_SECURE);
+                if(Http.Request.current().cookies.containsKey(COOKIE_PREFIX + "_FLASH") || !SESSION_SEND_ONLY_IF_CHANGED) {
+                    Http.Response.current().setCookie(COOKIE_PREFIX + "_FLASH", "", null, "/", 0, COOKIE_SECURE);
+                }
                 return;
             }
             try {
@@ -81,7 +87,7 @@ public class Scope {
                 throw new UnexpectedException("Flash serializationProblem", e);
             }
         }        // ThreadLocal access
-        static ThreadLocal<Flash> current = new ThreadLocal<Flash>();
+        public static ThreadLocal<Flash> current = new ThreadLocal<Flash>();
 
         public static Flash current() {
             return current.get();
@@ -193,14 +199,24 @@ public class Scope {
                             }
                         }
                         session.put(TS_KEY, System.currentTimeMillis() + (Time.parseDuration(COOKIE_EXPIRE) * 1000));
+                    } else {
+                        // Just restored. Nothing changed. No cookie-expire.
+                        session.changed = false;
+                    }
+                } else {
+                    // no previous cookie to restore; but we may have to set the timestamp in the new cookie
+                    if (COOKIE_EXPIRE != null) {
+                        session.put(TS_KEY, System.currentTimeMillis() + (Time.parseDuration(COOKIE_EXPIRE) * 1000));
                     }
                 }
+
                 return session;
             } catch (Exception e) {
                 throw new UnexpectedException("Corrupted HTTP session from " + Http.Request.current().remoteAddress, e);
             }
         }
         Map<String, String> data = new HashMap<String, String>(); // ThreadLocal access
+        boolean changed = false;
         public static ThreadLocal<Session> current = new ThreadLocal<Session>();
 
         public static Session current() {
@@ -225,14 +241,24 @@ public class Scope {
             return data.get(AT_KEY);
         }
 
+        void change() {
+            changed = true;
+        }
+
         void save() {
             if (Http.Response.current() == null) {
                 // Some request like WebSocket don't have any response
                 return;
             }
+            if(!changed && SESSION_SEND_ONLY_IF_CHANGED && COOKIE_EXPIRE == null) {
+                // Nothing changed and no cookie-expire, consequently send nothing back.
+                return;
+            }
             if (isEmpty()) {
                 // The session is empty: delete the cookie
-                Http.Response.current().setCookie(COOKIE_PREFIX + "_SESSION", "", null, "/", 0, COOKIE_SECURE, SESSION_HTTPONLY);
+                if(Http.Request.current().cookies.containsKey(COOKIE_PREFIX + "_SESSION") || !SESSION_SEND_ONLY_IF_CHANGED) {
+                    Http.Response.current().setCookie(COOKIE_PREFIX + "_SESSION", "", null, "/", 0, COOKIE_SECURE, SESSION_HTTPONLY);
+                }
                 return;
             }
             try {
@@ -260,6 +286,7 @@ public class Scope {
             if (key.contains(":")) {
                 throw new IllegalArgumentException("Character ':' is invalid in a session key.");
             }
+            change();
             if (value == null) {
                 data.remove(key);
             } else {
@@ -268,6 +295,7 @@ public class Scope {
         }
 
         public void put(String key, Object value) {
+            change();
             if (value == null) {
                 put(key, (String) null);
             }
@@ -279,6 +307,7 @@ public class Scope {
         }
 
         public boolean remove(String key) {
+            change();
             return data.remove(key) != null;
         }
 
@@ -289,6 +318,7 @@ public class Scope {
         }
 
         public void clear() {
+            change();
             data.clear();
         }
 
@@ -327,7 +357,23 @@ public class Scope {
             return current.get();
         }
         boolean requestIsParsed;
-        private Map<String, String[]> data = new HashMap<String, String[]>();
+        public Map<String, String[]> data = new HashMap<String, String[]>();
+
+        boolean rootParamsNodeIsGenerated = false;
+        private RootParamNode rootParamNode = null;
+
+        public RootParamNode getRootParamNode() {
+            checkAndParse();
+            if (!rootParamsNodeIsGenerated) {
+                rootParamNode = ParamNode.convert(data);
+                rootParamsNodeIsGenerated = true;
+            }
+            return rootParamNode;
+        }
+
+        public RootParamNode getRootParamNodeFromRequest() {
+            return ParamNode.convert(data);
+        }
 
         public void checkAndParse() {
             if (!requestIsParsed) {
@@ -355,16 +401,22 @@ public class Scope {
         public void put(String key, String value) {
             checkAndParse();
             data.put(key, new String[]{value});
+            // make sure rootsParamsNode is regenerated if needed
+            rootParamsNodeIsGenerated = false;
         }
 
         public void put(String key, String[] values) {
             checkAndParse();
             data.put(key, values);
+            // make sure rootsParamsNode is regenerated if needed
+            rootParamsNodeIsGenerated = false;
         }
 
         public void remove(String key) {
             checkAndParse();
             data.remove(key);
+            // make sure rootsParamsNode is regenerated if needed
+            rootParamsNodeIsGenerated = false;
         }
 
         public String get(String key) {
@@ -381,7 +433,7 @@ public class Scope {
         public <T> T get(String key, Class<T> type) {
             try {
                 // TODO: This is used by the test, but this is not the most convenient.
-                return (T) Binder.directBind(key, null, get(key), type);
+                return (T) Binder.bind(getRootParamNode(), key, type, type, null);
             } catch (Exception e) {
                 Validation.addError(key, "validation.invalid");
                 return null;
@@ -391,7 +443,7 @@ public class Scope {
         @SuppressWarnings("unchecked")
         public <T> T get(Annotation[] annotations, String key, Class<T> type) {
             try {
-                return (T) Binder.directBind(key, annotations, get(key), type);
+                return (T) Binder.directBind(annotations, get(key), type, null);
             } catch (Exception e) {
                 Validation.addError(key, "validation.invalid");
                 return null;

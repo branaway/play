@@ -7,6 +7,8 @@ import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
 import play.Play;
+import play.data.binding.ParamNode;
+import play.data.binding.RootParamNode;
 import play.db.DBConfig;
 import play.db.jpa.GenericModel.JPAQuery;
 import play.mvc.Scope.Params;
@@ -44,7 +46,7 @@ public class JPQL {
     }
 
     public long count(String entity) {
-        return Long.parseLong(em().createQuery("select count(e) from " + entity + " e").getSingleResult().toString());
+        return Long.parseLong(em().createQuery("select count(*) from " + entity + " e").getSingleResult().toString());
     }
 
     public long count(String entity, String query, Object[] params) {
@@ -112,7 +114,10 @@ public class JPQL {
 
     public GenericModel create(String entity, String name, Params params) throws Exception {
         Object o = Play.classloader.loadClass(entity).newInstance();
-        return ((GenericModel) o).edit(name, params.all());
+
+        RootParamNode rootParamNode = ParamNode.convert(params.all());
+
+        return ((GenericModel) o).edit(rootParamNode, name);
     }
 
     public String createFindByQuery(String entityName, String entityClass, String query, Object... params) {
@@ -181,7 +186,7 @@ public class JPQL {
         if (query.trim().length() == 0) {
             return "select count(*) from " + entityName;
         }
-        return "select count(e) from " + entityName + " e where " + query;
+        return "select count(*) from " + entityName + " e where " + query;
     }
 
     @SuppressWarnings("unchecked")
@@ -243,13 +248,22 @@ public class JPQL {
                 jpql.append(prop + " < ? AND " + prop + " > ?");
             } else if (part.endsWith("Like")) {
                 String prop = extractProp(part, "Like");
-                jpql.append("LOWER(" + prop + ") like ?");
+                // HSQL -> LCASE, all other dbs lower
+                if (isHSQL()) {
+                    jpql.append("LCASE(" + prop + ") like ?");
+                } else {
+                    jpql.append("LOWER(" + prop + ") like ?");
+                }
             } else if (part.endsWith("Ilike")) {
                 String prop = extractProp(part, "Ilike");
-                jpql.append("LOWER(" + prop + ") like LOWER(?)");
+                 if (isHSQL()) {
+                    jpql.append("LCASE(" + prop + ") like LCASE(?)");
+                 } else {
+                    jpql.append("LOWER(" + prop + ") like LOWER(?)");
+                 }
             } else if (part.endsWith("Elike")) {
-                String prop = extractProp(part, "Ilike");
-                jpql.append(prop + " like LOWER(?)");
+                String prop = extractProp(part, "Elike");
+                jpql.append(prop + " like ?");
             } else {
                 String prop = extractProp(part, "");
                 jpql.append(prop + " = ?");
@@ -259,6 +273,11 @@ public class JPQL {
             }
         }
         return jpql.toString();
+    }
+
+    private boolean isHSQL() {
+        String db = Play.configuration.getProperty("db");
+        return ("mem".equals(db) || "fs".equals(db) || "org.hsqldb.jdbcDriver".equals(Play.configuration.getProperty("db.driver")));
     }
 
     protected static String extractProp(String part, String end) {

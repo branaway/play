@@ -35,17 +35,12 @@ def secretKey():
     return ''.join([random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789') for i in range(64)])
 
 def isParentOf(path1, path2):
-    if len(path2) < len(path1) or len(path2) < 2:
-        return False
-    if (path1 == path2):
-        return True
-    return isParentOf(path1, os.path.dirname(path2))
-
-def isParentOf(path1, path2):
-    if len(path2) < len(path1) or len(path2) < 2:
-        return False
-    if (path1 == path2):
-        return True
+    relpath = os.path.relpath(path1, path2)
+    sep = os.sep
+    if sep == '\\':
+        sep = '\\\\'
+    ptn = '^\.\.(' + sep + '\.\.)*$'
+    return re.match(ptn, relpath) != None
 
 def getWithModules(args, env):
     withModules = []
@@ -76,7 +71,9 @@ def getWithModules(args, env):
     
     return md
 
-def package_as_war(app, env, war_path, war_zip_path, war_exclusion_list = []):
+def package_as_war(app, env, war_path, war_zip_path, war_exclusion_list = None):
+    if war_exclusion_list is None:
+        war_exclusion_list = []
     app.check()
     modules = app.modules()
     classpath = app.getClasspath()
@@ -191,15 +188,18 @@ def delete(filename):
         os.remove(filename)
 
 # Copy a directory, skipping dot-files
-def copy_directory(source, target, exclude = []):
+def copy_directory(source, target, exclude = None):
+    if exclude is None:
+        exclude = []
     skip = None
 
     if not os.path.exists(target):
         os.makedirs(target)
     for root, dirs, files in os.walk(source):
+        path_from_source = root[len(source):]
+        if path_from_source.find('/.') > -1 or path_from_source.find('\\.') > -1:
+            continue
         for file in files:
-            if root.find('/.') > -1 or root.find('\\.') > -1:
-                continue
             if file.find('~') == 0 or file.startswith('.'):
                 continue
 

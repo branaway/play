@@ -3,6 +3,8 @@ package play.data.validation;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -11,7 +13,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import net.sf.oval.configuration.annotation.AbstractAnnotationCheck;
 import play.Play;
-import play.classloading.enhancers.LocalvariablesNamesEnhancer.LocalVariablesNamesTracer;
+import play.classloading.enhancers.LVEnhancer.LVEnhancerRuntime;
 import play.exceptions.UnexpectedException;
 
 /**
@@ -21,7 +23,7 @@ import play.exceptions.UnexpectedException;
  */
 public class Validation {
 
-    static ThreadLocal<Validation> current = new ThreadLocal<Validation>();
+    public static ThreadLocal<Validation> current = new ThreadLocal<Validation>();
     List<Error> errors = new ArrayList<Error>();
     boolean keep = false;
 
@@ -40,7 +42,11 @@ public class Validation {
      */
     @SuppressWarnings({"serial", "unused"})
     public static List<Error> errors() {
-        return new ArrayList<Error>(current.get().errors) {
+        Validation validation = current.get();
+        if (validation == null)
+            return Collections.emptyList();
+        
+        return new ArrayList<Error>(validation.errors) {
 
             public Error forKey(String key) {
                 return Validation.error(key);
@@ -79,7 +85,8 @@ public class Validation {
      * @return True if the current request has errors
      */
     public static boolean hasErrors() {
-        return current.get().errors.size() > 0;
+        Validation validation = current.get();
+        return validation != null && validation.errors.size() > 0;
     }
 
     /**
@@ -87,7 +94,11 @@ public class Validation {
      * @return First error related to this field
      */
     public static Error error(String field) {
-        for (Error error : current.get().errors) {
+        Validation validation = current.get();
+        if (validation == null)
+            return null;
+          
+        for (Error error : validation.errors) {
             if (error.key!=null && error.key.equals(field)) {
                 return error;
             }
@@ -100,8 +111,12 @@ public class Validation {
      * @return All errors related to this field
      */
     public static List<Error> errors(String field) {
+        Validation validation = current.get();
+        if (validation == null)
+            return Collections.emptyList();
+      
         List<Error> errors = new ArrayList<Error>();
-        for (Error error : current.get().errors) {
+        for (Error error : validation.errors) {
             if (error.key!=null && error.key.equals(field)) {
                 errors.add(error);
             }
@@ -461,11 +476,14 @@ public class Validation {
      * @param o
      * @return
      */
+    // This does not make a lot of sense to not use Object
+    // And this not backward compatible as previously is was returning an empty
+    // string instead of the object name.
     static String getLocalName(Object o) {
-        List<String> names = LocalVariablesNamesTracer.getAllLocalVariableNames(o);
-        if (names.size() > 0) {
-            return names.get(0);
-        }
+        String[] names = LVEnhancerRuntime.getParamNames().params;
+        System.out.println("getLocalName " + Arrays.toString(names));
+        if(names.length > 0 && names[0] != null)
+            return names[0];
         return "";
     }
 

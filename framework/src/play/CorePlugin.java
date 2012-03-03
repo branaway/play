@@ -11,7 +11,7 @@ import play.classloading.ApplicationClasses.ApplicationClass;
 import play.classloading.enhancers.ContinuationEnhancer;
 import play.classloading.enhancers.ControllersEnhancer;
 import play.classloading.enhancers.Enhancer;
-import play.classloading.enhancers.LocalvariablesNamesEnhancer;
+import play.classloading.enhancers.LVEnhancer;
 import play.classloading.enhancers.MailerEnhancer;
 import play.classloading.enhancers.PropertiesEnhancer;
 import play.classloading.enhancers.SigEnhancer;
@@ -33,7 +33,7 @@ import com.jamonapi.utils.Misc;
 public class CorePlugin extends PlayPlugin {
 
     /**
-     * Get the appication status
+     * Get the application status
      */
     public static String computeApplicationStatus(boolean json) {
         if (json) {
@@ -75,7 +75,11 @@ public class CorePlugin extends PlayPlugin {
     public boolean rawInvocation(Request request, Response response) throws Exception {
         if (Play.mode == Mode.DEV && request.path.equals("/@kill")) {
             System.out.println("@KILLED");
-            System.exit(0);
+            if (Play.standalonePlayServer) {
+                System.exit(0);
+            } else {
+                Logger.error("Cannot execute @kill since Play is not running as standalone server");
+            }
         }
         if (request.path.equals("/@status") || request.path.equals("/@status.json")) {
             if(!Play.started) {
@@ -286,16 +290,21 @@ public class CorePlugin extends PlayPlugin {
         Class<?>[] enhancers = new Class[]{
             SigEnhancer.class,
             ControllersEnhancer.class,
+            
             ContinuationEnhancer.class,
+            LVEnhancer.class,
             MailerEnhancer.class,
-            PropertiesEnhancer.class,
-            LocalvariablesNamesEnhancer.class // bran: let's see what will happen without this: well lots of things break including param binding
+
+            PropertiesEnhancer.class
+
         };
         for (Class<?> enhancer : enhancers) {
             try {
                 long start = System.currentTimeMillis();
                 ((Enhancer) enhancer.newInstance()).enhanceThisClass(applicationClass);
-                Logger.trace("%sms to apply %s to %s", System.currentTimeMillis() - start, enhancer.getSimpleName(), applicationClass.name);
+                if (Logger.isTraceEnabled()) {
+                    Logger.trace("%sms to apply %s to %s", System.currentTimeMillis() - start, enhancer.getSimpleName(), applicationClass.name);
+                }
             } catch (Exception e) {
                 throw new UnexpectedException("While applying " + enhancer + " on " + applicationClass.name, e);
             }

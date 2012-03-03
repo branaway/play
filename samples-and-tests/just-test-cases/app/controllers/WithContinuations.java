@@ -9,8 +9,15 @@ import static play.libs.F.*;
 
 import java.util.*;
 import java.util.concurrent.atomic.*;
+import java.util.concurrent.*;
 
 import models.*;
+
+import play.jobs.*;
+
+import play.exceptions.*;
+import play.utils.*;
+import play.data.validation.*;
 
 public class WithContinuations extends Controller {
     
@@ -18,6 +25,14 @@ public class WithContinuations extends Controller {
     static void intercept() {
         // just to check
         Logger.info("Before continuation");
+    }
+    
+    protected static void doAwait() {
+        await(100);
+    }
+    
+    protected static String doAwait2() {
+        return await(new jobs.DoSomething(100).now());
     }
 
     public static void loopWithWait() {
@@ -234,6 +249,233 @@ public class WithContinuations extends Controller {
             }
         });
     }
+    
+    
+    public static class CompletedFuture<T> implements Future {
+
+        private final T data;
+        
+        public CompletedFuture(T data) {
+            this.data = data;
+        }
+
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            return false;
+        }
+
+        public boolean isCancelled() {
+            return false;
+        }
+
+        public boolean isDone() {
+            return true;
+        }
+
+        public T get() throws InterruptedException, ExecutionException {
+            return data;
+        }
+
+        public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+            return data;
+        }
+    }
+    
+    public static void renderTemplateWithVariablesAssignedBeforeAwait() {
+        int n = 1;
+        String a = "A";
+        Job<String> job = new Job<String>(){
+            public String doJobWithResult() {
+                return "B";
+            }
+        };
+        
+        String b = await(job.now());
+        
+        String c = "C";
+        
+        await(40);
+        
+        String d = "D";
+        
+        await( new CompletedFuture<Boolean>(true));
+        
+        String e = "E";
+        
+        render(n,a,b,c,d,e);
+    }
+    
+    // This class does not use await() directly and therefor is not enhanched for Continuations
+    public static class ControllerWithoutContinuations extends Controller{
+        
+        public static void useAwaitViaOtherClass() {
+            int failCount = 0;
+            try {
+                WithContinuations.doAwait();
+            } catch (ContinuationsException e) {
+                failCount++;
+            }
+            
+            try {
+                WithContinuations.doAwait2();
+            } catch (ContinuationsException e) {
+                failCount++;
+            }
+            
+            renderText("failCount: " + failCount);
+        }
+    }
+    
+    public static class ControllerWhichUsesAwaitViaInheritance extends WithContinuations {
+
+        public static void useAwaitViaInheritance() {
+            String res = WithContinuations.doAwait2();
+            renderText(res != null);
+        }
+    }
+
+    
+    // I don't know how to test WebSocketController directly so since we only are testing that the await stuff
+    // is working, we'll just call it via this regular controller - only testing that the enhancing is working ok.
+    public static void useAwaitInWebSocketControllerWithContinuations() {
+        WebSocketControllerWithContinuations.useAwait();
+        renderText("ok");
+    }
+    
+    // This is a WebSocketController, but since I'm not sre how to test a WebSocket,
+    // I'll just call a protected static method in it doing continuations.
+    // I'm doing this just to make sure that the enhancing is working for WebSocketControllers as well
+    public static class WebSocketControllerWithContinuations extends WebSocketController {
+        
+        protected static void useAwait() {
+            await(100);
+        }
+    }
+    
+    // I don't know how to test WebSocketController directly so since we only are testing that the await stuff
+    // is working, we'll just call it via this regular controller - only testing that the enhancing is working ok.
+    public static void useAwaitInWebSocketControllerWithoutContinuations() {
+        renderText( WebSocketControllerWithoutContinuations.useAwaitViaOtherClass() );
+    }
+
+
+    public static class WebSocketControllerWithoutContinuations extends WebSocketController {
+        
+        protected static String useAwaitViaOtherClass() {
+            int failCount = 0;
+            try {
+                WithContinuations.doAwait();
+            } catch (ContinuationsException e) {
+                failCount++;
+            }
+            
+            return "failCount: " + failCount;
+        }
+    }
+    
+    
+    public static void usingRenderArgsAndAwait() {
+        renderArgs.put("a", "1");
+        int size = Scope.RenderArgs.current().data.size();
+        await(10);
+        renderArgs.put("b", "2");
+        size++;
+        
+        Job<String> job = new Job<String>(){
+            public String doJobWithResult() {
+                return "B";
+            }
+        };
+        
+        String b = await(job.now());
+        
+        renderArgs.put("c", "3");
+        size++;
+        
+        await( new CompletedFuture<Boolean>(true));
+        
+        renderArgs.put("d", "4");
+        size++;
+        
+        boolean res = "1234".equals(""+renderArgs.get("a")+renderArgs.get("b")+renderArgs.get("c")+renderArgs.get("d")) && size == Scope.RenderArgs.current().data.size();
+        
+        renderText( res );
+    }
+    
+    public static void usingRenderArgsAndAwaitWithCallBack(String arg) {
+         renderArgs.put("arg", arg);
+
+         await("1s", new F.Action0() {
+
+             @Override
+             public void invoke() {
+                 renderText(renderArgs.get("arg"));
+             }
+         });
+    }
+
+    public static void usingRenderArgsAndAwaitWithFutureAndCallback(final String arg) {
+        renderArgs.put("arg", arg);
+
+        Promise<String> promise = new Job() {
+            @Override
+            public String doJobWithResult() throws Exception {
+                return "result";
+        }
+
+        }.now();
+        await(promise, new F.Action<String>() {
+
+            @Override
+            public void invoke(String result) {
+                renderText(result + "/" + renderArgs.get("arg"));
+            }
+        });
+    }
+
+    public static void echoParamsAfterAwait(String a, Integer b) {
+        String beforeString = "before await: " + getEchoString(a,b);
+        await(1);
+        String afterString = "after await: " + getEchoString(a,b);
+        
+        System.out.println("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n" + beforeString + "\n" + afterString);
+        renderText(beforeString + "\n" + afterString);
+    }
+
+    private static String getEchoString(String a, Integer b) {
+        return "a: " + a + " b: " + b + " params[a]: " + Utils.join(params.getAll("a"),",") + " params[b]: " + Utils.join(params.getAll("b"), ",");
+    }
+    
+    
+    private static List<String> getErrorStringList(List<play.data.validation.Error> errorList) {
+        List<String> list = new ArrayList<String>();
+        for ( play.data.validation.Error e : errorList ) {
+            list.add(e.getKey()+"="+e.message());
+        }
+        return list;
+    }
+    
+    public static class SomeBean {
+        @Required
+        public String prop;
+    }
+    
+    public static void validationAndAwait(@Required String a, Integer b) {
+        validation.addError("b", "someError");
+        String beforeErrors = Utils.join(getErrorStringList(validation.errors()), ",");
+        await(1);
+        SomeBean sb = new SomeBean();
+        validation.valid(sb);
+        String afterErrors = Utils.join(getErrorStringList(validation.errors()), ",");
+        renderText("beforeErrors: " + beforeErrors + " afterErrors: " + afterErrors);
+    }
+    
+    public static void paramsLocalVariableTracerAndAwait(int a) {
+        int aa = a;
+        await("1s");
+        render(a,aa);
+        
+    }
+    
     
 }
 
