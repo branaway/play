@@ -6,8 +6,9 @@ package play.utils;
  * More info here: http://www.javaspecialists.eu/archive/Issue129.html
  */
 public class FastRuntimeException extends RuntimeException {
+	private static final long serialVersionUID = -8587027480733313161L;
 
-    public FastRuntimeException(){
+	public FastRuntimeException(){
         super();
     }
 
@@ -27,7 +28,8 @@ public class FastRuntimeException extends RuntimeException {
      * Since we override this method, no stacktrace is generated - much faster
      * @return always null
      */
-    public Throwable fillInStackTrace() {
+    @Override
+	public Throwable fillInStackTrace() {
         return null;
     }
 }

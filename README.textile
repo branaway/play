@@ -45,9 +45,9 @@ h2. Reporting bugs
 
 Please report bugs on "our lighthouse tracker":http://play.lighthouseapp.com/projects/57987-play-framework.
 
-h2. Licence
+h2. License
 
-Play framework is distributed under "Apache 2 licence":http://www.apache.org/licenses/LICENSE-2.0.html.
+Play framework is distributed under "Apache 2 license":http://www.apache.org/licenses/LICENSE-2.0.html.
 
 
 h2. Bing Ran local patches:
@@ -60,6 +60,6 @@ I have made a few patched that fix a few bugs and inconvenience
 # NoRouteFoundException: added the action name in the error message.
 # Invoker: synch the creation of the suspended invocations.
 # Play: added a delay in detecting changes to avoid run the detection for very requests in a burst.
-# PlayHandler: added keep-alive header to the http 1.0 request. 
-# Wrapped the HotswapAgent in PlayAgent.jar to be used as the jvm agent instead of the whole play.jar. This way start script for apps can be simplified tot he point that I can regular Eclipse run/debug instead of using the remote debugging mode.
+# PlayHandler: added keep-alive header to the HTTP 1.0 request. 
+# Wrapped the HotswapAgent in PlayAgent.jar to be used as the JVM agent instead of the whole play.jar. This way start script for applications can be simplified to the point that I can use regular Eclipse run/debug instead of using the remote debugging mode.
 # added option to invoke ActionInvocation without going through the intermediate executor. The option to add to application.conf: "action.invocation.direct" with value of "true"/"false";

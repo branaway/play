@@ -136,13 +136,15 @@ public class Server {
     public static void main(String[] args) throws Exception {
         File root = new File(System.getProperty("application.path"));
         if (System.getProperty("precompiled", "false").equals("true")) {
+        	Logger.info("use Precompiled.");
             Play.usePrecompiled = true;
         }
+        Logger.info("run Play.init()");
         Play.init(root, System.getProperty("play.id", ""));
         if (System.getProperty("precompile") == null) {
             new Server(args);
         } else {
-            Logger.info("Done.");
+            Logger.info("Done precompiling.");
         }
     }
 }
