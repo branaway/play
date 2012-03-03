@@ -30,7 +30,7 @@ import play.libs.Codec;
 public class LVEnhancer extends Enhancer {
     @Override
     public void enhanceThisClass(ApplicationClass applicationClass)
-            throws Exception {
+            throws Exception {    	
         CtClass ctClass = makeClass(applicationClass);
         if(ctClass.isAnnotation() || ctClass.isInterface())
             return;

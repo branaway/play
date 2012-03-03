@@ -95,6 +95,7 @@ import play.mvc.WebSocketInvoker;
 import play.mvc.results.NotFound;
 import play.mvc.results.RenderStatic;
 import play.templates.JavaExtensions;
+import play.templates.TemplateLoader;
 import play.utils.HTTP;
 import play.utils.Utils;
 import play.vfs.VirtualFile;
@@ -708,8 +709,10 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
 
         // bran let's decouple the template system from this handler
 //        String errorHtml = TemplateLoader.load("errors/404." + format).render(binding);
-        String errorHtml = Play.getErrorPage(404, Play.PageFormat.from(format), binding);        
+//        String errorHtml = Play.getErrorPage(404, Play.PageFormat.from(format), binding);        
         
+        String errorHtml = TemplateLoader.load("errors/404." + format).render(binding);
+
         try {
             byte[] bytes = errorHtml.getBytes(Response.current().encoding);
             ChannelBuffer buf = ChannelBuffers.copiedBuffer(bytes);
@@ -802,8 +805,8 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
 
             nettyResponse.setHeader("Content-Type", (MimeTypes.getContentType("500." + format, "text/plain")));
             try {
-//                String errorHtml = TemplateLoader.load("errors/500." + format).render(binding);
-                String errorHtml = Play.getErrorPage(500, Play.PageFormat.from(format), binding);
+                String errorHtml = TemplateLoader.load("errors/500." + format).render(binding);
+//  bran:              String errorHtml = Play.getErrorPage(500, Play.PageFormat.from(format), binding);
 
                 byte[] bytes = errorHtml.getBytes(encoding);
                 ChannelBuffer buf = ChannelBuffers.copiedBuffer(bytes);

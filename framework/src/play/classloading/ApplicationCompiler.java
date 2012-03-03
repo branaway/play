@@ -1,10 +1,13 @@
 package play.classloading;
 
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.StringTokenizer;
 
+import org.eclipse.jdt.core.compiler.CategorizedProblem;
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.ClassFile;
@@ -129,7 +132,9 @@ public class ApplicationCompiler {
         for (int i = 0; i < classNames.length; i++) {
             compilationUnits[i] = new CompilationUnit(classNames[i]);
         }
-        IErrorHandlingPolicy policy = DefaultErrorHandlingPolicies.exitOnFirstError();
+        // bran get all the issues
+        IErrorHandlingPolicy policy = DefaultErrorHandlingPolicies.exitAfterAllProblems();
+//        IErrorHandlingPolicy policy = DefaultErrorHandlingPolicies.exitOnFirstError();
         IProblemFactory problemFactory = new DefaultProblemFactory(Locale.ENGLISH);
 
         /**
@@ -243,7 +248,16 @@ public class ApplicationCompiler {
 			public void acceptResult(CompilationResult result) {
                 // If error
                 if (result.hasErrors()) {
-                    for (IProblem problem: result.getErrors()) {
+                	// bran: sort the problems and report the first one
+                    CategorizedProblem[] errors = result.getErrors();
+                    Arrays.sort(errors, new Comparator<CategorizedProblem>() {
+						@Override
+						public int compare(CategorizedProblem o1,
+								CategorizedProblem o2) {
+							return o1.getSourceLineNumber() - o2.getSourceLineNumber();
+						}
+                    });
+                    for (IProblem problem: errors) {
                         String className = new String(problem.getOriginatingFileName()).replace("/", ".");
                         className = className.substring(0, className.length() - 5);
                         String message = problem.getMessage();
