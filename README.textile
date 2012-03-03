@@ -1,4 +1,4 @@
-note: this fork contains a few patches that I believe makes using it in dev mode faster and better in showing errors. -- branaway
+note: this fork contains a few patches that I believe would make using Play in dev mode faster and better in showing errors. -- branaway
 
 
 h1. Welcome to Play framework
