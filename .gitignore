@@ -30,6 +30,7 @@ eclipse
 *.iml
 *.ipr
 *.iws
+.pydevproject
 
 # modules/: exclude except for core modules
 modules/*
