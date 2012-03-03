@@ -28,7 +28,7 @@ import play.exceptions.UnexpectedException;
 public class LVEnhancer extends Enhancer {
     @Override
     public void enhanceThisClass(ApplicationClass applicationClass)
-            throws Exception {
+            throws Exception {    	
         CtClass ctClass = makeClass(applicationClass);
         for(CtBehavior behavior : ctClass.getDeclaredMethods()) {
             try {

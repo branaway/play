@@ -663,7 +663,6 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
         }
         nettyResponse.setHeader(CONTENT_TYPE, (MimeTypes.getContentType("404." + format, "text/plain")));
 
-
         String errorHtml = TemplateLoader.load("errors/404." + format).render(binding);
         try {
             byte[] bytes = errorHtml.getBytes(Response.current().encoding);
