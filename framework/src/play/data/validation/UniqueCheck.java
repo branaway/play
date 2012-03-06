@@ -84,7 +84,8 @@ public class UniqueCheck extends AbstractAnnotationCheck<Unique> {
         }
         if (isUpdate) {
             values[propertyNames.length] = keyValue;
-            jpql.append(" and ").append(keyProperty).append(" <>  ?");
+            // bran: was " and "
+            jpql.append(" and o.").append(keyProperty).append(" <>  ?");
         }
         return JPQL.instance.count(entityName, jpql.toString(), values) == 0L;
     }

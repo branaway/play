@@ -910,6 +910,14 @@ public class Play {
     }
 
     /**
+     * bran: to make the old Cobertura module happy with the naming of the method
+     * @return
+     */
+    public static boolean runingInTestMode() {
+    	return runningInTestMode();
+    }
+
+    /**
      * Call this method when there has been a fatal error that Play cannot recover from
      */
     public static void fatalServerErrorOccurred() {

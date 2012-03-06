@@ -11,7 +11,11 @@ After a successful merge,
 
 $ git push origin master
 
+History:
 
+2012.3.5: 
+  1. added Play.runingInTestNode() to make the Cobertura module happy. Bad naming.  
+  2. fixed UniqueCheck in the string concatenation for updates. 
 
 h1. Welcome to Play framework
 
