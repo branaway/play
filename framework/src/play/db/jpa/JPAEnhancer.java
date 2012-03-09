@@ -2,6 +2,7 @@ package play.db.jpa;
 
 import javassist.CtClass;
 import javassist.CtMethod;
+import play.Logger;
 import play.classloading.ApplicationClasses.ApplicationClass;
 import play.classloading.enhancers.Enhancer;
 
@@ -28,6 +29,7 @@ public class JPAEnhancer extends Enhancer {
         }
 
         String entityName = ctClass.getName();
+        Logger.info("enhancing " + entityName);
 
         // count
         CtMethod count = CtMethod.make("public static long count() { return getJPAConfig("+entityName+".class).jpql.count(\"" + entityName + "\"); }", ctClass);
@@ -42,7 +44,8 @@ public class JPAEnhancer extends Enhancer {
         ctClass.addMethod(findAll);
 
         // findById
-        CtMethod findById = CtMethod.make("public static play.db.jpa.JPABase findById(Object id) { return  getJPAConfig("+entityName+".class).jpql.findById(\"" + entityName + "\", id); }", ctClass);
+//        CtMethod findById = CtMethod.make("public static play.db.jpa.JPABase findById(Object id) { return  getJPAConfig("+entityName+".class).jpql.findById(\"" + entityName + "\", id); }", ctClass);
+        CtMethod findById = CtMethod.make("public static play.db.jpa.GenericModel findById(Object id) { return  getJPAConfig("+entityName+".class).jpql.findById(\"" + entityName + "\", id); }", ctClass);
         ctClass.addMethod(findById);
 
         // find
@@ -66,7 +69,8 @@ public class JPAEnhancer extends Enhancer {
         ctClass.addMethod(deleteAll);
 
         // findOneBy
-        CtMethod findOneBy = CtMethod.make("public static play.db.jpa.JPABase findOneBy(String query, Object[] params) { return  getJPAConfig("+entityName+".class).jpql.findOneBy(\"" + entityName + "\", query, params); }", ctClass);
+//        CtMethod findOneBy = CtMethod.make("public static play.db.jpa.JPABase findOneBy(String query, Object[] params) { return  getJPAConfig("+entityName+".class).jpql.findOneBy(\"" + entityName + "\", query, params); }", ctClass);
+        CtMethod findOneBy = CtMethod.make("public static play.db.jpa.GenericModel findOneBy(String query, Object[] params) { return  getJPAConfig("+entityName+".class).jpql.findOneBy(\"" + entityName + "\", query, params); }", ctClass);
         ctClass.addMethod(findOneBy);
 
         // create

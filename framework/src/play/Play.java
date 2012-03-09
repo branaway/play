@@ -24,6 +24,7 @@ import java.util.regex.Pattern;
 import play.cache.Cache;
 import play.classloading.ApplicationClasses;
 import play.classloading.ApplicationClassloader;
+import play.exceptions.CompilationException;
 import play.exceptions.PlayException;
 import play.exceptions.UnexpectedException;
 import play.libs.IO;
@@ -36,6 +37,8 @@ import play.vfs.VirtualFile;
 
 /**
  * Main framework class
+ * @author bran
+ * @author original authors
  */
 public class Play {
 
@@ -558,7 +561,8 @@ public class Play {
 	 	  	invokeDirect = true;
 		  }
 		  
-		  Logger.info("Shall we skip the executor in invoking actions? %1$s ", invokeDirect);
+   		  if (invokeDirect)
+   			  Logger.info("Skip the executor in invoking actions");
 
             // We made it
             started = true;
@@ -645,10 +649,8 @@ public class Play {
         
 		// bran: give a delay
 		if (System.currentTimeMillis() - lastTimeChecked.get() < Long.parseLong(configuration.getProperty(
-				"bran.play.dev.detect.change.interval", "2000")))
+				"bran.play.dev.detect.change.interval", "3000")))
 			return;
-		else
-			lastTimeChecked.set(System.currentTimeMillis());
 
         try {
             pluginCollection.beforeDetectingChanges();
@@ -657,6 +659,7 @@ public class Play {
             }
             Router.detectChanges(ctxPath);
             if (conf.lastModified() > startedAt) {
+            	Logger.info("Play.detectChanges: restart due to conf file change.");
                 start();
                 return;
             }
@@ -664,14 +667,103 @@ public class Play {
             if (!Play.started) {
                 throw new RuntimeException("Not started");
             }
+        } catch (CompilationException ce) {
+			// check if this from Java code derived from japid view
+			ce = mapJapidJavCodeError(ce);
+			throw ce;
         } catch (PlayException e) {
             throw e;
         } catch (Exception e) {
             // We have to do a clean refresh
+        	String message = e.getMessage();
+        	if (message == null || e instanceof NullPointerException){
+        		e.printStackTrace();
+        	}
+			Logger.info("Play.detectChanges: restart due to: " + message);
             start();
+        }
+        finally {
+			lastTimeChecked.set(System.currentTimeMillis());
         }
     }
 
+    /**
+     * bran: error mapper for better error reporting
+     * 
+     * @param e
+     * @return
+     */
+	public static CompilationException mapJapidJavCodeError(
+			CompilationException e) {
+		if (!e.isSourceAvailable())
+			return e;
+
+		// now map java error to japidview source code
+		
+		String srcFilePath = e.getSourceFile();
+		if (!srcFilePath.startsWith("/app/japidviews/")) {
+			return e;
+		}
+
+		String viewSourceFilePath = mapJavaToSrc(srcFilePath);
+		File file = new File(viewSourceFilePath);
+		VirtualFile vf = VirtualFile.fromRelativePath(viewSourceFilePath);
+
+		String sourceCode = e.getSourceVirtualFile().contentAsString();
+		String[] codeLines = sourceCode.split("\n");
+		String line = codeLines[e.getLineNumber() - 1];
+
+		int lineMarker = line.lastIndexOf("// line ");
+		if (lineMarker < 1) {
+			return e;
+		}
+		int oriLineNumber = Integer.parseInt(line.substring(lineMarker + 8)
+				.trim());
+		// get line start and end
+		// well not much sense. commented out
+//		String viewSource = vf.contentAsString();
+//		String[] viewLines = viewSource.split("\n");
+//		String problemLineInView = viewLines[oriLineNumber - 1];
+//		int start = 0;
+//		for (int i = 0; i < oriLineNumber - 1; i++) {
+//			start += viewLines[i].length() + 1;
+//		}
+//		int end = start -1 + problemLineInView.length();
+
+//		e = new CompilationException(vf, "Java code error --> \"" + e.getMessage() + "\"", oriLineNumber, start, end);
+		e = new CompilationException(vf, "Java  error --> \"" + e.getMessage() + "\"", oriLineNumber, 0, 0);
+		return e;
+	}
+
+    /**
+     * copied from Japid DirUtils
+     * @param clazz
+     * @return
+     */
+	public static String mapJavaToSrc(String k) {
+		if (k.endsWith(".java"))
+			k = k.substring(0, k.lastIndexOf(".java"));
+		
+		if (k.endsWith("_txt")) {
+			return k.substring(0, k.lastIndexOf("_txt")) + ".txt";
+		}
+		else if (k.endsWith("_xml")) {
+			return k.substring(0, k.lastIndexOf("_xml")) + ".xml";
+		}
+		else if (k.endsWith("_json")) {
+			return k.substring(0, k.lastIndexOf("_json")) + ".json";
+		}
+		else if (k.endsWith("_css")) {
+			return k.substring(0, k.lastIndexOf("_css")) + ".css";
+		}
+		else if (k.endsWith("_js")) {
+			return k.substring(0, k.lastIndexOf("_js")) + ".js";
+		}
+		else { // including html
+			return  k + ".html";
+		}
+	}
+    
     @SuppressWarnings("unchecked")
     public static <T> T plugin(Class<T> clazz) {
         return (T) pluginCollection.getPluginInstance((Class<? extends PlayPlugin>) clazz);

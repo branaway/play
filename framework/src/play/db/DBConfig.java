@@ -84,7 +84,6 @@ public class DBConfig {
      * Open a connection for the current thread.
      * @return A valid SQL connection
      */
-    @SuppressWarnings("deprecation")
     public Connection getConnection() {
         try {
             // do we have a present JPAContext for this db-config in current thread?
@@ -184,8 +183,8 @@ public class DBConfig {
 
         if (changed(propsPrefix)) {
             try {
-
                 // We now know that we will either config the db, or fail with exception
+            	
                 dbConfigured = true;
 
                 Properties p = Play.configuration;
@@ -211,7 +210,8 @@ public class DBConfig {
                 } else {
 
                     // Try the driver
-                    String driver = p.getProperty(propsPrefix+".driver");
+                    String dbDriver = p.getProperty(propsPrefix+".driver");
+					String driver = dbDriver;
                     try {
                         Driver d = (Driver) Class.forName(driver, true, Play.classloader).newInstance();
                         DriverManager.registerDriver(new ProxyDriver(d));
@@ -221,11 +221,14 @@ public class DBConfig {
 
                     // Try the connection
                     Connection fake = null;
-                    try {
-                        if (p.getProperty(propsPrefix+".user") == null) {
-                            fake = DriverManager.getConnection(p.getProperty(propsPrefix+".url"));
+                    String dbUrl = p.getProperty(propsPrefix + ".url");
+					String dbUser = p.getProperty(propsPrefix + ".user");
+					String dbPassword = p.getProperty(propsPrefix + ".pass");
+					try {
+                        if (dbUser == null) {
+                            fake = DriverManager.getConnection(dbUrl);
                         } else {
-                            fake = DriverManager.getConnection(p.getProperty(propsPrefix+".url"), p.getProperty(propsPrefix+".user"), p.getProperty(propsPrefix+".pass"));
+                            fake = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
                         }
                     } finally {
                         if (fake != null) {
@@ -234,10 +237,10 @@ public class DBConfig {
                     }
 
                     ComboPooledDataSource ds = new ComboPooledDataSource();
-                    ds.setDriverClass(p.getProperty(propsPrefix+".driver"));
-                    ds.setJdbcUrl(p.getProperty(propsPrefix + ".url"));
-                    ds.setUser(p.getProperty(propsPrefix + ".user"));
-                    ds.setPassword(p.getProperty(propsPrefix + ".pass"));
+                    ds.setDriverClass(dbDriver);
+                    ds.setJdbcUrl(dbUrl);
+                    ds.setUser(dbUser);
+                    ds.setPassword(dbPassword);
                     ds.setAcquireRetryAttempts(10);
                     ds.setCheckoutTimeout(Integer.parseInt(p.getProperty(propsPrefix + ".pool.timeout", "5000")));
                     ds.setBreakAfterAcquireFailure(false);

@@ -13,10 +13,14 @@ $ git push origin master
 
 History:
 
-2012.3.5: 
+2012.3.9, version 1.2.4.1 
   1. added Play.runingInTestNode() to make the Cobertura module happy. Bad naming.  
   2. fixed UniqueCheck in the string concatenation for updates. 
-
+  3. added enum filter to the LVEnhancer, not sure 100% though.
+  4. improvement: mapped Java code compilation error to the original view line, for better problem error pinpointing. 
+  5. added optimization in ApplicationClassLoader#detectChanges to fine tune dirtySig to avoid whole app reloading when a japidview file is changed, a performance improvement at dev time. 
+  
+  
 h1. Welcome to Play framework
 
 Play framework makes it easier to build Web applications with Java. It is a clean alternative to bloated Enterprise Java stacks. It focuses on developer productivity and targets RESTful architectures. Play is a perfect companion to agile software development.

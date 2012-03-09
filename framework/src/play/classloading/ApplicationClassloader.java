@@ -29,6 +29,7 @@ import play.classloading.hash.ClassStateHashCreator;
 import play.vfs.VirtualFile;
 import play.cache.Cache;
 import play.classloading.ApplicationClasses.ApplicationClass;
+import play.exceptions.CompilationException;
 import play.exceptions.UnexpectedException;
 import play.libs.IO;
 
@@ -129,6 +130,9 @@ public class ApplicationClassloader extends ClassLoader {
             }
         }
 
+        if(name.startsWith("java.") || name.startsWith("javax.") )
+        	return null;
+        
         long start = System.currentTimeMillis();
         ApplicationClass applicationClass = Play.classes.getApplicationClass(name);
         if (applicationClass != null) {
@@ -344,8 +348,19 @@ public class ApplicationClassloader extends ClassLoader {
 						dirtySig = true;
 					}
 					BytecodeCache.cacheBytecode(applicationClass.enhancedByteCode, applicationClass.name, applicationClass.javaSource);
-					newDefinitions.add(new ClassDefinition(applicationClass.javaClass, applicationClass.enhancedByteCode));
-					currentState = new ApplicationClassloaderState();//show others that we have changed..
+					// bran
+					if (applicationClass.javaClass == null) {
+						String msg = "javaClass is null: " + applicationClass.name;
+						Logger.error(msg);
+						throw new RuntimeException(msg);
+					} else if (applicationClass.enhancedByteCode == null) {
+						String msg = "enhancedByteCode is null: " + applicationClass.name;
+						Logger.error(msg);
+						throw new RuntimeException(msg);
+					} else {
+						newDefinitions.add(new ClassDefinition(applicationClass.javaClass, applicationClass.enhancedByteCode));
+						currentState = new ApplicationClassloaderState();//show others that we have changed..
+					}					
 				}
 			}
 			Logger.info("Finished compiling and enhancing. Took  %s (ms) to compile, %s (ms) to enhance ", compileTime, enhanceTime);
@@ -357,15 +372,28 @@ public class ApplicationClassloader extends ClassLoader {
                 try {
                     HotswapAgent.reload(newDefinitions.toArray(new ClassDefinition[newDefinitions.size()]));
                 } catch (Throwable e) {
-                    throw new RuntimeException("Need reload");
+                    throw new RuntimeException("Need reload: hotswap agent failed to reload: " + e + e.getMessage());
                 }
             } else {
-                throw new RuntimeException("Need reload");
+                throw new RuntimeException("Need reload: HotSwapAgent is not enabled.");
             }
         }
         // Check signature (variable name & annotations aware !)
         if (dirtySig) {
-            throw new RuntimeException("Signature change !");
+        	// bran: experimental optimization for single file change. It used to throw an exception right away
+        	if (newDefinitions.size() >= 1)
+        		if (fromMultipleSourceFile(newDefinitions))
+        			throw new RuntimeException("Signature change from multiple source file!");
+        		else {
+        			// optimization for japid
+        			ClassDefinition def = newDefinitions.get(0);
+        			if (def.getDefinitionClass().getName().startsWith("japidviews")) {
+        				Logger.info("japid view signature changes are from the same source file. Try ignoring dirtySig to  avoid whole-sale reloading");
+        			}
+        			else {
+        				throw new RuntimeException("Signature changed from multiple source file!");
+        			}
+        		}
         }
 
         // Now check if there is new classes or removed classes
@@ -389,10 +417,29 @@ public class ApplicationClassloader extends ClassLoader {
                     }
                 }
             }
-            throw new RuntimeException("Path has changed");
+            throw new RuntimeException("Some file on Path has changed(added, removed).");
         }
     }
-    /**
+    private static boolean fromMultipleSourceFile(List<ClassDefinition> newDefinitions) {
+    	String cname = null;
+    	for (ClassDefinition def: newDefinitions) {
+    		String cn = def.getDefinitionClass().getName();
+    		int i = cn.indexOf('$');
+    		if (i > 0)
+    			cn = cn.substring(0, i);
+    		if (cname == null)
+    			cname = cn;
+    		else
+    			if (cname.equals(cn)) {
+    				// same file
+    			}
+    			else {
+    				return true;
+    			}
+    	}
+    	return false;
+	}
+	/**
      * Used to track change of the application sources path
      */
     int pathHash = 0;
@@ -446,14 +493,17 @@ public class ApplicationClassloader extends ClassLoader {
 		                System.out.println("start compiling all " + classNames.size() + " classes. ");
 		                
 		                t= System.currentTimeMillis();
-		                Play.classes.compiler.compile(classNames.toArray(new String[classNames.size()]));
+		                try {
+							Play.classes.compiler.compile(classNames.toArray(new String[classNames.size()]));
+						} catch (CompilationException e) {
+							throw Play.mapJapidJavCodeError(e);
+						}
 		                System.out.println("compiling took(ms): " + (System.currentTimeMillis() - t));
 	                }
 	                
 	                System.out.println("start loading all " + classNames.size() + " classes. ");
 	                t= System.currentTimeMillis();
 
-//                    Play.classes.compiler.compile(classNames.toArray(new String[classNames.size()]));
 
                 }
 

@@ -32,12 +32,21 @@ public class LVEnhancer extends Enhancer {
     public void enhanceThisClass(ApplicationClass applicationClass)
             throws Exception {    	
         CtClass ctClass = makeClass(applicationClass);
-        if(ctClass.isAnnotation() || ctClass.isInterface())
+        // bran: added exclusion of Enum
+        if(ctClass.isAnnotation() || ctClass.isInterface() || ctClass.isEnum())
             return;
+        
+        if (ctClass.getName().startsWith("japidviews."))
+        	return;
+        	
         for(CtBehavior behavior : ctClass.getDeclaredMethods()) {
             try {
                 if(behavior.isEmpty() || behavior.getMethodInfo().getCodeAttribute() == null || Utils.getLocalVariableAttribute(behavior) == null) {
-                    CtField signature = CtField.make("public static String[] $" + behavior.getName() + "0 = new String[0];", ctClass);
+                	// bran: there might be a bug? what if two methods of the same name having different signature? 
+                	// The field name would be the same and would cause duplicated field error!
+                	// Could this enhancer is intended for controllers, which are not supposed to have action methods of the same name?
+                    String fname = "public static String[] $" + behavior.getName() + "0 = new String[0];";
+					CtField signature = CtField.make(fname, ctClass);
                     ctClass.addField(signature);
                     continue;
                 }

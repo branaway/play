@@ -47,7 +47,7 @@ public class SigEnhancer extends Enhancer {
                 sigChecksum.append(annotation + " ");
             }
             // Signatures names
-            
+            // bran
             if (applicationClass.name.startsWith("japidviews.")) {
             	// bran: ignore localvar change for japidviews.
             	continue;

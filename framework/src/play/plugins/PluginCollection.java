@@ -124,7 +124,7 @@ public class PluginCollection {
      * Enable found plugins
      */
     public void loadPlugins() {
-        Logger.trace("Loading plugins");
+        Logger.info("Loading plugins");
         // Play! plugins
         Enumeration<URL> urls = null;
         try {
@@ -141,7 +141,7 @@ public class PluginCollection {
         List<LoadingPluginInfo> pluginsToLoad = new ArrayList<LoadingPluginInfo>();
         while (urls != null && urls.hasMoreElements()) {
             URL url = urls.nextElement();
-            Logger.trace("Found one plugins descriptor, %s", url);
+            Logger.info("Found one plugins descriptor, %s", url);
             try {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream(), "utf-8"));
                 String line;
@@ -163,7 +163,7 @@ public class PluginCollection {
         Collections.sort(pluginsToLoad);
 
         for ( LoadingPluginInfo info : pluginsToLoad) {
-            Logger.trace("Loading plugin %s", info.name);
+            Logger.info("Loading plugin %s", info.name);
             try {
                 PlayPlugin plugin = (PlayPlugin) Play.classloader.loadClass(info.name).newInstance();
                 plugin.index = info.index;

@@ -79,4 +79,11 @@ public class CompilationException extends PlayException implements SourceAttachm
         return source != null && line != null;
     }
     
+    /**
+     * @author bran
+     * @return
+     */
+    public VirtualFile getSourceVirtualFile() {
+    	return source;
+    }
 }

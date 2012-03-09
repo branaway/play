@@ -38,7 +38,10 @@ import play.mvc.Scope.Params;
 
 /**
  * A super class for JPA entities
- * bran: lots of the method used to return <T extends JPABase>, I changed them to <T extends GenericModel>
+ * bran: lots of the method used to return <T extends JPABase>, I changed them to <T extends GenericModel>, forgot why....
+ * 
+ * Was it because the impl from the JPAEnhancer used the JPQL.finds which return generic model?
+ * 
  */
 @MappedSuperclass
 @SuppressWarnings("unchecked")
@@ -301,6 +304,19 @@ public class GenericModel extends JPABase {
      */
     public static <T extends GenericModel> T findById(Object id) {
         throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+    }
+
+    /**
+     * get the first element from the query result set
+     * 
+     * bran: I added it back since the enhance would add this anyway
+     * @param entity
+     * @param query
+     * @param params
+     * @return
+     */
+    public static <T extends GenericModel> T findOneBy(String query, Object[] params) {
+    	throw new UnsupportedOperationException("Model not enhanced. Please annotate your JPA model with @javax.persistence.Entity annotation.");
     }
 
     /**

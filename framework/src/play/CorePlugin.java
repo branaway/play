@@ -298,6 +298,9 @@ public class CorePlugin extends PlayPlugin {
             PropertiesEnhancer.class
 
         };
+        
+        Logger.info("to enhance " + applicationClass.name);
+        
         for (Class<?> enhancer : enhancers) {
             try {
                 long start = System.currentTimeMillis();
