@@ -1,26 +1,24 @@
-Note: this fork contains a few patches that I believe would make using Play in dev mode faster and better in showing errors. -- branaway
+h2. About
 
-To synch with the original play repo, I have added a remote called upstream that is mapped to git://github.com/playframework/play, which is the play 1.x repo. 
+bing.ran@gmail.com
 
-then:
+This fork came from the HEAD of master in the original Play framework, at about a post 1.2.4 version. 
 
-$ git fetch upstream
-$ git merge upstream/master
-
-After a successful merge, 
-
-$ git push origin master
+It contains 
+1. a few patches that I believe would make using Play in dev mode faster
+2. special code to work with Japid for better japid views' error reporting in DEV mode. Most of japid grammar errors will be pointed back to the original view files. 
 
 History:
 
-2012.3.9, version 1.2.4.1 
+2012.3.9, version 1.2.5, tested with japid 0.9.3.1
   1. added Play.runingInTestNode() to make the Cobertura module happy. Bad naming.  
   2. fixed UniqueCheck in the string concatenation for updates. 
   3. added enum filter to the LVEnhancer, not sure 100% though.
   4. improvement: mapped Java code compilation error to the original view line, for better problem error pinpointing. 
   5. added optimization in ApplicationClassLoader#detectChanges to fine tune dirtySig to avoid whole app reloading when a japidview file is changed, a performance improvement at dev time. 
   
-  
+For More changes I have made, please see the bottom of this page. 
+
 h1. Welcome to Play framework
 
 Play framework makes it easier to build Web applications with Java. It is a clean alternative to bloated Enterprise Java stacks. It focuses on developer productivity and targets RESTful architectures. Play is a perfect companion to agile software development.
@@ -86,3 +84,15 @@ I have made a few patched that fix a few bugs and inconvenience
 # PlayHandler: added keep-alive header to the HTTP 1.0 request. 
 # Wrapped the HotswapAgent in PlayAgent.jar to be used as the JVM agent instead of the whole play.jar. This way start script for applications can be simplified to the point that I can use regular Eclipse run/debug instead of using the remote debugging mode.
 # added option to invoke ActionInvocation without going through the intermediate executor. The option to add to application.conf: "action.invocation.direct" with value of "true"/"false";
+
+
+To synch with the original play repo, I have added a remote called upstream that is mapped to git://github.com/playframework/play, which is the play 1.x repo. 
+
+then:
+
+$ git fetch upstream
+$ git merge upstream/master
+
+After a successful merge, 
+
+$ git push origin master
