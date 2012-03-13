@@ -42,7 +42,7 @@ public class LVEnhancer extends Enhancer {
         for(CtBehavior behavior : ctClass.getDeclaredMethods()) {
             try {
                 if(behavior.isEmpty() || behavior.getMethodInfo().getCodeAttribute() == null || Utils.getLocalVariableAttribute(behavior) == null) {
-                	// bran: there might be a bug? what if two methods of the same name having different signature? 
+                	// bran: XXX there might be a bug? what if two methods of the same name having different signature? 
                 	// The field name would be the same and would cause duplicated field error!
                 	// Could this enhancer is intended for controllers, which are not supposed to have action methods of the same name?
                     String fname = "public static String[] $" + behavior.getName() + "0 = new String[0];";

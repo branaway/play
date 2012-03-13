@@ -295,7 +295,7 @@ public class CorePlugin extends PlayPlugin {
             LVEnhancer.class,
             MailerEnhancer.class,
 
-            PropertiesEnhancer.class
+//            PropertiesEnhancer.class // see what would happen bran:
 
         };
         

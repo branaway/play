@@ -553,7 +553,7 @@ public class Logger {
                 errorOut.println(format(message, args));
                 errorOut.println("");
                 if (playException.isSourceAvailable()) {
-                    errorOut.println(playException.getErrorTitle() + " (In " + playException.getSourceFile() + " around line " + playException.getLineNumber() + ")");
+                    errorOut.println(playException.getErrorTitle() + " (" + playException.getSourceFile() + ":" + playException.getLineNumber() + ")");
                 } else {
                     errorOut.println(playException.getErrorTitle());
                 }

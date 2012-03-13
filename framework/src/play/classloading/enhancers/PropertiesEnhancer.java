@@ -39,6 +39,10 @@ public class PropertiesEnhancer extends Enhancer {
             return;
         }
 
+        // bran
+        if (ctClass.getName().startsWith("japidviews."))
+        	return;
+        
         // Add a default constructor if needed
         try {
             boolean hasDefaultConstructor = false;
