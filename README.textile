@@ -10,6 +10,8 @@ It contains
 
 History:
 
+2012.3.9, version 1.2.5.1, tested with japid 0.9.3.3
+  1. disabled PropertiesEnhancer for Japid Views.   
 2012.3.9, version 1.2.5, tested with japid 0.9.3.1
   1. added Play.runingInTestNode() to make the Cobertura module happy. Bad naming.  
   2. fixed UniqueCheck in the string concatenation for updates. 
