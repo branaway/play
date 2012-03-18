@@ -372,14 +372,13 @@ public class Play {
 
     private static Properties readOneConfigurationFile(String filename) {
         Properties propsFromFile=null;
-
         VirtualFile appRoot = VirtualFile.open(applicationPath);
-
+        
         VirtualFile conf = appRoot.child("conf/" + filename);
         if (confs.contains(conf)) {
             throw new RuntimeException("Detected recursive @include usage. Have seen the file " + filename + " before");
         }
-
+        
         try {
             propsFromFile = IO.readUtf8Properties(conf.inputstream());
         } catch (RuntimeException e) {
@@ -710,7 +709,7 @@ public class Play {
 		}
 
 		String viewSourceFilePath = mapJavaToSrc(srcFilePath);
-		File file = new File(viewSourceFilePath);
+//		File file = new File(viewSourceFilePath);
 		VirtualFile vf = VirtualFile.fromRelativePath(viewSourceFilePath);
 
 		String sourceCode = e.getSourceVirtualFile().contentAsString();

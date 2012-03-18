@@ -59,7 +59,6 @@ public class DependenciesManager {
     
     final FileFilter dirsToTrim = new FileFilter() {
     
-        @Override
         public boolean accept(File file) {
             return file.isDirectory() && isDirToTrim(file.getName());
         }
@@ -285,6 +284,7 @@ public class DependenciesManager {
         File ivyModule = new File(application, "conf/dependencies.yml");
         if(!ivyModule.exists()) {
             System.out.println("~ !! " + ivyModule.getAbsolutePath() + " does not exist");
+			System.exit(-1);
             return null;
         }
 
