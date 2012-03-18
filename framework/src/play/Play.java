@@ -130,9 +130,9 @@ public class Play {
      */
     public static Map<String, VirtualFile> modulesRoutes;
     /**
-     * The main application.conf
+     * The loaded configuration files
      */
-    public static VirtualFile conf;
+    public static Set<VirtualFile> confs = new HashSet<VirtualFile>(1);
     /**
      * The app configuration (already resolved from the framework id)
      */
@@ -354,7 +354,8 @@ public class Play {
      * Read application.conf and resolve overriden key using the play id mechanism.
      */
     public static void readConfiguration() {
-        configuration = readOneConfigurationFile("application.conf", new HashSet<String>());
+        confs = new HashSet<VirtualFile>();
+        configuration = readOneConfigurationFile("application.conf");
         extractHttpPort();
         // Plugins
         pluginCollection.onConfigurationRead();
@@ -369,17 +370,16 @@ public class Play {
     }
 
 
-    private static Properties readOneConfigurationFile(String filename, Set<String> seenFileNames) {
-
-        if (seenFileNames.contains(filename)) {
-            throw new RuntimeException("Detected recursive @include usage. Have seen the file " + filename + " before");
-        }
-        seenFileNames.add(filename);
-
+    private static Properties readOneConfigurationFile(String filename) {
         Properties propsFromFile=null;
 
         VirtualFile appRoot = VirtualFile.open(applicationPath);
-        conf = appRoot.child("conf/" + filename);
+
+        VirtualFile conf = appRoot.child("conf/" + filename);
+        if (confs.contains(conf)) {
+            throw new RuntimeException("Detected recursive @include usage. Have seen the file " + filename + " before");
+        }
+
         try {
             propsFromFile = IO.readUtf8Properties(conf.inputstream());
         } catch (RuntimeException e) {
@@ -388,6 +388,8 @@ public class Play {
                 fatalServerErrorOccurred();
             }
         }
+        confs.add(conf);
+        
         // OK, check for instance specifics configuration
         Properties newConfiguration = new OrderSafeProperties();
         Pattern pattern = Pattern.compile("^%([a-zA-Z0-9_\\-]+)\\.(.*)$");
@@ -441,7 +443,7 @@ public class Play {
             if (key.toString().startsWith("@include.")) {
                 try {
                     String filenameToInclude = propsFromFile.getProperty(key.toString());
-                    toInclude.putAll( readOneConfigurationFile(filenameToInclude, seenFileNames) );
+                    toInclude.putAll( readOneConfigurationFile(filenameToInclude) );
                 } catch (Exception ex) {
                     Logger.warn("Missing include: %s", key);
                 }
@@ -658,10 +660,12 @@ public class Play {
                 classloader.detectChanges();
             }
             Router.detectChanges(ctxPath);
-            if (conf.lastModified() > startedAt) {
-            	Logger.info("Play.detectChanges: restart due to conf file change.");
-                start();
-                return;
+            for(VirtualFile conf : confs) {
+	            if (conf.lastModified() > startedAt) {
+	            	Logger.info("Play.detectChanges: restart due to conf file change: " + conf.getName());
+	                start();
+	                return;
+	            }
             }
             pluginCollection.detectChange();
             if (!Play.started) {

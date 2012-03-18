@@ -35,7 +35,7 @@ public class JPAConfig {
     protected JPAConfig(Ejb3Configuration cfg, String configName) {
         this.configName = configName;
         invokeJPAConfigurationExtensions(cfg, configName);
-        entityManagerFactory = cfg.buildEntityManagerFactory();
+        entityManagerFactory = cfg.buildEntityManagerFactory(); // bran: heavy lifting here
         jpql = new JPQL(this);
     }
 

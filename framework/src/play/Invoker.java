@@ -378,28 +378,21 @@ public class Invoker {
             if (task instanceof Promise) {
                 Promise<V> smartFuture = (Promise<V>) task;
                 smartFuture.onRedeem(new F.Action<F.Promise<V>>() {
-                    @Override
                     public void invoke(Promise<V> result) {
                         executor.submit(invocation);
                     }
                 });
             } else {
-                checkInit();
-                // bran: was inside of the the synch...
-                instance.queue.put(task, invocation);
-            }
-        }
-
-		/**
-		 * bran
-		 */
-		private synchronized static void checkInit() {
+                synchronized (WaitForTasksCompletion.class) {
 			if (instance == null) {
 				instance = new WaitForTasksCompletion();
 				Logger.warn("Start WaitForTasksCompletion");
 				instance.start();
 			}
+                    instance.queue.put(task, invocation);
+                }
 		}
+        }
 
         @Override
         public void run() {

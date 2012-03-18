@@ -43,7 +43,7 @@ public class JPA {
     private final static Map<String, JPAConfig> jpaConfigs = new HashMap<String, JPAConfig>(1);
 
     protected static void addConfiguration(String configName, Ejb3Configuration cfg) {
-        JPAConfig jpaConfig = new JPAConfig(cfg, configName);// this is where the schemas are checked
+        JPAConfig jpaConfig = new JPAConfig(cfg, configName);// bran: this is where the schemas are checked
         jpaConfigs.put(configName, jpaConfig);
         if( DBConfig.defaultDbConfigName.equals(configName)) {
             _defaultJPAConfig = jpaConfig;

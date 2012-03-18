@@ -7,8 +7,6 @@ import javax.persistence.MappedSuperclass;
 import javax.persistence.Transient;
 import javax.persistence.Version;
 
-import controllers.CRUD.Hidden;
-
 import play.data.validation.Check;
 import play.data.validation.CheckWith;
 import play.db.jpa.GenericModel;

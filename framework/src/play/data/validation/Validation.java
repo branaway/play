@@ -3,7 +3,6 @@ package play.data.validation;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -11,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+
 import net.sf.oval.configuration.annotation.AbstractAnnotationCheck;
 import play.Play;
 import play.classloading.enhancers.LVEnhancer.LVEnhancerRuntime;
@@ -20,6 +20,7 @@ import play.exceptions.UnexpectedException;
  * 
  * bran: some of those validation actions depend on the local variables 
  * tracer to retrieve the variable name in runtime for use in the error message. 
+ * History: added back the valid(o) -- bran
  */
 public class Validation {
 
@@ -448,10 +449,10 @@ public class Validation {
         return applyCheck(check, key, o);
     }
 
-//    public ValidationResult valid(Object o) {
-//        String key = getLocalName(o);
-//        return Validation.valid(key, o);
-//    }
+    public ValidationResult valid(Object o) {
+        String key = getLocalName(o);
+        return Validation.valid(key, o);
+    }
 
     static ValidationResult applyCheck(AbstractAnnotationCheck<?> check, String key, Object o) {
         try {
@@ -481,7 +482,7 @@ public class Validation {
     // string instead of the object name.
     static String getLocalName(Object o) {
         String[] names = LVEnhancerRuntime.getParamNames().params;
-        System.out.println("getLocalName " + Arrays.toString(names));
+//        System.out.println("getLocalName " + Arrays.toString(names));
         if(names.length > 0 && names[0] != null)
             return names[0];
         return "";
