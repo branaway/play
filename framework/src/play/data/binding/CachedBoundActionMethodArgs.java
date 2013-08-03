@@ -5,7 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 // ActionInvoker.getActionMethodArgs() is called twice when using validation
-// so we use this threadlocal cache to store the binding-result pr method pr request.
+// so we use this threadlocal cache to store the binding-result per method per request.
 // This way we don't have to do it twice.
 public class CachedBoundActionMethodArgs {
 

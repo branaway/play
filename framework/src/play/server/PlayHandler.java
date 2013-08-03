@@ -174,13 +174,14 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
                 if (raw) {
                     copyResponse(ctx, request, response, nettyRequest);
                 } else {
+                	NettyInvocation nettyInvocation = new NettyInvocation(request, response, ctx, nettyRequest, messageEvent);
 
                 	if (Play.invokeDirect) {
-                		new NettyInvocation(request, response, ctx, nettyRequest, messageEvent).run();
+                		nettyInvocation.run();
                     }
                     else {
                     	// Delegate to Play framework
-                    	Invoker.invoke(new NettyInvocation(request, response, ctx, nettyRequest, messageEvent));
+                    	Invoker.invoke(nettyInvocation);
                     }
 
                 }

@@ -670,8 +670,9 @@ public class Play {
             if (!Play.started) {
                 throw new RuntimeException("Not started");
             }
+            lastTimeChecked.set(System.currentTimeMillis());
         } catch (CompilationException ce) {
-			// check if this from Java code derived from japid view
+			// bran: check if this from Java code derived from japid view
 			ce = mapJapidJavCodeError(ce);
 			throw ce;
         } catch (PlayException e) {
@@ -684,9 +685,6 @@ public class Play {
         	}
 			Logger.info("Play.detectChanges: restart due to: " + message);
             start();
-        }
-        finally {
-			lastTimeChecked.set(System.currentTimeMillis());
         }
     }
 
@@ -712,16 +710,7 @@ public class Play {
 //		File file = new File(viewSourceFilePath);
 		VirtualFile vf = VirtualFile.fromRelativePath(viewSourceFilePath);
 
-		String sourceCode = e.getSourceVirtualFile().contentAsString();
-		String[] codeLines = sourceCode.split("\n");
-		String line = codeLines[e.getLineNumber() - 1];
-
-		int lineMarker = line.lastIndexOf("// line ");
-		if (lineMarker < 1) {
-			return e;
-		}
-		int oriLineNumber = Integer.parseInt(line.substring(lineMarker + 8)
-				.trim());
+		int oriLineNumber = mapJavaErrorLineToSrcLine(vf.contentAsString(), e.getLineNumber());
 		// get line start and end
 		// well not much sense. commented out
 //		String viewSource = vf.contentAsString();
@@ -738,6 +727,18 @@ public class Play {
 		return e;
 	}
 
+	static int mapJavaErrorLineToSrcLine(String sourceCode, int lineNum) {
+		String[] codeLines = sourceCode.split("\n");
+		String line = codeLines[lineNum - 1];
+	
+		int lineMarker = line.lastIndexOf("// line ");
+		if (lineMarker < 1) {
+			return 0;
+		}
+		int oriLineNumber = Integer.parseInt(line.substring(lineMarker + 8)
+				.trim());
+		return oriLineNumber;
+	}
     /**
      * copied from Japid DirUtils
      * @param clazz

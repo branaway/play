@@ -858,7 +858,7 @@ public class Router {
                         Map<String, String> localArgs = new HashMap<String, String>();
                         for (Arg arg : args) {
                             // FIXME: Careful with the arguments that are not matching as they are part of the hostname
-                            // Defaultvalue indicates it is a one of these urls. This is a trick and should be changed.
+                            // Default value indicates it is a one of these urls. This is a trick and should be changed.
                             if (arg.defaultValue == null) {
                                localArgs.put(arg.name, Utils.urlDecodePath(matcher.group(arg.name)));
                             }

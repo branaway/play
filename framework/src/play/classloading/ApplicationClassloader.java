@@ -120,6 +120,8 @@ public class ApplicationClassloader extends ClassLoader {
                 ApplicationClass applicationClass = Play.classes.getApplicationClass(name);
                 if (applicationClass != null) {
                     applicationClass.javaClass = clazz;
+                    // bran: added. should do this to the enhancedBytecode too?
+                    applicationClass.javaByteCode = code;
                     if (!applicationClass.isClass()) {
                         applicationClass.javaPackage = applicationClass.javaClass.getPackage();
                     }
