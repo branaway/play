@@ -530,6 +530,7 @@ public class Play {
             Play.classloader.getAllClasses();
 
             // Routes
+            // bran: ctxPath is not reset based on config. a bug?
             Router.detectChanges(ctxPath);
 
             // Cache
@@ -710,7 +711,7 @@ public class Play {
 //		File file = new File(viewSourceFilePath);
 		VirtualFile vf = VirtualFile.fromRelativePath(viewSourceFilePath);
 
-		int oriLineNumber = mapJavaErrorLineToSrcLine(vf.contentAsString(), e.getLineNumber());
+		int oriLineNumber = mapJavaErrorLineToSrcLine(e.getSourceVirtualFile().contentAsString(), e.getLineNumber());
 		// get line start and end
 		// well not much sense. commented out
 //		String viewSource = vf.contentAsString();

@@ -10,6 +10,8 @@ It contains
 
 History:
 
+2013.8.5, version 1.2.5.3, tested with japid 0.9.22
+  1. bug fix: error in passing the source file to the error line mapper. 
 2013.8.3, version 1.2.5.2, tested with japid 0.9.22
   1. added bytecode to the application class from pre-compiled code in ApplicationClassLoader, about line 123. Required by using with post-controller japid in pre-compiled mode.  
 2012.3.9, version 1.2.5.1, tested with japid 0.9.3.3
