@@ -14,7 +14,7 @@ framework/play.jar
 framework/src/version
 framework/src/play/version
 framework/tests/test-application/db
-framework/play-*.jar
+#framework/play-*.jar
 framework/docs
 samples-and-tests/*/test-result/
 

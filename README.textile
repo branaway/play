@@ -68,6 +68,10 @@ The project history is pretty big. You can pull only a shallow clone by specifyi
 
 bc.  git clone git://github.com/branaway/play.git --depth 10
 
+h2. Compiling the source
+
+cd to framework and "ant". To create a new release, create a new version tag and associate the tag with the recent version and ant again. 
+
 h2. Reporting bugs
 
 Please use the github issue to report bugs
