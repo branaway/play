@@ -17,7 +17,7 @@ bc. application.baseUrl=http://localhost:9000/
 
 For @prod@ mode:
 
-bc. %production%.application.baseUrl=http://www.yourdomain.com/
+bc. %production.application.baseUrl=http://www.yourdomain.com/
 
 
 h3(#application.defaultCookieDomain). application.defaultCookieDomain
@@ -821,6 +821,15 @@ HTTP server maximum content length for response streaming, in bytes.
 Default: none - no maximum.
 
 
+h3(#play.ssl.enabledCiphers). play.ssl.enabledCiphers
+
+This setting allows to specify certain SSL ciphers to be used. This might be needed in case you have to be PCI compliant, as some ciphers in the default settings are vulnerable to the so-called BEAST attack.
+
+bc. play.ssl.enabledCiphers=SSL_RSA_WITH_RC4_128_MD5,SSL_RSA_WITH_RC4_128_SHA
+
+Default: none - the default ciphers are chosen.
+
+
 h3(#play.pool). play.pool
 
 Execution pool size. Try to keep this as low as possible. Setting this to 1 thread will serialise all requests (very useful for debugging purpose). For example:
@@ -906,7 +915,7 @@ bc. XForwardedProto=https
 
 h3(#XForwardedSupport). XForwardedSupport
 
-A comma-separated list of IP addresses that are allowed @X-Forwarded-For@ HTTP request header values, used to restrict local addresses when an @X-Forwarded-For@ request header is set by a proxy server.
+A comma-separated list of IP addresses that are allowed @X-Forwarded-For@ HTTP request header values, used to restrict local addresses when an @X-Forwarded-For@ request header is set by a proxy server. Alternatively you can use 'ALL' if you do not want to restrict local addresses. **Note**: only use 'ALL' if you are very sure that if it safe to do so (e.g. you have a proper firewall in place that blocks public requests). A valid use-case would be when using Play! behind a Amazon ELB loadbalancer, which internal IP's tend to change over time.      
 
 Default: @127.0.0.1@
 

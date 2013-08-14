@@ -55,8 +55,8 @@ Using the @renderArgs()@ method, you can also get direct access to the arguments
 
 bc. @Test
 public void testUserIsFoundAndPassedToView() {
-    Response response = POST("/user/find?name=mark&dob=18011977")
-    assertThat(renderArgs("user"), is(notNullValue());
+    Response response = POST("/user/find?name=mark&dob=18011977");
+    assertThat(renderArgs("user"), is(notNullValue()));
     User user = (User) renderArgs("user");
     assertThat(user.name, is("mark"));
 }
@@ -128,6 +128,51 @@ bc. #{selenium 'Get string from cache'}
     clickAndWait('register')
  
 #{/selenium}
+
+h3. CleanTest Annotation
+
+Some Unit/Functional tests may need to (or should not) access these ThreadLocal MVC objects:
+* Response,
+* Request,
+* RenderArgs,
+
+By default these objects will be created and you can directly access them.
+The CleanTest annotation enables you to change this default behaviour (a use 
+case would be to test some code that will be used in a Job context and thus 
+doesn't have access to these objects).   
+
+
+bc.  Request request = Request.current();
+// some code to use request
+     
+Response response = Response.current();
+// some code to use response
+      
+RenderArgs renderArgs = RenderArgs.current();
+// some code to use renderArgs
+
+In order to control the access to these parameters, you can use the <code>@CleanTest</code> on the test class.
+
+bc. @CleanTest(removeCurrent= true, createDefault=false)
+public class FunctionalTestCleanTest extends FunctionalTest {
+    @Test
+    public void testParam(){
+        Request request = Request.current();
+        assertNull(request);
+     
+        Response response = Response.current();
+        assertNull(response);
+      
+        RenderArgs renderArgs = RenderArgs.current();
+        assertNull(renderArgs);
+     }  
+}
+
+This annotation has the following properties:
+
+* **removeCurrent**: Indicate if current MVC objects will be removed or not
+* **createDefault**: Indicate if current MVC objects will be created or not
+
 
 h2. <a name="fixtures">Fixtures</a>
 

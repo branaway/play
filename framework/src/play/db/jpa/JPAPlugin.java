@@ -3,13 +3,11 @@ package play.db.jpa;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Level;
-import org.apache.log4j.config.PropertyGetter;
 import org.hibernate.CallbackException;
 import org.hibernate.EmptyInterceptor;
 import org.hibernate.collection.spi.PersistentCollection;
 import org.hibernate.ejb.Ejb3Configuration;
 import org.hibernate.type.Type;
-import play.Invoker.InvocationContext;
 import play.Logger;
 import play.Play;
 import play.PlayPlugin;
@@ -72,14 +70,15 @@ public class JPAPlugin extends PlayPlugin {
             if (ids != null && ids.length > 0) {
                 try {
                     EntityManager em = JPABase.getJPAConfig(clazz).getJPAContext().em();
-                    String q = "from " + clazz.getName() + " o where";
+                    StringBuilder q = new StringBuilder().append("from ").append(clazz.getName()).append(" o where");
+                    int keyIdx = 1;
                     for (String keyName : keyNames) {
-                            q += " o." + keyName + " = ? and " ;
+                            q.append(" o.").append(keyName).append(" = ?").append(keyIdx++).append(" and ");
                     }
                     if (q.length() > 4) {
-                        q = q.substring(0, q.length() - 4);
+                        q = q.delete(q.length() - 4, q.length());
                     }
-                    Query query = em.createQuery(q);
+                    Query query = em.createQuery(q.toString());
                     // The primary key can be a composite.
                     Class[] pk = new JPAModelLoader(clazz).keyTypes();
                     int j = 0;
@@ -306,23 +305,23 @@ public class JPAPlugin extends PlayPlugin {
         String dialect = Play.configuration.getProperty(propPrefix + "jpa.dialect");
         if (dialect != null) {
             return dialect;
-        } else if (driver.equals("org.h2.Driver")) {
+        } else if ("org.h2.Driver".equals(driver)) {
             return "org.hibernate.dialect.H2Dialect";
-        } else if (driver.equals("org.hsqldb.jdbcDriver")) {
+        } else if ("org.hsqldb.jdbcDriver".equals(driver)) {
             return "org.hibernate.dialect.HSQLDialect";
-        } else if (driver.equals("com.mysql.jdbc.Driver")) {
+        } else if ("com.mysql.jdbc.Driver".equals(driver)) {
             return "play.db.jpa.MySQLDialect";
-        } else if (driver.equals("org.postgresql.Driver")) {
+        } else if ("org.postgresql.Driver".equals(driver)) {
             return "org.hibernate.dialect.PostgreSQLDialect";
-        } else if (driver.toLowerCase().equals("com.ibm.db2.jdbc.app.DB2Driver")) {
+        } else if ("com.ibm.db2.jdbc.app.DB2Driver".equals(driver)) {
             return "org.hibernate.dialect.DB2Dialect";
-        } else if (driver.equals("com.ibm.as400.access.AS400JDBCDriver")) {
+        } else if ("com.ibm.as400.access.AS400JDBCDriver".equals(driver)) {
             return "org.hibernate.dialect.DB2400Dialect";
-        } else if (driver.equals("com.ibm.as400.access.AS390JDBCDriver")) {
+        } else if ("com.ibm.as400.access.AS390JDBCDriver".equals(driver)) {
             return "org.hibernate.dialect.DB2390Dialect";
-        } else if (driver.equals("oracle.jdbc.OracleDriver")) {
+        } else if ("oracle.jdbc.OracleDriver".equals(driver)) {
             return "org.hibernate.dialect.Oracle10gDialect";
-        } else if (driver.equals("com.sybase.jdbc2.jdbc.SybDriver")) {
+        } else if ("com.sybase.jdbc2.jdbc.SybDriver".equals(driver)) {
             return "org.hibernate.dialect.SybaseAnywhereDialect";
         } else if ("com.microsoft.jdbc.sqlserver.SQLServerDriver".equals(driver)) {
             return "org.hibernate.dialect.SQLServerDialect";
@@ -849,7 +848,7 @@ public class JPAPlugin extends PlayPlugin {
     // Explicit SAVE for JPABase is implemented here
     // ~~~~~~
     // We've hacked the org.hibernate.event.def.AbstractFlushingEventListener line 271, to flush collection update,remove,recreation
-    // only if the owner will be saved.
+    // only if the owner will be saved or if the targeted entity will be saved (avoid the org.hibernate.HibernateException: Found two representations of same collection)
     // As is:
     // if (session.getInterceptor().onCollectionUpdate(coll, ce.getLoadedKey())) {
     //      actionQueue.addAction(...);
@@ -858,51 +857,77 @@ public class JPAPlugin extends PlayPlugin {
     // This is really hacky. We should move to something better than Hibernate like EBEAN
     private static class PlayInterceptor extends EmptyInterceptor {
 
-        @Override
-        public int[] findDirty(Object o, Serializable id, Object[] arg2, Object[] arg3, String[] arg4, Type[] arg5) {
-            if (o instanceof JPABase && !((JPABase) o).willBeSaved) {
-                return new int[0];
-            }
-            return null;
-        }
+		   @Override
+	       public int[] findDirty(Object o, Serializable id, Object[] arg2, Object[] arg3, String[] arg4, Type[] arg5) {
+	       		if (o instanceof JPABase && !((JPABase) o).willBeSaved) {
+	                return new int[0];
+	            }
+	            return null;
+	       }
 
-        @Override
-        public boolean onCollectionUpdate(Object collection, Serializable key) throws CallbackException {
-            if (collection instanceof PersistentCollection) {
-                Object o = ((PersistentCollection) collection).getOwner();
-                if (o instanceof JPABase) {
-                    return ((JPABase) o).willBeSaved;
+		   @Override
+           public boolean onCollectionUpdate(Object collection, Serializable key) throws CallbackException {
+                if (collection instanceof PersistentCollection) {
+                    Object o = ((PersistentCollection) collection).getOwner();
+                   	if (o instanceof JPABase) {
+						if (entities.get() != null) {
+                           	return ((JPABase) o).willBeSaved || ((JPABase) entities.get()).willBeSaved;
+						} else {
+							return ((JPABase) o).willBeSaved;
+						}
+                    }
+                } else {
+                    System.out.println("HOO: Case not handled !!!");
                 }
-            } else {
-                System.out.println("HOO: Case not handled !!!");
-            }
-            return super.onCollectionUpdate(collection, key);
-        }
+          		return super.onCollectionUpdate(collection, key);
+          }
 
-        @Override
-        public boolean onCollectionRecreate(Object collection, Serializable key) throws CallbackException {
-            if (collection instanceof PersistentCollection) {
-                Object o = ((PersistentCollection) collection).getOwner();
-                if (o instanceof JPABase) {
-                    return ((JPABase) o).willBeSaved;
-                }
-            } else {
-                System.out.println("HOO: Case not handled !!!");
-            }
+          @Override
+          public boolean onCollectionRecreate(Object collection, Serializable key) throws CallbackException {
+              if (collection instanceof PersistentCollection) {
+                  Object o = ((PersistentCollection) collection).getOwner();
+          	 	if (o instanceof JPABase) {
+				if (entities.get() != null) {
+                    return ((JPABase) o).willBeSaved || ((JPABase) entities.get()).willBeSaved;
+				} else {
+					return ((JPABase) o).willBeSaved;
+				}
+                   } 
+			} else {
+           		System.out.println("HOO: Case not handled !!!");
+        	}
             return super.onCollectionRecreate(collection, key);
         }
 
-        @Override
+		@Override
         public boolean onCollectionRemove(Object collection, Serializable key) throws CallbackException {
-            if (collection instanceof PersistentCollection) {
+		 	if (collection instanceof PersistentCollection) {
                 Object o = ((PersistentCollection) collection).getOwner();
-                if (o instanceof JPABase) {
-                    return ((JPABase) o).willBeSaved;
+	            if (o instanceof JPABase) {
+					if (entities.get() != null) {
+                   		return ((JPABase) o).willBeSaved || ((JPABase) entities.get()).willBeSaved;
+					} else {
+						return ((JPABase) o).willBeSaved;
+					}
                 }
-            } else {
-                System.out.println("HOO: Case not handled !!!");
-            }
-            return super.onCollectionRemove(collection, key);
-        }
+			} else {
+	          	System.out.println("HOO: Case not handled !!!");
+	        }
+	        return super.onCollectionRemove(collection, key);
+		}
+
+		protected ThreadLocal<Object> entities = new ThreadLocal<Object>();
+		
+		@Override
+	 	public boolean onSave(Object entity, Serializable id, Object[] state, String[] propertyNames, Type[] types)  {
+			entities.set(entity);
+			return super.onSave(entity, id, state, propertyNames, types);
+		}
+				
+		@Override
+		public void afterTransactionCompletion(org.hibernate.Transaction tx) {
+			entities.remove();
+		}
+    
     }
 }

@@ -136,10 +136,10 @@ public class JPQL {
         if (query.trim().toLowerCase().startsWith("order by ")) {
             return "from " + entityName + " " + query;
         }
-        if (query.trim().indexOf(" ") == -1 && query.trim().indexOf("=") == -1 && params != null && params.length == 1) {
+        if (query.trim().indexOf(' ') == -1 && query.trim().indexOf('=') == -1 && params != null && params.length == 1) {
             query += " = ?1";
         }
-        if (query.trim().indexOf(" ") == -1 && query.trim().indexOf("=") == -1 && params == null) {
+        if (query.trim().indexOf(' ') == -1 && query.trim().indexOf('=') == -1 && params == null) {
             query += " = null";
         }
         return "from " + entityName + " where " + query;
@@ -155,10 +155,10 @@ public class JPQL {
         if (query.trim().toLowerCase().startsWith("from ")) {
             return "delete " + query;
         }
-        if (query.trim().indexOf(" ") == -1 && query.trim().indexOf("=") == -1 && params != null && params.length == 1) {
+        if (query.trim().indexOf(' ') == -1 && query.trim().indexOf('=') == -1 && params != null && params.length == 1) {
             query += " = ?1";
         }
-        if (query.trim().indexOf(" ") == -1 && query.trim().indexOf("=") == -1 && params == null) {
+        if (query.trim().indexOf(' ') == -1 && query.trim().indexOf('=') == -1 && params == null) {
             query += " = null";
         }
         return "delete from " + entityName + " where " + query;
@@ -177,10 +177,10 @@ public class JPQL {
         if (query.trim().toLowerCase().startsWith("order by ")) {
             return "select count(*) from " + entityName;
         }
-        if (query.trim().indexOf(" ") == -1 && query.trim().indexOf("=") == -1 && params != null && params.length == 1) {
+        if (query.trim().indexOf(' ') == -1 && query.trim().indexOf('=') == -1 && params != null && params.length == 1) {
             query += " = ?1";
         }
-        if (query.trim().indexOf(" ") == -1 && query.trim().indexOf("=") == -1 && params == null) {
+        if (query.trim().indexOf(' ') == -1 && query.trim().indexOf('=') == -1 && params == null) {
             query += " = null";
         }
         if (query.trim().length() == 0) {
@@ -215,65 +215,66 @@ public class JPQL {
 
     public String findByToJPQL(String findBy) {
         findBy = findBy.substring(2);
-        StringBuffer jpql = new StringBuffer();
+        StringBuilder jpql = new StringBuilder();
         String subRequest;
         if (findBy.contains("OrderBy"))
         	subRequest = findBy.split("OrderBy")[0];
         else subRequest = findBy;
         String[] parts = subRequest.split("And");
+		int index = 1;
         for (int i = 0; i < parts.length; i++) {
             String part = parts[i];
             if (part.endsWith("NotEqual")) {
                 String prop = extractProp(part, "NotEqual");
-                jpql.append(prop + " <> ?");
+                jpql.append(prop).append(" <> ?").append(index++);
             } else if (part.endsWith("Equal")) {
                 String prop = extractProp(part, "Equal");
-                jpql.append(prop + " = ?");
+                jpql.append(prop).append(" = ?").append(index++);
             } else if (part.endsWith("IsNotNull")) {
                 String prop = extractProp(part, "IsNotNull");
-                jpql.append(prop + " is not null");
+                jpql.append(prop).append(" is not null");
             } else if (part.endsWith("IsNull")) {
                 String prop = extractProp(part, "IsNull");
-                jpql.append(prop + " is null");
+                jpql.append(prop).append(" is null");
             } else if (part.endsWith("LessThan")) {
                 String prop = extractProp(part, "LessThan");
-                jpql.append(prop + " < ?");
+                jpql.append(prop).append(" < ?").append(index++);
             } else if (part.endsWith("LessThanEquals")) {
                 String prop = extractProp(part, "LessThanEquals");
-                jpql.append(prop + " <= ?");
+                jpql.append(prop).append(" <= ?").append(index++);
             } else if (part.endsWith("GreaterThan")) {
                 String prop = extractProp(part, "GreaterThan");
-                jpql.append(prop + " > ?");
+                jpql.append(prop).append(" > ?").append(index++);
             } else if (part.endsWith("GreaterThanEquals")) {
                 String prop = extractProp(part, "GreaterThanEquals");
-                jpql.append(prop + " >= ?");
+                jpql.append(prop).append(" >= ?").append(index++);
             } else if (part.endsWith("Between")) {
                 String prop = extractProp(part, "Between");
-                jpql.append(prop + " < ? AND " + prop + " > ?");
+                jpql.append(prop).append(" < ?").append(index++).append(" AND ").append(prop).append(" > ?").append(index++);
             } else if (part.endsWith("Like")) {
                 String prop = extractProp(part, "Like");
                 // HSQL -> LCASE, all other dbs lower
                 if (isHSQL()) {
-                    jpql.append("LCASE(" + prop + ") like ?");
+                    jpql.append("LCASE(").append(prop).append(") like ?").append(index++);
                 } else {
-                    jpql.append("LOWER(" + prop + ") like ?");
+                    jpql.append("LOWER(").append(prop).append(") like ?").append(index++);
                 }
             } else if (part.endsWith("Ilike")) {
                 String prop = extractProp(part, "Ilike");
                  if (isHSQL()) {
-                    jpql.append("LCASE(" + prop + ") like LCASE(?)");
+                    jpql.append("LCASE(").append(prop).append(") like LCASE(?").append(index++).append(")");
                  } else {
-                    jpql.append("LOWER(" + prop + ") like LOWER(?)");
+                    jpql.append("LOWER(").append(prop).append(") like LOWER(?").append(index++).append(")");
                  }
             } else if (part.endsWith("Elike")) {
                 String prop = extractProp(part, "Elike");
-                jpql.append(prop + " like ?");
+                jpql.append(prop).append(" like ?").append(index++);
             } else {
                 String prop = extractProp(part, "");
-                jpql.append(prop + " = ?");
+                jpql.append(prop).append(" = ?").append(index++);
             }
             if (i < parts.length - 1) {
-                jpql.append(" AND ");
+                jpql.append(" AND ");	
             }
         }
 		// ORDER BY clause

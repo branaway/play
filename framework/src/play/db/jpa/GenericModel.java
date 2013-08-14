@@ -27,6 +27,8 @@ import javax.persistence.PostPersist;
 import javax.persistence.PostUpdate;
 import javax.persistence.Query;
 
+import org.apache.commons.lang.StringUtils;
+
 import play.Play;
 import play.classloading.enhancers.LVEnhancer;
 import play.data.binding.BeanWrapper;
@@ -85,7 +87,9 @@ public class GenericModel extends JPABase {
 
     @SuppressWarnings("deprecation")
     public static <T extends JPABase> T edit(ParamNode rootParamNode, String name, Object o, Annotation[] annotations) {
-        ParamNode paramNode = rootParamNode.getChild(name, true);
+        // #1601 - If name is empty, we're dealing with "root" request parameters (without prefixes).
+        // Must not call rootParamNode.getChild in that case, as it returns null. Use rootParamNode itself instead.
+        ParamNode paramNode = StringUtils.isEmpty(name) ? rootParamNode : rootParamNode.getChild(name, true);
         // #1195 - Needs to keep track of whick keys we remove so that we can restore it before
         // returning from this method.
         List<ParamNode.RemovedNode> removedNodesList = new ArrayList<ParamNode.RemovedNode>();
@@ -137,7 +141,7 @@ public class GenericModel extends JPABase {
                                     if (_id.equals("")) {
                                         continue;
                                     }
-                                    Query q = em.createQuery("from " + relation + " where " + keyName + " = ?");
+                                    Query q = em.createQuery("from " + relation + " where " + keyName + " = ?1");
                                     q.setParameter(1, Binder.directBind(rootParamNode.getOriginalKey(), annotations,_id, Model.Manager.factoryFor((Class<Model>) Play.classloader.loadClass(relation)).keyType(), null));
                                     try {
                                         l.add(q.getSingleResult());
@@ -152,7 +156,7 @@ public class GenericModel extends JPABase {
                             String[] ids = fieldParamNode.getChild(keyName, true).getValues();
                             if (ids != null && ids.length > 0 && !ids[0].equals("")) {
 
-                                Query q = em.createQuery("from " + relation + " where " + keyName + " = ?");
+                                Query q = em.createQuery("from " + relation + " where " + keyName + " = ?1");
                                 q.setParameter(1, Binder.directBind(rootParamNode.getOriginalKey(), annotations, ids[0], Model.Manager.factoryFor((Class<Model>) Play.classloader.loadClass(relation)).keyType(), null));
                                 try {
                                     Object to = q.getSingleResult();
@@ -181,7 +185,9 @@ public class GenericModel extends JPABase {
                     }
                 }
             }
-            ParamNode beanNode = rootParamNode.getChild(name, true);
+            // #1601 - If name is empty, we're dealing with "root" request parameters (without prefixes).
+            // Must not call rootParamNode.getChild in that case, as it returns null. Use rootParamNode itself instead.
+            ParamNode beanNode = StringUtils.isEmpty(name) ? rootParamNode : rootParamNode.getChild(name, true);
             Binder.bindBean(beanNode, o, annotations);
             return (T) o;
         } catch (Exception e) {
@@ -387,6 +393,8 @@ public class GenericModel extends JPABase {
 
         /**
          * Bind a JPQL named parameter to the current query.
+         * Careful, this will also bind count results. This means that Integer get transformed into long 
+         *  so hibernate can do the right thing. Use the setParameter if you just want to set parameters. 
          */
         public JPAQuery bind(String name, Object param) {
             if (param.getClass().isArray()) {
@@ -398,6 +406,14 @@ public class GenericModel extends JPABase {
             query.setParameter(name, param);
             return this;
         }
+
+		/** 
+		 * Set a named parameter for this query.
+		 **/
+  		public JPAQuery setParameter(String name, Object param) {
+			query.setParameter(name, param);
+	        return this;
+		}
 
         /**
          * Retrieve all results of the query

@@ -59,7 +59,7 @@ public class UniqueCheck extends AbstractAnnotationCheck<Unique> {
                 ((FieldContext) context).getField().getName());
         final GenericModel model = (GenericModel) validatedObject;
         final Model.Factory factory =  Model.Manager.factoryFor(model.getClass());
-        final String keyProperty = StringUtils.capitalize(factory.keyName());
+        final String keyProperty = factory.keyName();
         final Object keyValue = factory.keyValue(model);
         //In case of an update make sure that we won't read the current record from database.
         final boolean isUpdate = (keyValue != null);
@@ -69,6 +69,7 @@ public class UniqueCheck extends AbstractAnnotationCheck<Unique> {
         final Object[] values = new Object[isUpdate ? propertyNames.length + 1 :
                 propertyNames.length];
         final Class clazz = validatedObject.getClass();
+		int index = 1;
         for (int i = 0; i < propertyNames.length; i++) {
             Field field = getField(clazz, propertyNames[i]);
             field.setAccessible(true);
@@ -80,12 +81,16 @@ public class UniqueCheck extends AbstractAnnotationCheck<Unique> {
             if (i > 0) {
                 jpql.append(" And ");
             }
-            jpql.append("o.").append(propertyNames[i]).append(" = ? ");
+            jpql.append("o.").append(propertyNames[i]).append(" = ?" + String.valueOf(index++) + " ");
         }
         if (isUpdate) {
             values[propertyNames.length] = keyValue;
+
             // bran: was " and "
-            jpql.append(" and o.").append(keyProperty).append(" <>  ?");
+            //jpql.append(" and o.").append(keyProperty).append(" <>  ?");
+	    // the index after ??
+            jpql.append(" and o.").append(keyProperty).append(" <>  ?" + String.valueOf(index++) + " ");
+
         }
         return JPQL.instance.count(entityName, jpql.toString(), values) == 0L;
     }

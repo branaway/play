@@ -104,7 +104,7 @@ public class Messages {
     }
 
     public static String formatString(String value, Object... args) {
-        String message = String.format(value, coolStuff(value, args));
+        String message = String.format(Lang.getLocale(), value, coolStuff(value, args));
         Matcher matcher = recursive.matcher(message);
         StringBuffer sb = new StringBuffer();
         while(matcher.find()) {
@@ -171,7 +171,10 @@ public class Messages {
     public static Properties all(String locale) {
         if(locale == null || "".equals(locale))
             return defaults;
-        return locales.get(locale);
+        Properties mergedMessages = new Properties();
+        mergedMessages.putAll(defaults);
+        mergedMessages.putAll(locales.get(locale));
+        return mergedMessages;
     }
 
 }

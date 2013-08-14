@@ -1,8 +1,13 @@
 package play.test;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -15,8 +20,15 @@ import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
+import org.junit.runner.notification.RunNotifier;
+import org.junit.runners.model.TestClass;
+
 import play.Logger;
 import play.Play;
+import play.mvc.Http.Request;
+import play.mvc.Http.Response;
+import play.mvc.Router;
+import play.mvc.Scope.RenderArgs;
 import play.vfs.VirtualFile;
 
 /**
@@ -36,6 +48,8 @@ public class TestEngine {
 
     public static List<Class> allUnitTests() {
         List<Class> classes = Play.classloader.getAssignableClasses(Assert.class);
+        Collection<Class> pluginClasses = Play.pluginCollection.getUnitTests();
+        classes.addAll(pluginClasses);
         for (ListIterator<Class> it = classes.listIterator(); it.hasNext();) {
             Class c = it.next();
             if (Modifier.isAbstract(c.getModifiers())) {
@@ -52,6 +66,8 @@ public class TestEngine {
 
     public static List<Class> allFunctionalTests() {
         List<Class> classes = Play.classloader.getAssignableClasses(FunctionalTest.class);
+        Collection<Class> pluginClasses = Play.pluginCollection.getFunctionalTests();
+        classes.addAll(pluginClasses);
         for (ListIterator<Class> it = classes.listIterator(); it.hasNext();) {
             if (Modifier.isAbstract(it.next().getModifiers())) {
                 it.remove();
@@ -93,6 +109,54 @@ public class TestEngine {
             }
         }
     }
+    
+    public static void initTest(Class<?> testClass) { 
+        CleanTest cleanTestAnnot = null;
+        if(testClass != null ){
+            cleanTestAnnot = testClass.getAnnotation(CleanTest.class) ;
+        }
+        if(cleanTestAnnot != null && cleanTestAnnot.removeCurrent() == true){
+            if(Request.current != null){
+                Request.current.remove();
+            }
+            if(Response.current != null){
+                Response.current.remove();
+            }
+            if(RenderArgs.current != null){
+                RenderArgs.current.remove();
+            }
+        }
+        if (cleanTestAnnot == null || (cleanTestAnnot != null && cleanTestAnnot.createDefault() == true)) {
+            if (Request.current() == null) {
+                // Use base URL to create a request for this host
+                String host = Router.getBaseUrl();
+                if(host == null || host.equals("application.baseUrl")){
+                    host = "localhost";
+                }else if(host.contains("http://")){
+                    host = host.replaceAll("http://", ""); 
+                }else if(host.contains("https://")){
+                    host = host.replaceAll("https://", ""); 
+                 }
+                Request request = Request.createRequest(null, "GET", "/", "",
+                        null, null, null, null, false, 80, host, false,
+                        null, null);
+                request.body = new ByteArrayInputStream(new byte[0]);
+                Request.current.set(request);
+            }
+
+            if (Response.current() == null) {
+                Response response = new Response();
+                response.out = new ByteArrayOutputStream();
+                response.direct = null;
+                Response.current.set(response);
+            }
+
+            if (RenderArgs.current() == null) {
+                RenderArgs renderArgs = new RenderArgs();
+                RenderArgs.current.set(renderArgs);
+            }
+        }
+    }
 
     @SuppressWarnings("unchecked")
     public static TestResults run(final String name) {
@@ -101,7 +165,9 @@ public class TestEngine {
         try {
             // Load test class
             final Class testClass = Play.classloader.loadClass(name);
-
+                 
+            initTest(testClass);
+            
             TestResults pluginTestResults = Play.pluginCollection.runTest(testClass);
             if (pluginTestResults != null) {
                 return pluginTestResults;

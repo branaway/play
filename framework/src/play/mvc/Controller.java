@@ -17,6 +17,7 @@ import play.Invoker.Suspend;
 import play.Logger;
 import play.Play;
 import play.classloading.ApplicationClasses;
+import play.classloading.ApplicationClasses.ApplicationClass;
 import play.classloading.enhancers.ContinuationEnhancer;
 import play.classloading.enhancers.ControllersEnhancer.ControllerInstrumentation;
 import play.classloading.enhancers.ControllersEnhancer.ControllerSupport;
@@ -528,7 +529,7 @@ public class Controller implements ControllerSupport {
      * @param permanent true -> 301, false -> 302
      */
     protected static void redirect(String url, boolean permanent) {
-        if (url.matches("^([^./]+[.]?)+$")) { // fix Java !
+        if (url.indexOf("/") == -1) { // fix Java !
             redirect(url, permanent, new Object[0]);
         }
         throw new Redirect(url, permanent);
@@ -665,10 +666,12 @@ public class Controller implements ControllerSupport {
             }
             StackTraceElement element = PlayException.getInterestingStrackTraceElement(ex);
             if (element != null) {
-                throw new TemplateNotFoundException(templateName, Play.classes.getApplicationClass(element.getClassName()), element.getLineNumber());
-            } else {
-                throw ex;
+                ApplicationClass applicationClass = Play.classes.getApplicationClass(element.getClassName());
+                if (applicationClass != null) {
+                    throw new TemplateNotFoundException(templateName, applicationClass, element.getLineNumber());
+                }
             }
+            throw ex;
         }
     }
 

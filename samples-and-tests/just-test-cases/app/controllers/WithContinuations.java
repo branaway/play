@@ -41,7 +41,7 @@ public class WithContinuations extends Controller {
             if(i>0) sb.append(";");
             long s = System.currentTimeMillis();
             await(100);
-            boolean delay = System.currentTimeMillis() - s > 100 && System.currentTimeMillis() - s < 1000;
+            boolean delay = System.currentTimeMillis() - s > 100;
             sb.append(i + ":" + delay);
         }
         renderText(sb);
@@ -191,7 +191,7 @@ public class WithContinuations extends Controller {
                 if(i.get() > 5) {
                     renderText(sb);
                 } else {
-                    boolean delay = System.currentTimeMillis() - s.get() > 100 && System.currentTimeMillis() - s.get() < 150;
+                    boolean delay = System.currentTimeMillis() - s.get() > 100;
                     sb.append(i + ":" + delay);
                     s.set(System.currentTimeMillis());
                     await(100, this);
@@ -474,6 +474,54 @@ public class WithContinuations extends Controller {
         await("1s");
         render(a,aa);
         
+    }
+    public static void useAwaitOnFailingJobsPromise(String a) {
+        Job job = new Job() {
+            @Override
+            public void doJob() throws Exception {
+                throw new RuntimeException("Hello world!");
+            }
+        };
+        
+        Promise promise;
+        if("now".equals(a)) {
+            promise = job.now();
+        }
+        else {
+            promise = job.in(1);
+        }
+        
+        try {
+            await(promise);
+            renderText("ok");
+        }
+        catch(Exception e) {
+            renderText("caught exception: " + e);
+        }
+    }
+    public static void useAwaitOnNormalJobsPromise(String a) {
+        Job job = new Job() {
+          @Override
+          public void doJob() throws Exception {
+            Logger.trace("Everything is fine, I'm just doing my job!");
+          }
+        };
+        
+        Promise promise;
+        if("now".equals(a)) {
+            promise = job.now();
+        }
+        else {
+            promise = job.in(1);
+        }
+        
+        try {
+            await(promise);
+            renderText("ok");
+        }
+        catch(Exception e) {
+            renderText("caught exception");
+        }
     }
     
     

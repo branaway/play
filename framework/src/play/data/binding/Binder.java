@@ -179,10 +179,6 @@ public abstract class Binder {
                 return bindCollection(clazz, type, paramNode, bindingAnnotations);
             }
 
-            if (!paramNode.getAllChildren().isEmpty()) {
-                return internalBindBean(clazz, paramNode, bindingAnnotations);
-            }
-
             Object directBindResult = internalDirectBind(paramNode.getOriginalKey(), bindingAnnotations.annotations, paramNode.getFirstValue(clazz), clazz, type);
             
             if (directBindResult != DIRECTBINDING_NO_RESULT) {
@@ -194,6 +190,10 @@ public abstract class Binder {
             if (clazz.isArray()) {
                 return bindArray(clazz, paramNode, bindingAnnotations);
             }
+			
+			if (!paramNode.getAllChildren().isEmpty()) {
+	        	return internalBindBean(clazz, paramNode, bindingAnnotations);
+	        }
 
             return null; // give up
         } catch (BinderException e) {
@@ -400,7 +400,9 @@ public abstract class Binder {
                     if (annotation.annotationType().equals(As.class)) {
                         As as = ((As) annotation);
                         final String separator = as.value()[0];
-                        values = values[0].split(separator);
+			if (separator != null && !separator.isEmpty()){
+                        	values = values[0].split(separator);
+			}
                     }
                 }
             }

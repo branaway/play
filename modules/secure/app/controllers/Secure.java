@@ -15,7 +15,7 @@ public class Secure extends Controller {
     static void checkAccess() throws Throwable {
         // Authent
         if(!session.contains("username")) {
-            flash.put("url", "GET".equals(request.method) ? request.url : "/"); // seems a good default
+            flash.put("url", "GET".equals(request.method) ? request.url : Play.ctxPath + "/"); // seems a good default
             login();
         }
         // Checks
@@ -86,8 +86,8 @@ public class Secure extends Controller {
         // Remember if needed
         if(remember) {
             Date expiration = new Date();
-            String duration = "30d";  // maybe make this override-able 
-            expiration.setTime(expiration.getTime() + Time.parseDuration(duration));
+            String duration = Play.configuration.getProperty("secure.rememberme.duration","30d"); 
+            expiration.setTime(expiration.getTime() + Time.parseDuration(duration) * 1000 );
             response.setCookie("rememberme", Crypto.sign(username + "-" + expiration.getTime()) + "-" + username + "-" + expiration.getTime(), duration);
 
         }
@@ -110,7 +110,7 @@ public class Secure extends Controller {
         Security.invoke("onAuthenticated");
         String url = flash.get("url");
         if(url == null) {
-            url = "/";
+            url = Play.ctxPath + "/";
         }
         redirect(url);
     }

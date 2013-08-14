@@ -1,11 +1,16 @@
 package play.deps;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.FileFilter;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.ivy.Ivy;
@@ -24,6 +29,7 @@ import play.libs.Files;
 import play.libs.IO;
 
 public class DependenciesManager {
+    public static final String MODULE_ORDER_CONF = ".modulesOrder.conf";
 
     public static void main(String[] args) throws Exception {
 
@@ -109,7 +115,7 @@ public class DependenciesManager {
         for (File path : paths) {
             if (path.exists()) {
                 for (File f : path.listFiles()) {
-                    if (!installed.contains(f)) {
+                    if (!installed.contains(f) && !f.getName().equals(MODULE_ORDER_CONF)) {
                         notSync.add(f);
                     }
                 }
@@ -130,7 +136,7 @@ public class DependenciesManager {
         } else if (!notSync.isEmpty()) {
             System.out.println("~");
             System.out.println("~ *****************************************************************************");
-            System.out.println("~ WARNING: Your lib/ and modules/ directories and not synced with current dependencies (use --sync to automatically delete them)");
+            System.out.println("~ WARNING: Your lib/ and modules/ directories are not synced with current dependencies (use --sync to automatically delete them)");
             System.out.println("~");
             for (File f : notSync) {
                 System.out.println("~ \tUnknown: " + f.getAbsolutePath());
@@ -156,8 +162,30 @@ public class DependenciesManager {
         return false;
     }
 
-    public List<File> retrieve(ResolveReport report) throws Exception {
+    public List<String> retrieveModules()
+	    throws Exception {
+	List<String> modules = new ArrayList<String>();
+	
+	File file = new File(application + "/modules", MODULE_ORDER_CONF);
+	FileInputStream in = new FileInputStream(file);
+	Properties modulesOrderConfiguration = new Properties();
+	modulesOrderConfiguration.load(in);
+	
+	    String value = null;
+	 Long key = 1L;
 
+	 while ((value = modulesOrderConfiguration.getProperty(key.toString())) != null) {
+	     modules.add(value);
+	     key++;
+	 }
+	
+	in.close();
+	return modules;
+    }
+	
+    public List<File> retrieve(ResolveReport report) throws Exception {
+	Properties modulesOrderConfiguration = new Properties();
+        	
         // Track missing artifacts
         List<ArtifactDownloadReport> missing = new ArrayList<ArtifactDownloadReport>();
 
@@ -172,11 +200,36 @@ public class DependenciesManager {
                     } else {
                         if (isPlayModule(artifact) || !isFrameworkLocal(artifact)) {
                             artifacts.add(artifact);
+                            
+                            // Save the order of module
+                            if(isPlayModule(artifact)){
+                                String mName = artifact.getLocalFile().getName();
+                                if (mName.endsWith(".jar") || mName.endsWith(".zip")) {
+                            	mName = mName.substring(0, mName.length() - 4); 
+                                }
+                                modulesOrderConfiguration.setProperty(String.valueOf(modulesOrderConfiguration.size() + 1), mName);
+                            }
                         }
                     }
                 }
             }
         }
+        
+        // Load modules from modules/ directory, but get the order from the dependencies.yml file
+	// .listFiles() returns items in an OS dependant sequence, which is bad
+	// See #781
+        // Save order in file to be able to retrieve it
+        
+        // Create directory if not exist
+        File modulesDir = new File(application, "modules");
+        if(!modulesDir.exists()){
+            modulesDir.mkdir();
+        }
+          
+        File file =   new File(application + "/modules", ".modulesOrder.conf");
+        FileOutputStream fOut = new FileOutputStream(file);
+        modulesOrderConfiguration.store(fOut, "Modules orders");
+        fOut.close();  
 
         if (!missing.isEmpty()) {
             System.out.println("~");
@@ -216,13 +269,27 @@ public class DependenciesManager {
         Boolean trim = System.getProperty("play.trimdeps").equals("true");
         try {
             File from = artifact.getLocalFile();
+
             if (!isPlayModule(artifact)) {
-                File to = new File(application, "lib" + File.separator + from.getName()).getCanonicalFile();
-                new File(application, "lib").mkdir();
-                Files.copy(from, to);
-                System.out.println("~ \tlib/" + to.getName());
-                return to;
+                if ("source".equals(artifact.getArtifact().getType())) {
+                    // A source artifact: leave it in the cache, and write its path in tmp/lib-src/<jar-name>.src
+                    // so that it can be used later by commands generating IDE project fileS.
+                    new File(application, "tmp/lib-src").mkdirs();
+                    IO.writeContent(from.getAbsolutePath(),
+                            new File(application, "tmp/lib-src/" + from.getName().replace("-sources", "") + ".src"));
+                    return null;
+
+                } else {
+                    // A regular library: copy it to the lib/ directory
+                    File to = new File(application, "lib" + File.separator + from.getName()).getCanonicalFile();
+                    new File(application, "lib").mkdir();
+                    Files.copy(from, to);
+                    System.out.println("~ \tlib/" + to.getName());
+                    return to;
+                }
+
             } else {
+                // A module
                 String mName = from.getName();
                 if (mName.endsWith(".jar") || mName.endsWith(".zip")) {
                     mName = mName.substring(0, mName.length() - 4);
@@ -320,7 +387,7 @@ public class DependenciesManager {
         ResolveEngine resolveEngine = ivy.getResolveEngine();
         ResolveOptions resolveOptions = new ResolveOptions();
         resolveOptions.setConfs(new String[]{"default"});
-        resolveOptions.setArtifactFilter(FilterHelper.getArtifactTypeFilter(new String[]{"jar", "bundle"}));
+        resolveOptions.setArtifactFilter(FilterHelper.getArtifactTypeFilter(new String[]{"jar", "bundle", "source"}));
 
         return resolveEngine.resolve(ivyModule.toURI().toURL(), resolveOptions);
     }

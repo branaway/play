@@ -38,6 +38,8 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.persistence.Entity;
+
 public class Fixtures {
 
     static Pattern keyPattern = Pattern.compile("([^(]+)\\(([^)]+)\\)");
@@ -104,7 +106,9 @@ public class Fixtures {
     public static void deleteAllModels() {
         List<Class<? extends Model>> classes = new ArrayList<Class<? extends Model>>();
         for (ApplicationClasses.ApplicationClass c : Play.classes.getAssignableClasses(Model.class)) {
-            classes.add((Class<? extends Model>)c.javaClass);
+		   if( c.javaClass.isAnnotationPresent(Entity.class) ) {
+		       classes.add((Class<? extends Model>)c.javaClass);
+		    }
         }
         for (DBConfig dbConfig : DB.getDBConfigs()) {
             disableForeignKeyConstraints(dbConfig);
@@ -195,7 +199,7 @@ public class Fixtures {
                     break;
                 }
             }
-            if (yamlFile == null) {
+            if (yamlFile == null || !yamlFile.exists()) {
                 throw new RuntimeException("Cannot load fixture " + name + ", the file was not found");
             }
 
@@ -267,7 +271,6 @@ public class Fixtures {
         } catch (ScannerException e) {
             throw new YAMLException(e, yamlFile);
         } catch (Throwable e) {
-            e.printStackTrace();
             throw new RuntimeException("Cannot load fixture " + name + ": " + e.getMessage(), e);
         }
     }
@@ -417,7 +420,7 @@ public class Fixtures {
                 continue;
             }
             if (value instanceof Map<?, ?>) {
-                serialized.putAll(serialize((Map<?, ?>) value, prefix + "." + key));
+                serialized.putAll(serialize((Map<?, ?>) value, prefix + "[" + key.toString() +"]"));
             } else if (value instanceof Date) {
                 serialized.put(prefix + "." + key.toString(), new String[]{new SimpleDateFormat(DateBinder.ISO8601).format(((Date) value))});
             } else if (Collection.class.isAssignableFrom(value.getClass())) {

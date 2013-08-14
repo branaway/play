@@ -1,14 +1,12 @@
 package play.mvc;
 
+import java.io.UnsupportedEncodingException;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import play.Logger;
 import play.Play;
@@ -42,18 +40,13 @@ public class Scope {
 
         Map<String, String> data = new HashMap<String, String>();
         Map<String, String> out = new HashMap<String, String>();
-        static Pattern flashParser = Pattern.compile("\u0000([^:]*):([^\u0000]*)\u0000");
 
         static Flash restore() {
             try {
                 Flash flash = new Flash();
                 Http.Cookie cookie = Http.Request.current().cookies.get(COOKIE_PREFIX + "_FLASH");
                 if (cookie != null) {
-                    String flashData = URLDecoder.decode(cookie.value, "utf-8");
-                    Matcher matcher = flashParser.matcher(flashData);
-                    while (matcher.find()) {
-                        flash.data.put(matcher.group(1), matcher.group(2));
-                    }
+                    CookieDataCodec.decode(flash.data, cookie.value);
                 }
                 return flash;
             } catch (Exception e) {
@@ -73,15 +66,7 @@ public class Scope {
                 return;
             }
             try {
-                StringBuilder flash = new StringBuilder();
-                for (String key : out.keySet()) {
-                    flash.append("\u0000");
-                    flash.append(key);
-                    flash.append(":");
-                    flash.append(out.get(key));
-                    flash.append("\u0000");
-                }
-                String flashData = URLEncoder.encode(flash.toString(), "utf-8");
+                String flashData = CookieDataCodec.encode(data);
                 Http.Response.current().setCookie(COOKIE_PREFIX + "_FLASH", flashData, null, "/", null, COOKIE_SECURE);
             } catch (Exception e) {
                 throw new UnexpectedException("Flash serializationProblem", e);
@@ -168,7 +153,6 @@ public class Scope {
      */
     public static class Session {
 
-        static Pattern sessionParser = Pattern.compile("\u0000([^:]*):([^\u0000]*)\u0000");
         static final String AT_KEY = "___AT";
         static final String ID_KEY = "___ID";
         static final String TS_KEY = "___TS";
@@ -177,36 +161,38 @@ public class Scope {
             try {
                 Session session = new Session();
                 Http.Cookie cookie = Http.Request.current().cookies.get(COOKIE_PREFIX + "_SESSION");
+				final int duration = Time.parseDuration(COOKIE_EXPIRE) ;
+				final long expiration = (duration * 1000l);
+
                 if (cookie != null && Play.started && cookie.value != null && !cookie.value.trim().equals("")) {
                     String value = cookie.value;
-                    String sign = value.substring(0, value.indexOf("-"));
-                    String data = value.substring(value.indexOf("-") + 1);
-                    if (sign.equals(Crypto.sign(data, Play.secretKey.getBytes()))) {
-                        String sessionData = URLDecoder.decode(data, "utf-8");
-                        Matcher matcher = sessionParser.matcher(sessionData);
-                        while (matcher.find()) {
-                            session.put(matcher.group(1), matcher.group(2));
-                        }
-                    }
+				 	int firstDashIndex = value.indexOf("-");
+				    if(firstDashIndex > -1) {
+                    	String sign = value.substring(0, firstDashIndex);
+                    	String data = value.substring(firstDashIndex + 1);
+                    	if (CookieDataCodec.safeEquals(sign, Crypto.sign(data, Play.secretKey.getBytes()))) {
+                            CookieDataCodec.decode(session.data, data);
+                    	}
+					} 
                     if (COOKIE_EXPIRE != null) {
                         // Verify that the session contains a timestamp, and that it's not expired
-                        if (!session.contains(TS_KEY)) {
+					    if (!session.contains(TS_KEY)) {
                             session = new Session();
                         } else {
-                            if (Long.parseLong(session.get(TS_KEY)) < System.currentTimeMillis()) {
+					        if ((Long.parseLong(session.get(TS_KEY))) < System.currentTimeMillis()) {
                                 // Session expired
                                 session = new Session();
                             }
                         }
-                        session.put(TS_KEY, System.currentTimeMillis() + (Time.parseDuration(COOKIE_EXPIRE) * 1000));
+					    session.put(TS_KEY, System.currentTimeMillis() + expiration);
                     } else {
                         // Just restored. Nothing changed. No cookie-expire.
                         session.changed = false;
                     }
                 } else {
                     // no previous cookie to restore; but we may have to set the timestamp in the new cookie
-                    if (COOKIE_EXPIRE != null) {
-                        session.put(TS_KEY, System.currentTimeMillis() + (Time.parseDuration(COOKIE_EXPIRE) * 1000));
+			        if (COOKIE_EXPIRE != null) {	
+				        session.put(TS_KEY, (System.currentTimeMillis() + expiration));
                     }
                 }
 
@@ -262,15 +248,7 @@ public class Scope {
                 return;
             }
             try {
-                StringBuilder session = new StringBuilder();
-                for (String key : data.keySet()) {
-                    session.append("\u0000");
-                    session.append(key);
-                    session.append(":");
-                    session.append(data.get(key));
-                    session.append("\u0000");
-                }
-                String sessionData = URLEncoder.encode(session.toString(), "utf-8");
+                String sessionData = CookieDataCodec.encode(data);
                 String sign = Crypto.sign(sessionData, Play.secretKey.getBytes());
                 if (COOKIE_EXPIRE == null) {
                     Http.Response.current().setCookie(COOKIE_PREFIX + "_SESSION", sign + "-" + sessionData, null, "/", null, COOKIE_SECURE, SESSION_HTTPONLY);
@@ -378,23 +356,28 @@ public class Scope {
         public void checkAndParse() {
             if (!requestIsParsed) {
                 Http.Request request = Http.Request.current();
-                String contentType = request.contentType;
-                if (contentType != null) {
-                    DataParser dataParser = DataParser.parsers.get(contentType);
-                    if (dataParser != null) {
-                        _mergeWith(dataParser.parse(request.body));
-                    } else {
-                        if (contentType.startsWith("text/")) {
-                            _mergeWith(new TextParser().parse(request.body));
+                if (request == null) {
+                    throw new UnexpectedException("Current request undefined");
+                } else {
+                    String contentType = request.contentType;
+                    if (contentType != null) {
+                        DataParser dataParser = DataParser.parsers
+                                .get(contentType);
+                        if (dataParser != null) {
+                            _mergeWith(dataParser.parse(request.body));
+                        } else {
+                            if (contentType.startsWith("text/")) {
+                                _mergeWith(new TextParser().parse(request.body));
+                            }
                         }
                     }
+                    try {
+                        request.body.close();
+                    } catch (Exception e) {
+                        //
+                    }
+                    requestIsParsed = true;
                 }
-                try {
-                    request.body.close();
-                } catch (Exception e) {
-                    //
-                }
-                requestIsParsed = true;
             }
         }
 
