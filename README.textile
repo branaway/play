@@ -2,13 +2,14 @@ h2. About
 
 bing.ran@gmail.com
 
-This fork came from the HEAD of master in the original Play framework, at about a post 1.2.4 version. 
+This fork came from the HEAD of master in the original Play framework, at about a post 1.2.4 version. 2013/8/15: Changes in the latest HEAD of the original repository has been merged back. 
 
 It contains 
 1. a few patches that make using Play in dev mode faster.
 2. special code to work with Japid for better japid views' error reporting in DEV mode. Most of japid grammar errors will be pointed back to the original view files. 
 
 History:
+2013.9.3, roll back a unfinished hack on error pages.  
 2013.8.14, merged upstream master. 
 2013.8.5, version 1.2.5.3, tested with japid 0.9.22
   1. bug fix: error in passing the source file to the error line mapper. 
@@ -36,11 +37,11 @@ h2. Getting started
 
 1. Install the latest version of Play framework and unzip it anywhere you want:
 
-bc. unzip play-1.2.zip -d /opt/play-1.2
+bc. unzip play-1.x.zip -d /opt/play-1.2
 
 2. Add the **play** script to your PATH:
 
-bc. export PATH=$PATH:/opt/play-1.2
+bc. export PATH=$PATH:/opt/play-1.x
 
 3. Create a new Play application:
 
@@ -72,6 +73,9 @@ bc.  git clone git://github.com/branaway/play.git --depth 10
 h2. Compiling the source
 
 cd to framework and "ant". To create a new release, create a new version tag and associate the tag with the recent version and ant again. 
+
+"ant package" will create a disrtibution in the dist. 
+
 
 h2. Reporting bugs
 
