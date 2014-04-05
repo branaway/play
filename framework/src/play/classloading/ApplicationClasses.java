@@ -1,6 +1,5 @@
 package play.classloading;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.lang.annotation.Annotation;
@@ -9,12 +8,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javassist.ClassPool;
-import javassist.CtClass;
 import play.Logger;
 import play.Play;
-import play.PlayPlugin;
-import play.classloading.enhancers.Enhancer;
 import play.exceptions.UnexpectedException;
 import play.vfs.VirtualFile;
 
@@ -204,37 +199,38 @@ public class ApplicationClasses {
             this.timestamp = 0L;
         }
 
-        static final ClassPool enhanceChecker_classPool = Enhancer.newClassPool();
-        static final CtClass ctPlayPluginClass = enhanceChecker_classPool.makeClass(PlayPlugin.class.getName());
-
         /**
          * Enhance this class
          * @return the enhanced byteCode
          */
         public byte[] enhance() {
             this.enhancedByteCode = this.javaByteCode;
-            if (isClass()) {
+//            if(this.name.startsWith("japidviews"))
+//            	return this.enhancedByteCode;
 
-                // before we can start enhancing this class we must make sure it is not a PlayPlugin.
-                // PlayPlugins can be included as regular java files in a Play-application.
-                // If a PlayPlugin is present in the application, it is loaded when other plugins are loaded.
-                // All plugins must be loaded before we can start enhancing.
-                // This is a problem when loading PlayPlugins bundled as regular app-class since it uses the same classloader
-                // as the other (soon to be) enhanced play-app-classes.
-                boolean shouldEnhance = true;
-                try {
-                    CtClass ctClass = enhanceChecker_classPool.makeClass(new ByteArrayInputStream(this.enhancedByteCode));
-                    if (ctClass.subclassOf(ctPlayPluginClass)) {
-                        shouldEnhance = false;
-                    }
-                } catch( Exception e) {
-                    // nop
-                }
-
-                if (shouldEnhance) {
-                    Play.pluginCollection.enhance(this);
-                }
-            }
+           // bran experimental: no enhancement 
+//            if (isClass()) {
+//
+//                // before we can start enhancing this class we must make sure it is not a PlayPlugin.
+//                // PlayPlugins can be included as regular java files in a Play-application.
+//                // If a PlayPlugin is present in the application, it is loaded when other plugins are loaded.
+//                // All plugins must be loaded before we can start enhancing.
+//                // This is a problem when loading PlayPlugins bundled as regular app-class since it uses the same classloader
+//                // as the other (soon to be) enhanced play-app-classes.
+//                boolean shouldEnhance = true;
+//                try {
+//                    CtClass ctClass = enhanceChecker_classPool.makeClass(new ByteArrayInputStream(this.enhancedByteCode));
+//                    if (ctClass.subclassOf(ctPlayPluginClass)) {
+//                        shouldEnhance = false;
+//                    }
+//                } catch( Exception e) {
+//                    // nop
+//                }
+//
+//                if (shouldEnhance) {
+//                    Play.pluginCollection.enhance(this);
+//                }
+//            }
             if (System.getProperty("precompile") != null) {
                 try {
                     // emit bytecode to standard class layout as well

@@ -705,6 +705,11 @@ public class Play {
      */
 	public static CompilationException mapJapidJavCodeError(
 			CompilationException e) {
+		// testing the error%00ForPlay
+		boolean test = true;
+		if (test)
+			return e;
+		
 		if (!e.isSourceAvailable())
 			return e;
 
@@ -732,7 +737,7 @@ public class Play {
 //		int end = start -1 + problemLineInView.length();
 
 //		e = new CompilationException(vf, "Java code error --> \"" + e.getMessage() + "\"", oriLineNumber, start, end);
-		e = new CompilationException(vf, "Java  error --> \"" + e.getMessage() + "\"", oriLineNumber, 0, 0);
+		e = new CompilationException(vf, "\"" + e.getMessage() + "\"", oriLineNumber, 0, 0);
 		return e;
 	}
 
@@ -744,8 +749,16 @@ public class Play {
 		if (lineMarker < 1) {
 			return 0;
 		}
-		int oriLineNumber = Integer.parseInt(line.substring(lineMarker + 8)
-				.trim());
+		line = line.substring(lineMarker + 8).trim();
+		String num = "";
+		for (int i = 0; i < line.length(); i++) {
+			char c = line.charAt(i);
+			if (Character.isDigit(c))
+				num += c;
+			else
+				break;
+		}
+		int oriLineNumber = Integer.parseInt(num);
 		return oriLineNumber;
 	}
     /**
@@ -958,7 +971,7 @@ public class Play {
 	}
 
 
-	public enum PageFormat {
+	public static enum PageFormat {
 		HTML,
 		XML,
 		JSON,
@@ -987,7 +1000,7 @@ public class Play {
 	 * @author Bing Ran<bing_ran@hotmail.com>
 	 * 
 	 */
-	public interface ErrorPager {
+	public static interface ErrorPager {
 
 		/**
 		 * 

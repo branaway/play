@@ -6,12 +6,14 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import org.apache.commons.lang.StringUtils;
+
 import play.Play.Mode;
 import play.classloading.ApplicationClasses.ApplicationClass;
 import play.classloading.enhancers.ContinuationEnhancer;
 import play.classloading.enhancers.ControllersEnhancer;
 import play.classloading.enhancers.Enhancer;
 import play.classloading.enhancers.LVEnhancer;
+//import play.classloading.enhancers.LVEnhancer;
 import play.classloading.enhancers.MailerEnhancer;
 import play.classloading.enhancers.PropertiesEnhancer;
 import play.classloading.enhancers.SigEnhancer;
@@ -298,6 +300,9 @@ public class CorePlugin extends PlayPlugin {
 //            PropertiesEnhancer.class // see what would happen bran:
 
         };
+        
+        if (applicationClass.name.startsWith("japidviews."))
+        	return;
         
         Logger.info("to enhance " + applicationClass.name);
         

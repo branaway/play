@@ -38,38 +38,53 @@ public class ApplicationCompiler {
 
     Map<String, Boolean> packagesCache = new HashMap<String, Boolean>();
     ApplicationClasses applicationClasses;
-    Map<String, String> settings;
+	private CompilerOptions compilerOptions;
 
     /**
      * Try to guess the magic configuration options
      */
     public ApplicationCompiler(ApplicationClasses applicationClasses) {
+    	Map<String, String> settings;
         this.applicationClasses = applicationClasses;
-        this.settings = new HashMap<String, String>();
-        this.settings.put(CompilerOptions.OPTION_ReportMissingSerialVersion, CompilerOptions.IGNORE);
-        this.settings.put(CompilerOptions.OPTION_LineNumberAttribute, CompilerOptions.GENERATE);
-        this.settings.put(CompilerOptions.OPTION_SourceFileAttribute, CompilerOptions.GENERATE);
-        this.settings.put(CompilerOptions.OPTION_ReportDeprecation, CompilerOptions.IGNORE);
-        this.settings.put(CompilerOptions.OPTION_ReportUnusedImport, CompilerOptions.IGNORE);
-        this.settings.put(CompilerOptions.OPTION_Encoding, "UTF-8");
-        this.settings.put(CompilerOptions.OPTION_LocalVariableAttribute, CompilerOptions.GENERATE);
+        settings = new HashMap<String, String>();
+        settings.put(CompilerOptions.OPTION_ReportMissingSerialVersion, CompilerOptions.IGNORE);
+        settings.put(CompilerOptions.OPTION_LineNumberAttribute, CompilerOptions.GENERATE);
+        settings.put(CompilerOptions.OPTION_SourceFileAttribute, CompilerOptions.GENERATE);
+        settings.put(CompilerOptions.OPTION_ReportDeprecation, CompilerOptions.IGNORE);
+        settings.put(CompilerOptions.OPTION_ReportUnusedImport, CompilerOptions.IGNORE);
+        settings.put(CompilerOptions.OPTION_Encoding, "UTF-8");
+        settings.put(CompilerOptions.OPTION_LocalVariableAttribute, CompilerOptions.GENERATE);
+        
         String javaVersion = CompilerOptions.VERSION_1_5;
-        if(System.getProperty("java.version").startsWith("1.6")) {
+        String javaVersionProperty = System.getProperty("java.version");
+		if(javaVersionProperty.startsWith("1.6")) {
             javaVersion = CompilerOptions.VERSION_1_6;
-        } else if (System.getProperty("java.version").startsWith("1.7")) {
+        } else if (javaVersionProperty.startsWith("1.7")) {
             javaVersion = CompilerOptions.VERSION_1_7;
-        }
-        if("1.5".equals(Play.configuration.get("java.source"))) {
+	    } else if (javaVersionProperty.startsWith("1.8")) {
+	    	javaVersion = CompilerOptions.VERSION_1_8;
+	    }
+     
+		if("1.5".equals(Play.configuration.get("java.source"))) {
             javaVersion = CompilerOptions.VERSION_1_5;
         } else if("1.6".equals(Play.configuration.get("java.source"))) {
             javaVersion = CompilerOptions.VERSION_1_6;
         } else if("1.7".equals(Play.configuration.get("java.source"))) {
             javaVersion = CompilerOptions.VERSION_1_7;
-        }
-        this.settings.put(CompilerOptions.OPTION_Source, javaVersion);
-        this.settings.put(CompilerOptions.OPTION_TargetPlatform, javaVersion);
-        this.settings.put(CompilerOptions.OPTION_PreserveUnusedLocal, CompilerOptions.PRESERVE);
-        this.settings.put(CompilerOptions.OPTION_Compliance, javaVersion);
+	    } else if("1.8".equals(Play.configuration.get("java.source"))) {
+	    	javaVersion = CompilerOptions.VERSION_1_8;
+	    }
+		
+        settings.put(CompilerOptions.OPTION_Source, javaVersion);
+        settings.put(CompilerOptions.OPTION_TargetPlatform,  javaVersion);
+        settings.put(CompilerOptions.OPTION_Compliance,  javaVersion);
+        settings.put(CompilerOptions.PROTECTED,  javaVersion);
+        settings.put(CompilerOptions.OPTION_PreserveUnusedLocal, CompilerOptions.PRESERVE);
+        
+        compilerOptions = new CompilerOptions(settings);
+        compilerOptions.produceMethodParameters = true;
+        compilerOptions.produceReferenceInfo = true;
+        
     }
 
     /**
@@ -120,6 +135,15 @@ public class ApplicationCompiler {
 		public char[][] getPackageName() {
             return packageName;
         }
+
+		/* (non-Javadoc)
+		 * @see org.eclipse.jdt.internal.compiler.env.ICompilationUnit#ignoreOptionalProblems()
+		 */
+		@Override
+		public boolean ignoreOptionalProblems() {
+			// TODO Auto-generated method stub
+			return false;
+		}
     }
 
     /**
@@ -293,7 +317,7 @@ public class ApplicationCompiler {
         /**
          * The JDT compiler
          */
-        Compiler jdtCompiler = new Compiler(nameEnvironment, policy, settings, compilerRequestor, problemFactory) {
+        Compiler jdtCompiler = new Compiler(nameEnvironment, policy, compilerOptions, compilerRequestor, problemFactory) {
 
             @Override
             protected void handleInternalException(Throwable e, CompilationUnitDeclaration ud, CompilationResult result) {

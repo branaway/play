@@ -2,7 +2,7 @@
 
 <project name="play! framework" default="jar" basedir=".">
 
-    <property name="baseversion" value="master" />
+    <property name="baseversion" value="master_jdk8" />
 
     <path id="project.classpath">
         <fileset dir=".">
@@ -125,7 +125,7 @@
         <property name="play.path" value="../.."/>
         <ant antfile="build.xml" target="build" dir="../modules/testrunner" />
         <ant antfile="build.xml" target="build" dir="../modules/grizzly" />
-        <ant antfile="build.xml" target="build" dir="../modules/docviewer" />
+        <!-- ant antfile="build.xml" target="build" dir="../modules/docviewer" / -->
     </target>
 
     <!-- Netbeans support -->

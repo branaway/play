@@ -113,7 +113,7 @@ public class JPAPlugin extends PlayPlugin {
 
     @Override
     public void enhance(ApplicationClass applicationClass) throws Exception {
-        new JPAEnhancer().enhanceThisClass(applicationClass);
+//        new JPAEnhancer().enhanceThisClass(applicationClass);
     }
 
 

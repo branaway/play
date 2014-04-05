@@ -500,7 +500,8 @@ public class ApplicationClassloader extends ClassLoader {
 		                try {
 							Play.classes.compiler.compile(classNames.toArray(new String[classNames.size()]));
 						} catch (CompilationException e) {
-							throw Play.mapJapidJavCodeError(e);
+							throw e;
+//							throw Play.mapJapidJavCodeError(e);
 						}
 		                System.out.println("compiling took(ms): " + (System.currentTimeMillis() - t));
 	                }
