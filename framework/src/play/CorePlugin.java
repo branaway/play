@@ -9,15 +9,6 @@ import org.apache.commons.lang.StringUtils;
 
 import play.Play.Mode;
 import play.classloading.ApplicationClasses.ApplicationClass;
-import play.classloading.enhancers.ContinuationEnhancer;
-import play.classloading.enhancers.ControllersEnhancer;
-import play.classloading.enhancers.Enhancer;
-import play.classloading.enhancers.LVEnhancer;
-//import play.classloading.enhancers.LVEnhancer;
-import play.classloading.enhancers.MailerEnhancer;
-import play.classloading.enhancers.PropertiesEnhancer;
-import play.classloading.enhancers.SigEnhancer;
-import play.exceptions.UnexpectedException;
 import play.libs.Crypto;
 import play.mvc.Http.Header;
 import play.mvc.Http.Request;
@@ -28,6 +19,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.jamonapi.MonitorFactory;
 import com.jamonapi.utils.Misc;
+//import play.classloading.enhancers.LVEnhancer;
 
 /**
  * Plugin used for core tasks
@@ -289,33 +281,5 @@ public class CorePlugin extends PlayPlugin {
 
     @Override
     public void enhance(ApplicationClass applicationClass) throws Exception {
-        Class<?>[] enhancers = new Class[]{
-            SigEnhancer.class,
-            ControllersEnhancer.class,
-            
-            ContinuationEnhancer.class,
-            LVEnhancer.class,
-            MailerEnhancer.class,
-
-//            PropertiesEnhancer.class // see what would happen bran:
-
-        };
-        
-        if (applicationClass.name.startsWith("japidviews."))
-        	return;
-        
-        Logger.info("to enhance " + applicationClass.name);
-        
-        for (Class<?> enhancer : enhancers) {
-            try {
-                long start = System.currentTimeMillis();
-                ((Enhancer) enhancer.newInstance()).enhanceThisClass(applicationClass);
-                if (Logger.isTraceEnabled()) {
-                    Logger.trace("%sms to apply %s to %s", System.currentTimeMillis() - start, enhancer.getSimpleName(), applicationClass.name);
-                }
-            } catch (Exception e) {
-                throw new UnexpectedException("While applying " + enhancer + " on " + applicationClass.name, e);
-            }
-        }
     }
 }
