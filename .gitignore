@@ -24,9 +24,9 @@ samples-and-tests/*/test-result/
 nbproject
 eclipse
 .amateras
-.settings
-.classpath
-.project
+#.settings
+#.classpath
+#.project
 *.iml
 *.ipr
 *.iws
