@@ -3,10 +3,12 @@ package play.inject;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.List;
+
 import javax.inject.Inject;
+
 import play.Play;
-import play.classloading.enhancers.ControllersEnhancer.ControllerSupport;
 import play.jobs.Job;
+import play.mvc.ControllerSupport;
 import play.mvc.Mailer;
 
 public class Injector {

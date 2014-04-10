@@ -1,15 +1,22 @@
 package play.data.binding;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.*;
-import java.util.*;
-
-import play.Logger;
-import play.classloading.enhancers.PropertiesEnhancer.PlayPropertyAccessor;
-import play.exceptions.UnexpectedException;
-import play.utils.Utils;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import play.Logger;
+import play.exceptions.UnexpectedException;
 
 /**
  * Parameters map to POJO binder.
@@ -149,7 +156,7 @@ public abstract class BeanWrapper {
             return method.getName().substring(3, 4).toLowerCase() + method.getName().substring(4);
         }
         @Override boolean isSetter(Method method) {
-            return (!method.isAnnotationPresent(PlayPropertyAccessor.class) && method.getName().startsWith("set") && method.getName().length() > 3 && method.getParameterTypes().length == 1 && (method.getModifiers() & notaccessibleMethod) == 0);
+            return (/*!method.isAnnotationPresent(PlayPropertyAccessor.class) && */method.getName().startsWith("set") && method.getName().length() > 3 && method.getParameterTypes().length == 1 && (method.getModifiers() & notaccessibleMethod) == 0);
         }
         @Override Collection<Field> getFields(Class<?> forClass) {
             final Collection<Field> fields = new ArrayList<Field>();
@@ -171,7 +178,7 @@ public abstract class BeanWrapper {
             return method.getName().substring(0, method.getName().length() - 4);
         }
         @Override boolean isSetter(Method method) {
-            return (!method.isAnnotationPresent(PlayPropertyAccessor.class) && method.getName().endsWith("_$eq") && method.getParameterTypes().length == 1 && (method.getModifiers() & notaccessibleMethod) == 0);
+            return (/*!method.isAnnotationPresent(PlayPropertyAccessor.class) && */method.getName().endsWith("_$eq") && method.getParameterTypes().length == 1 && (method.getModifiers() & notaccessibleMethod) == 0);
         }
         @Override Collection<Field> getFields(Class<?> forClass) {
             return Arrays.asList(forClass.getDeclaredFields());

@@ -7,34 +7,34 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
-import java.net.MalformedURLException;
 
 import org.junit.Before;
-import play.Invoker.InvocationContext;
 
-import play.classloading.enhancers.ControllersEnhancer.ControllerInstrumentation;
+import play.Invoker;
+import play.Invoker.InvocationContext;
 import play.mvc.ActionInvoker;
+import play.mvc.Controller;
+import play.mvc.ControllerInstrumentation;
 import play.mvc.Http;
 import play.mvc.Http.Request;
 import play.mvc.Http.Response;
+import play.mvc.Router.ActionDefinition;
 import play.mvc.Scope.RenderArgs;
 
 import com.ning.http.multipart.FilePart;
 import com.ning.http.multipart.MultipartRequestEntity;
 import com.ning.http.multipart.Part;
 import com.ning.http.multipart.StringPart;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.TimeUnit;
-import play.Invoker;
-import play.mvc.Controller;
-import play.mvc.Router.ActionDefinition;
 
 /**
  * Application tests support

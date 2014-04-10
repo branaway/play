@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import javax.activation.DataSource;
 import javax.mail.internet.InternetAddress;
 
 import org.apache.commons.lang.StringUtils;
@@ -19,18 +20,16 @@ import org.apache.commons.mail.MultiPartEmail;
 import org.apache.commons.mail.SimpleEmail;
 
 import play.Logger;
-import play.classloading.enhancers.LVEnhancer.LVEnhancerRuntime;
 import play.exceptions.MailException;
 import play.exceptions.TemplateNotFoundException;
 import play.exceptions.UnexpectedException;
-import play.libs.Mail;
-import play.templates.Template;
-import play.templates.TemplateLoader;
-
-import javax.mail.internet.InternetAddress;
 import play.libs.F;
 import play.libs.F.T4;
-import javax.activation.DataSource;
+import play.libs.Mail;
+import play.mvc.Http.Request;
+import play.templates.Template;
+import play.templates.TemplateLoader;
+import play.utils.Utils;
 
 /**
  * Application mailer support
@@ -226,7 +225,7 @@ public class Mailer {
             templateName = templateName.substring(0, templateName.indexOf("("));
             templateName = templateName.replace(".", "/");
 
-            String[] names = LVEnhancerRuntime.getParamNames().mergeParamsAndVarargs();
+            String[] names = Utils.getParamNames(Request.current().invokedMethod)/*.mergeParamsAndVarargs()*/;
             
             // overrides Template name
             if (args.length > 0 && args[0] instanceof String && names[0] == null) {

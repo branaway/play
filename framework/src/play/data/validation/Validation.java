@@ -13,7 +13,6 @@ import java.util.regex.Pattern;
 
 import net.sf.oval.configuration.annotation.AbstractAnnotationCheck;
 import play.Play;
-import play.classloading.enhancers.LVEnhancer.LVEnhancerRuntime;
 import play.exceptions.UnexpectedException;
 
 /**
@@ -481,9 +480,10 @@ public class Validation {
     // And this not backward compatible as previously it was returning an empty
     // string instead of the object name.
     static String getLocalName(Object o) {
-        String[] names = LVEnhancerRuntime.getParamNames().params;
-        if(names.length > 0 && names[0] != null)
-            return names[0];
+    	// bran don't know how yet
+//        String[] names = LVEnhancerRuntime.getParamNames().params;
+//        if(names.length > 0 && names[0] != null)
+//            return names[0];
         return "";
     }
 

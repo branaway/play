@@ -4,6 +4,8 @@ import play.Play;
 import play.mvc.Scope;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
@@ -13,6 +15,7 @@ import java.nio.charset.CharsetDecoder;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Generic utils
@@ -230,4 +233,13 @@ public class Utils {
             return plain;
         }
     }
+
+	/**
+	 * get the params of the current method
+	 * @author Bing Ran (bing.ran@gmail.com)
+	 * @return
+	 */
+	public static String[] getParamNames(Method method) {
+		return Arrays.stream(method.getParameters()).map(Parameter::getName).collect(Collectors.toList()).toArray(new String[] {});
+	}
 }

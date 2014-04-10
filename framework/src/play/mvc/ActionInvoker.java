@@ -69,7 +69,7 @@ public class ActionInvoker {
         Scope.Flash.current.set(Scope.Flash.restore());
         CachedBoundActionMethodArgs.init();
 
-        ControllersEnhancer.currentAction.set(new Stack<String>());
+        ControllerInstrumentation.currentAction.set(new Stack<String>());
 
         if (request.resolved) {
             return;
@@ -588,6 +588,12 @@ public class ActionInvoker {
         return result;
     }
 
+    /**
+     * 
+     * @author Bing Ran (bing.ran@gmail.com)
+     * @param fullAction
+     * @return the controller class and the action method, in the format of  [<class<?>>, Method]
+     */
     public static Object[] getActionMethod(String fullAction) {
         Method actionMethod = null;
         Class controllerClass = null;

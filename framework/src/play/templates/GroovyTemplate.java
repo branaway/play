@@ -1,7 +1,5 @@
 package play.templates;
 
-import com.jamonapi.Monitor;
-import com.jamonapi.MonitorFactory;
 import groovy.lang.Binding;
 import groovy.lang.Closure;
 import groovy.lang.GroovyClassLoader;
@@ -9,15 +7,20 @@ import groovy.lang.GroovyObjectSupport;
 import groovy.lang.GroovyShell;
 import groovy.lang.MissingPropertyException;
 import groovy.lang.Script;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
-import org.apache.commons.lang.StringEscapeUtils;
 import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.CompilationUnit.GroovyClassOperation;
 import org.codehaus.groovy.control.CompilerConfiguration;
@@ -28,11 +31,11 @@ import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
 import org.codehaus.groovy.runtime.InvokerHelper;
 import org.codehaus.groovy.syntax.SyntaxException;
 import org.codehaus.groovy.tools.GroovyClass;
+
 import play.Logger;
 import play.Play;
 import play.Play.Mode;
 import play.classloading.BytecodeCache;
-import play.classloading.enhancers.LVEnhancer;
 import play.data.binding.Unbinder;
 import play.exceptions.ActionNotFoundException;
 import play.exceptions.NoRouteFoundException;
@@ -46,15 +49,19 @@ import play.exceptions.UnexpectedException;
 import play.i18n.Lang;
 import play.i18n.Messages;
 import play.libs.Codec;
-import play.mvc.Http;
-import play.utils.Java;
 import play.mvc.ActionInvoker;
+import play.mvc.Http;
 import play.mvc.Http.Request;
 import play.mvc.Router;
 import play.templates.types.SafeCSVFormatter;
 import play.templates.types.SafeHTMLFormatter;
 import play.templates.types.SafeXMLFormatter;
 import play.utils.HTML;
+import play.utils.Java;
+import play.utils.Utils;
+
+import com.jamonapi.Monitor;
+import com.jamonapi.MonitorFactory;
 
 /**
  * A template
@@ -515,7 +522,7 @@ public class GroovyTemplate extends BaseTemplate {
                     try {
                         Map<String, Object> r = new HashMap<String, Object>();
                         Method actionMethod = (Method) ActionInvoker.getActionMethod(action)[1];
-                        String[] names = (String[]) actionMethod.getDeclaringClass().getDeclaredField("$" + actionMethod.getName() + LVEnhancer.computeMethodHash(actionMethod.getParameterTypes())).get(null);
+                        String[] names = Utils.getParamNames(actionMethod);
                         if (param instanceof Object[]) {
                             if(((Object[])param).length == 1 && ((Object[])param)[0] instanceof Map) {
                                 r = (Map<String,Object>)((Object[])param)[0];

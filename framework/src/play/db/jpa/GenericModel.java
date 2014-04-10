@@ -30,7 +30,6 @@ import javax.persistence.Query;
 import org.apache.commons.lang.StringUtils;
 
 import play.Play;
-import play.classloading.enhancers.LVEnhancer;
 import play.data.binding.BeanWrapper;
 import play.data.binding.Binder;
 import play.data.binding.ParamNode;
@@ -215,12 +214,18 @@ public class GenericModel extends JPABase {
     }
 
     public boolean validateAndSave() {
-        if (Validation.valid(LVEnhancer.LVEnhancerRuntime.getParamNames().subject, this).ok) {
+        if (Validation.valid(getKey(), this).ok) {
             save();
             return true;
         }
         return false;
     }
+
+	private String getKey(){
+		// bran method name?
+		//return LVEnhancer.LVEnhancerRuntime.getParamNames().subject;
+		return null;
+	}
 
     public boolean validateAndCreate() {
 		if (Validation.valid(this.getClass().getName(), this).ok) {
