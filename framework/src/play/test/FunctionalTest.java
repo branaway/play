@@ -22,9 +22,9 @@ import org.junit.Before;
 
 import play.Invoker;
 import play.Invoker.InvocationContext;
+import play.classloading.enhancers.ControllersEnhancer.ControllerInstrumentation;
 import play.mvc.ActionInvoker;
 import play.mvc.Controller;
-import play.mvc.ControllerInstrumentation;
 import play.mvc.Http;
 import play.mvc.Http.Request;
 import play.mvc.Http.Response;

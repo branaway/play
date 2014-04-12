@@ -23,6 +23,7 @@ import play.Invoker.Suspend;
 import play.Logger;
 import play.Play;
 import play.cache.CacheFor;
+import play.classloading.enhancers.ControllersEnhancer.ControllerInstrumentation;
 //import play.classloading.enhancers.ControllersEnhancer.ControllerInstrumentation;
 //import play.classloading.enhancers.ControllersEnhancer.ControllerSupport;
 import play.data.binding.Binder;
