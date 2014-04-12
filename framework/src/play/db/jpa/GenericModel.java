@@ -278,93 +278,95 @@ public class GenericModel extends JPABase {
         return (T) this;
     }
 
-    public static <T extends GenericModel> T create(String name, Params params) {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
-    }
-
-    /**
-     * Count entities
-     * @return number of entities of this class
-     */
-    public static long count() {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
-    }
-
-    /**
-     * Count entities with a special query.
-     * Example : Long moderatedPosts = Post.count("moderated", true);
-     * @param query HQL query or shortcut
-     * @param params Params to bind to the query
-     * @return A long
-     */
-    public static long count(String query, Object... params) {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
-    }
-
-    /**
-     * Find all entities of this type
-     */
-    public static <T extends GenericModel> List<T> findAll() {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
-    }
-
-    /**
-     * Find the entity with the corresponding id.
-     * @param id The entity id
-     * @return The entity
-     */
-    public static <T extends GenericModel> T findById(Object id) {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
-    }
-
-    /**
-     * get the first element from the query result set
-     * 
-     * bran: I added it back since the enhance would add this anyway
-     * @param entity
-     * @param query
-     * @param params
-     * @return
-     */
-    public static <T extends GenericModel> T findOneBy(String query, Object[] params) {
-    	throw new UnsupportedOperationException("Model not enhanced. Please annotate your JPA model with @javax.persistence.Entity annotation.");
-    }
-
-    /**
-     * Prepare a query to find entities.
-     * @param query HQL query or shortcut
-     * @param params Params to bind to the query
-     * @return A JPAQuery
-     */
-    public static JPAQuery find(String query, Object... params) {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
-    }
-
-    /**
-     * Prepare a query to find *all* entities.
-     * @return A JPAQuery
-     */
-    public static JPAQuery all() {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
-    }
-
-    /**
-     * Batch delete of entities
-     * @param query HQL query or shortcut
-     * @param params Params to bind to the query
-     * @return Number of entities deleted
-     */
-    public static int delete(String query, Object... params) {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
-    }
-
-    /**
-     * Delete all entities
-     * @return Number of entities deleted
-     */
-    public static int deleteAll() {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
-    }
+    /*bran: removed all the static convenient methods to favor a slight more explicit JPQL call, which does not require fancy code enhancement*/
+//
+//    public static <T extends GenericModel> T create(String name, Params params) {
+//        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+//    }
+//
+//    /**
+//     * Count entities
+//     * @return number of entities of this class
+//     */
+//    public static long count() {
+//        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+//    }
+//
+//    /**
+//     * Count entities with a special query.
+//     * Example : Long moderatedPosts = Post.count("moderated", true);
+//     * @param query HQL query or shortcut
+//     * @param params Params to bind to the query
+//     * @return A long
+//     */
+//    public static long count(String query, Object... params) {
+//        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+//    }
+//
+//    /**
+//     * Find all entities of this type
+//     */
+//    public static <T extends GenericModel> List<T> findAll() {
+//        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+//    }
+//
+//    /**
+//     * Find the entity with the corresponding id.
+//     * @param id The entity id
+//     * @return The entity
+//     */
+//    public static <T extends GenericModel> T findById(Object id) {
+//        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+//    }
+//
+//    /**
+//     * get the first element from the query result set
+//     * 
+//     * bran: I added it back since the enhance would add this anyway
+//     * @param entity
+//     * @param query
+//     * @param params
+//     * @return
+//     */
+//    public static <T extends GenericModel> T findOneBy(String query, Object[] params) {
+//    	throw new UnsupportedOperationException("Model not enhanced. Please annotate your JPA model with @javax.persistence.Entity annotation.");
+//    }
+//
+//    /**
+//     * Prepare a query to find entities.
+//     * @param query HQL query or shortcut
+//     * @param params Params to bind to the query
+//     * @return A JPAQuery
+//     */
+//    public static JPAQuery find(String query, Object... params) {
+//        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+//    }
+//
+//    /**
+//     * Prepare a query to find *all* entities.
+//     * @return A JPAQuery
+//     */
+//    public static JPAQuery all() {
+//        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+//    }
+//
+//    /**
+//     * Batch delete of entities
+//     * @param query HQL query or shortcut
+//     * @param params Params to bind to the query
+//     * @return Number of entities deleted
+//     */
+//    public static int delete(String query, Object... params) {
+//        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+//    }
+//
+//    /**
+//     * Delete all entities
+//     * @return Number of entities deleted
+//     */
+//    public static int deleteAll() {
+//        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+//    }
 
     /**
      * A JPAQuery

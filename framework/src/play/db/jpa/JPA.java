@@ -1,6 +1,7 @@
 package play.db.jpa;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.persistence.EntityManager;
@@ -9,7 +10,9 @@ import org.hibernate.ejb.Ejb3Configuration;
 
 import play.Logger;
 import play.db.DBConfig;
+import play.db.jpa.GenericModel.JPAQuery;
 import play.exceptions.JPAException;
+import play.mvc.Scope.Params;
 
 
 /**
@@ -173,4 +176,71 @@ public class JPA {
             jpaConfig.clearJPAContext();
         }
     }
+
+	public static long count(Class<? extends GenericModel> modelClass, String query, Object... params) {
+		EntityWithDB en = EntityWithDB.from(modelClass); 
+		return JPA.getJPQL(en).count(en.entity, query, params);
+	}
+
+	@SuppressWarnings("unchecked")
+	public static <T extends GenericModel> List<T>  findAll(Class<T> modelClass) {
+		EntityWithDB en = EntityWithDB.from(modelClass); 
+		return (List<T>) JPA.getJPQL(en).findAll(en.entity);
+	}
+
+	public static <T extends GenericModel> T findById(Class<T> modelClass, Object id) {
+		EntityWithDB en = EntityWithDB.from(modelClass); 
+		return (T) JPA.getJPQL(en).findById(modelClass, id);
+	}
+
+	@SuppressWarnings("unchecked")
+	public static <T extends GenericModel> List <T> findBy(Class<T> modelClass, String query, Object... params) {
+		EntityWithDB en = EntityWithDB.from(modelClass); 
+		return (List<T>) JPA.getJPQL(en).findBy(en.entity, query, params);
+	}
+
+	public static JPAQuery find(Class<? extends GenericModel> modelClass, String query, Object... params) {
+		EntityWithDB en = EntityWithDB.from(modelClass); 
+		return JPA.getJPQL(en).find(en.entity, query, params);
+	}
+
+	public static JPAQuery find(Class<? extends GenericModel> modelClass) {
+		EntityWithDB en = EntityWithDB.from(modelClass); 
+		return JPA.getJPQL(en).find(en.entity);
+	}
+
+	public static JPAQuery all(Class<? extends GenericModel> modelClass) {
+		EntityWithDB en = EntityWithDB.from(modelClass); 
+		return JPA.getJPQL(en).all(en.entity);
+	}
+
+	public static int delete(Class<? extends GenericModel> modelClass, String query, Object... params) {
+		EntityWithDB en = EntityWithDB.from(modelClass); 
+		return JPA.getJPQL(en).delete(en.entity, query, params);
+	}
+
+	public static int deleteAll(Class<? extends GenericModel> modelClass) {
+		EntityWithDB en = EntityWithDB.from(modelClass); 
+		return JPA.getJPQL(en).deleteAll(en.entity);
+	}
+
+	public static <T extends GenericModel> T create(Class<T> modelClass, String name, Params params) throws Exception {
+		EntityWithDB en = EntityWithDB.from(modelClass); 
+		return JPA.getJPQL(en).create(modelClass, name, params);
+	}
+
+	@SuppressWarnings("unchecked")
+	public static <T extends GenericModel> T findOneBy(Class<T> modelClass, String query, Object... params) {
+		EntityWithDB en = EntityWithDB.from(modelClass); 
+		return (T) JPA.getJPQL(en).findOneBy(en.entity, query, params);
+	}
+
+	public static long count(Class<? extends GenericModel> modelClass) {
+		EntityWithDB en = EntityWithDB.from(modelClass); 
+		return JPA.getJPQL(en).count(en.entity);
+	}
+
+	static JPQL getJPQL(EntityWithDB en) {
+		return getJPAConfig(en.persistenceUnit).jpql;
+	}
 }
