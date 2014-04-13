@@ -10,6 +10,7 @@ import java.util.Map;
 
 import play.Logger;
 import play.Play;
+import play.classloading.enhancers.SigEnhancer;
 import play.exceptions.UnexpectedException;
 import play.vfs.VirtualFile;
 
@@ -205,6 +206,7 @@ public class ApplicationClasses {
          */
         public byte[] enhance() {
             this.enhancedByteCode = this.javaByteCode;
+         
 //            if(this.name.startsWith("japidviews"))
 //            	return this.enhancedByteCode;
 

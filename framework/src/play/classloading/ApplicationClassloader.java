@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
 
 import play.Logger;
 import play.Play;
+import play.classloading.enhancers.SigEnhancer;
 import play.classloading.hash.ClassStateHashCreator;
 import play.vfs.VirtualFile;
 import play.cache.Cache;
@@ -346,6 +347,11 @@ public class ApplicationClassloader extends ClassLoader {
 					
 					compt = System.currentTimeMillis();
 					applicationClass.enhance();
+					try {
+						new SigEnhancer().enhanceThisClass(applicationClass);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
 					enhanceTime += (System.currentTimeMillis() - compt);
 					
 					if (sigChecksum != applicationClass.sigChecksum) {
