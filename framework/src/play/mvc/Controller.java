@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Future;
 
@@ -14,10 +15,12 @@ import play.Invoker.Suspend;
 import play.Logger;
 import play.Play;
 import play.classloading.ApplicationClasses.ApplicationClass;
+import play.data.binding.Unbinder;
 import play.data.validation.Validation;
 import play.exceptions.NoRouteFoundException;
 import play.exceptions.PlayException;
 import play.exceptions.TemplateNotFoundException;
+import play.exceptions.UnexpectedException;
 import play.libs.F;
 import play.libs.Time;
 import play.mvc.Http.Request;
@@ -505,98 +508,78 @@ public class Controller implements ControllerSupport {
             }
         }
     }
-//
-//    /**
-//     * Send a Redirect response.
-//     * @param url The Location to redirect
-//     * @param permanent true -> 301, false -> 302
-//     */
-//    protected static void redirect(String url, boolean permanent) {
-//        if (url.indexOf("/") == -1) { // fix Java !
-//            redirect(url, permanent, new Object[0]);
-//        }
-//        throw new Redirect(url, permanent);
-//    }
 
-//    /**
-//     * 302 Redirect to another action
-//     * @param action The fully qualified action name (ex: Application.index)
-//     * @param args Method arguments
-//     */
-//    public static void redirect(String action, Object... args) {
-//        redirect(action, false, args);
-//    }
-//
-//    /**
-//     * Redirect to another action
-//     * @param action The fully qualified action name (ex: Application.index)
-//     * @param permanent true -> 301, false -> 302
-//     * @param args Method arguments
-//     */
-//    protected static void redirect(String action, boolean permanent, Object... args) {
-//        try {
-//            Map<String, Object> newArgs = new HashMap<String, Object>(args.length);
-//            Method actionMethod = (Method) ActionInvoker.getActionMethod(action)[1];
+    /**
+     * Send a Redirect response.
+     * @param url The Location to redirect
+     * @param permanent true -> 301, false -> 302
+     */
+    protected static void redirect(String url, boolean permanent) {
+        if (url.indexOf("/") == -1) { // fix Java !
+            redirect(url, permanent, new Object[0]);
+        }
+        throw new Redirect(url, permanent);
+    }
+
+    /**
+     * 302 Redirect to another action
+     * @param action The fully qualified action name (ex: Application.index)
+     * @param args Method arguments
+     */
+    public static void redirect(String action, Object... args) {
+        redirect(action, false, args);
+    }
+
+    /**
+     * Redirect to another action
+     * @param action The fully qualified action name (ex: Application.index)
+     * @param permanent true -> 301, false -> 302
+     * @param args Method arguments
+     */
+    protected static void redirect(String action, boolean permanent, Object... args) {
+        try {
+            Map<String, Object> newArgs = new HashMap<String, Object>(args.length);
+            Method actionMethod = (Method) ActionInvoker.getActionMethod(action)[1];
 //            String[] names = (String[]) actionMethod.getDeclaringClass().getDeclaredField("$" + actionMethod.getName() + LVEnhancer.computeMethodHash(actionMethod.getParameterTypes())).get(null);
-//            for (int i = 0; i < names.length && i < args.length; i++) {
-//                Annotation[] annotations = actionMethod.getParameterAnnotations()[i];
-//                boolean isDefault = false;
-//                try {
-//                    Method defaultMethod = actionMethod.getDeclaringClass().getDeclaredMethod(actionMethod.getName() + "$default$" + (i + 1));
-//                    // Patch for scala defaults
-//                    if (!Modifier.isStatic(actionMethod.getModifiers()) && actionMethod.getDeclaringClass().getSimpleName().endsWith("$")) {
-//                        Object instance = actionMethod.getDeclaringClass().getDeclaredField("MODULE$").get(null);
-//                        if (defaultMethod.invoke(instance).equals(args[i])) {
-//                            isDefault = true;
-//                        }
-//                    }
-//                } catch (NoSuchMethodException e) {
-//                    //
-//                }
-//
-//                // Bind the argument
-//
-//                if (isDefault) {
-//                    newArgs.put(names[i], new Default(args[i]));
-//                } else {
-//                    Unbinder.unBind(newArgs, args[i], names[i], annotations);
-//                }
-//
-//            }
-//            try {
-//
-//                ActionDefinition actionDefinition = Router.reverse(action, newArgs);
-//
-//                if (_currentReverse.get() != null) {
-//                    ActionDefinition currentActionDefinition = _currentReverse.get();
-//                    currentActionDefinition.action = actionDefinition.action;
-//                    currentActionDefinition.url = actionDefinition.url;
-//                    currentActionDefinition.method = actionDefinition.method;
-//                    currentActionDefinition.star = actionDefinition.star;
-//                    currentActionDefinition.args = actionDefinition.args;
-//
-//                    _currentReverse.remove();
-//                } else {
-//                    throw new Redirect(actionDefinition.toString(), permanent);
-//                }
-//            } catch (NoRouteFoundException e) {
-//                StackTraceElement element = PlayException.getInterestingStrackTraceElement(e);
-//                if (element != null) {
-//                    throw new NoRouteFoundException(action, newArgs, Play.classes.getApplicationClass(element.getClassName()), element.getLineNumber());
-//                } else {
-//                    throw e;
-//                }
-//            }
-//        } catch (Exception e) {
-//            if (e instanceof Redirect) {
-//                throw (Redirect) e;
-//            }
-//            if (e instanceof PlayException) {
-//                throw (PlayException) e;
-//            }
-//            throw new UnexpectedException(e);
-//        }
-//    }
+            String[] names = play.utils.Utils.getParamNames(actionMethod);
+            for (int i = 0; i < names.length && i < args.length; i++) {
+            	Unbinder.unBind(newArgs, args[i], names[i], actionMethod.getParameterAnnotations()[i]);
+            }
+            
+            try {
+
+                ActionDefinition actionDefinition = Router.reverse(action, newArgs);
+
+                if (_currentReverse.get() != null) {
+                    ActionDefinition currentActionDefinition = _currentReverse.get();
+                    currentActionDefinition.action = actionDefinition.action;
+                    currentActionDefinition.url = actionDefinition.url;
+                    currentActionDefinition.method = actionDefinition.method;
+                    currentActionDefinition.star = actionDefinition.star;
+                    currentActionDefinition.args = actionDefinition.args;
+
+                    _currentReverse.remove();
+                } else {
+                    throw new Redirect(actionDefinition.toString(), permanent);
+                }
+            } catch (NoRouteFoundException e) {
+                StackTraceElement element = PlayException.getInterestingStrackTraceElement(e);
+                if (element != null) {
+                    throw new NoRouteFoundException(action, newArgs, Play.classes.getApplicationClass(element.getClassName()), element.getLineNumber());
+                } else {
+                    throw e;
+                }
+            }
+        } catch (Exception e) {
+            if (e instanceof Redirect) {
+                throw (Redirect) e;
+            }
+            if (e instanceof PlayException) {
+                throw (PlayException) e;
+            }
+            throw new UnexpectedException(e);
+        }
+    }
 
     protected static boolean templateExists(String templateName) {
         try {
