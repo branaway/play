@@ -1,5 +1,9 @@
 package bran;
+
 import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -7,6 +11,7 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.util.CheckClassAdapter;
 
 /**
  * 
@@ -41,7 +46,7 @@ public class ControllerClassVisitor extends ClassVisitor implements Opcodes {
 	@Override
 	public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
 		MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
-		
+
 		MethodDescr md = new MethodDescr(access, name, desc, signature, exceptions);
 		if (!isInterface && mv != null && !name.equals("<init>") && !name.contains("$")) {
 			mv = new ControllerActionMethodVisitor(controllerName, md, mv);
@@ -59,7 +64,7 @@ public class ControllerClassVisitor extends ClassVisitor implements Opcodes {
 		}
 		cv.visitEnd();
 	}
-	
+
 	public static byte[] visitController(byte[] code) {
 		try {
 			ControllerClassVisitor controllerClassVisitor = new ControllerClassVisitor();
@@ -69,10 +74,30 @@ public class ControllerClassVisitor extends ClassVisitor implements Opcodes {
 			throw new RuntimeException(e);
 		}
 	}
-	
-//	static ControllerClassVisitor controllerClassVisitor = new ControllerClassVisitor();
-	
+
+	// static ControllerClassVisitor controllerClassVisitor = new
+	// ControllerClassVisitor();
+
 	public byte[] output() {
-		return ((ClassWriter)super.cv).toByteArray();
+		byte[] byteArray = ((ClassWriter) super.cv).toByteArray();
+		verifyit(byteArray);
+		return byteArray;
 	}
+
+	/**
+	 * @author Bing Ran (bing.ran@gmail.com)
+	 * @param byteArray
+	 */
+	private void verifyit(byte[] byteArray) {
+//		not really working...
+//		ClassReader cr;
+//		try {
+//			cr = new ClassReader(new ByteArrayInputStream(byteArray));
+//			CheckClassAdapter.verify(cr, false, new PrintWriter(System.out));
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
+
+	}
+
 }

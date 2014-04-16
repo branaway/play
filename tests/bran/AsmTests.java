@@ -37,7 +37,8 @@ public class AsmTests {
 	}
 
 	public static void so(String a, long b, boolean c, double d, String ee) {
-		beforeMethod(null, a, b, c, d, ee);
+		
+		beforeMethod(null, "sss", b, c, d, ee, a, b);
 	}
 	
 }
