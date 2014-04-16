@@ -23,6 +23,7 @@ import play.Invoker.Suspend;
 import play.Logger;
 import play.Play;
 import play.cache.CacheFor;
+import play.classloading.enhancers.ControllersEnhancer;
 import play.classloading.enhancers.ControllersEnhancer.ControllerInstrumentation;
 //import play.classloading.enhancers.ControllersEnhancer.ControllerInstrumentation;
 //import play.classloading.enhancers.ControllersEnhancer.ControllerSupport;
@@ -70,7 +71,7 @@ public class ActionInvoker {
         Scope.Flash.current.set(Scope.Flash.restore());
         CachedBoundActionMethodArgs.init();
 
-        ControllerInstrumentation.currentAction.set(new Stack<String>());
+        ControllersEnhancer.currentAction.set(new Stack<String>());
 
         if (request.resolved) {
             return;

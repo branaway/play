@@ -15,6 +15,7 @@ import play.Invoker.Suspend;
 import play.Logger;
 import play.Play;
 import play.classloading.ApplicationClasses.ApplicationClass;
+import play.classloading.enhancers.ControllersEnhancer.ControllerInstrumentation;
 import play.data.binding.Unbinder;
 import play.data.validation.Validation;
 import play.exceptions.NoRouteFoundException;
@@ -824,5 +825,15 @@ public class Controller implements ControllerSupport {
 	 */
 	public static void await(int millis) {
 		throw new NotImplementedException();
+	}
+	
+	// bran: used to be inserted to the beginning of an action call
+	public static void beforeMethod(Method m, Object[] args) {
+	     if(!ControllerInstrumentation.isActionCallAllowed()) {
+                 redirect(m.getDeclaringClass().getName() + "." + m.getName(), args);
+	     }
+	     else {
+	    	 ControllerInstrumentation.stopActionCall();
+	     }
 	}
 }

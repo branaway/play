@@ -9,6 +9,10 @@ import org.apache.commons.lang.StringUtils;
 
 import play.Play.Mode;
 import play.classloading.ApplicationClasses.ApplicationClass;
+import play.classloading.enhancers.ControllersEnhancer;
+import play.classloading.enhancers.Enhancer;
+import play.classloading.enhancers.SigEnhancer;
+import play.exceptions.UnexpectedException;
 import play.libs.Crypto;
 import play.mvc.Http.Header;
 import play.mvc.Http.Request;
@@ -281,5 +285,25 @@ public class CorePlugin extends PlayPlugin {
 
     @Override
     public void enhance(ApplicationClass applicationClass) throws Exception {
+        Class<? extends Enhancer>[] enhancers = new Class[]{
+//                ContinuationEnhancer.class,
+                SigEnhancer.class,
+                ControllersEnhancer.class,
+//                MailerEnhancer.class,
+//                PropertiesEnhancer.class,
+//                LocalvariablesNamesEnhancer.class
+            };
+            for (Class<? extends Enhancer> enhancer : enhancers) {
+                try {
+                    long start = System.currentTimeMillis();
+                    enhancer.newInstance().enhanceThisClass(applicationClass);
+                    if (Logger.isTraceEnabled()) {
+                        Logger.trace("%sms to apply %s to %s", System.currentTimeMillis() - start, enhancer.getSimpleName(), applicationClass.name);
+                    }
+                } catch (Exception e) {
+                    throw new UnexpectedException("While applying " + enhancer + " on " + applicationClass.name, e);
+                }
+            }
+
     }
 }

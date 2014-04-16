@@ -347,11 +347,6 @@ public class ApplicationClassloader extends ClassLoader {
 					
 					compt = System.currentTimeMillis();
 					applicationClass.enhance();
-					try {
-						new SigEnhancer().enhanceThisClass(applicationClass);
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
 					enhanceTime += (System.currentTimeMillis() - compt);
 					
 					if (sigChecksum != applicationClass.sigChecksum) {
