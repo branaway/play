@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.jamonapi.Monitor;
 import com.jamonapi.MonitorFactory;
+
 import java.util.ArrayList;
 
 import play.Play.Mode;
@@ -21,6 +22,8 @@ import play.exceptions.UnexpectedException;
 import play.i18n.Lang;
 import play.libs.F;
 import play.libs.F.Promise;
+import play.mvc.results.NotFound;
+import play.mvc.results.RenderStatic;
 import play.utils.PThreadFactory;
 
 /**
@@ -196,8 +199,10 @@ public class Invoker {
 
         /**
          * Init the call (especially usefull in DEV mode to detect changes)
+         * @throws RenderStatic 
+         * @throws NotFound 
          */
-        public boolean init() {
+        public boolean init() throws NotFound, RenderStatic {
             Thread.currentThread().setContextClassLoader(Play.classloader);
             Play.detectChanges();
             if (!Play.started) {
@@ -211,7 +216,7 @@ public class Invoker {
         }
 
 
-        public abstract InvocationContext getInvocationContext();
+        public abstract InvocationContext getInvocationContext() throws NotFound, RenderStatic;
 
         /**
          * Things to do before an Invocation
@@ -304,7 +309,7 @@ public class Invoker {
         Suspend retry = null;
 
         @Override
-        public boolean init() {
+        public boolean init() throws NotFound, RenderStatic {
             retry = null;
             return super.init();
         }
@@ -315,7 +320,7 @@ public class Invoker {
         }
 
         @Override
-        public InvocationContext getInvocationContext() {
+        public InvocationContext getInvocationContext() throws NotFound, RenderStatic {
             return new InvocationContext(invocationType);
         }
     }

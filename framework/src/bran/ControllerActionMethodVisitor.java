@@ -1,7 +1,11 @@
 package bran;
 
 import java.lang.reflect.Type;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
+import javassist.CtField;
 
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -30,6 +34,24 @@ public class ControllerActionMethodVisitor extends MethodVisitor implements Opco
 		// alert();
 	}
 
+	/**
+	 * replace special field access to xxx.current() call
+	 */
+	@Override
+	public void visitFieldInsn(final int opcode, final String owner, final String name, final String desc) {
+		if (opcode == GETSTATIC) {
+			if (isSpecialFieldAccess(owner, name)) {
+				String type = desc.substring(1, desc.length() - 1); 
+				// remove L and ;
+				String gDesc = "()" + desc;
+				mv.visitMethodInsn(INVOKESTATIC, type, "current", gDesc, false);
+				return;
+			}
+		}
+		// else
+		super.visitFieldInsn(opcode, owner, name, desc);
+	}
+
 	private void alert() {
 		mv.visitCode();
 		mv.visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
@@ -37,39 +59,14 @@ public class ControllerActionMethodVisitor extends MethodVisitor implements Opco
 		mv.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", false);
 	}
 
-	private void redirect0() {
-		mv.visitCode();
-
-		mv.visitMethodInsn(INVOKESTATIC, "play/classloading/enhancers/ControllersEnhancer$ControllerInstrumentation",
-				"isActionCallAllowed", "()Z", false);
-		Label l0 = new Label();
-		mv.visitJumpInsn(IFNE, l0);
-		mv.visitTypeInsn(NEW, "java/lang/StringBuilder");
-		mv.visitInsn(DUP);
-		mv.visitVarInsn(ALOAD, 0);
-		mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/reflect/Method", "getDeclaringClass", "()Ljava/lang/Class;", false);
-		mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Class", "getName", "()Ljava/lang/String;", false);
-		mv.visitMethodInsn(INVOKESTATIC, "java/lang/String", "valueOf", "(Ljava/lang/Object;)Ljava/lang/String;", false);
-		mv.visitMethodInsn(INVOKESPECIAL, "java/lang/StringBuilder", "<init>", "(Ljava/lang/String;)V", false);
-		mv.visitLdcInsn(".");
-		mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append",
-				"(Ljava/lang/String;)Ljava/lang/StringBuilder;", false);
-		mv.visitVarInsn(ALOAD, 0);
-		mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/reflect/Method", "getName", "()Ljava/lang/String;", false);
-		mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append",
-				"(Ljava/lang/String;)Ljava/lang/StringBuilder;", false);
-		mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "toString", "()Ljava/lang/String;", false);
-		mv.visitVarInsn(ALOAD, 1);
-		mv.visitMethodInsn(INVOKESTATIC, "play/mvc/Controller", "redirect", "(Ljava/lang/String;[Ljava/lang/Object;)V",
-				false);
-		Label l1 = new Label();
-		mv.visitJumpInsn(GOTO, l1);
-		mv.visitLabel(l0);
-		mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
-		mv.visitMethodInsn(INVOKESTATIC, "play/classloading/enhancers/ControllersEnhancer$ControllerInstrumentation",
-				"stopActionCall", "()V", false);
-		mv.visitLabel(l1);
-		mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
+	boolean isSpecialFieldAccess(String owner, String fname) {
+		if (owner.equals(this.owner) || owner.equals("play.mvc.WebSocketController")) {
+			return fname.equals("params") || fname.equals("request") || fname.equals("response")
+					|| fname.equals("session") || fname.equals("params") || fname.equals("renderArgs")
+					|| fname.equals("routeArgs") || fname.equals("validation") || fname.equals("inbound")
+					|| fname.equals("outbound") || fname.equals("flash");
+		}
+		return false;
 	}
 
 	private void redirect() {
@@ -94,7 +91,7 @@ public class ControllerActionMethodVisitor extends MethodVisitor implements Opco
 		// parameter array
 		int arrayLength = pts.size();
 		mv.visitIntInsn(BIPUSH, arrayLength);
-//		mv.visitInsn(ICONST_0);
+		// mv.visitInsn(ICONST_0);
 		mv.visitTypeInsn(ANEWARRAY, "java/lang/Object");
 
 		int currentSlot = 0;
@@ -129,7 +126,7 @@ public class ControllerActionMethodVisitor extends MethodVisitor implements Opco
 		}
 		mv.visitMethodInsn(INVOKESTATIC, "play/mvc/Controller", "redirect", "(Ljava/lang/String;[Ljava/lang/Object;)V",
 				false);
-//		mv.visitInsn(RETURN);
+		// mv.visitInsn(RETURN);
 	}
 
 	@Override
@@ -152,4 +149,39 @@ public class ControllerActionMethodVisitor extends MethodVisitor implements Opco
 	public void visitMaxs(int maxStack, int maxLocals) {
 		mv.visitMaxs(maxStack + 3, maxLocals + 2); // should be ignored
 	}
+
+	/* (non-Javadoc)
+	 * @see org.objectweb.asm.MethodVisitor#visitTryCatchBlock(org.objectweb.asm.Label, org.objectweb.asm.Label, org.objectweb.asm.Label, java.lang.String)
+	 */
+	@Override
+	public void visitTryCatchBlock(Label start, Label end, Label handler, String type) {
+		handlers.add(handler);
+		super.visitTryCatchBlock(start, end, handler, type);
+	}
+	
+	Set<Label> handlers = new HashSet<>();
+
+	/* (non-Javadoc)
+	 * @see org.objectweb.asm.MethodVisitor#visitLabel(org.objectweb.asm.Label)
+	 */
+	@Override
+	public void visitLabel(Label label) {
+		if (handlers.contains(label)) {
+			// let inject something
+//			System.out.println("caught you");
+		}
+		super.visitLabel(label);
+	}
+
+	/* (non-Javadoc)
+	 * @see org.objectweb.asm.MethodVisitor#visitFrame(int, int, java.lang.Object[], int, java.lang.Object[])
+	 */
+	@Override
+	public void visitFrame(int type, int nLocal, Object[] local, int nStack, Object[] stack) {
+		super.visitFrame(type, nLocal, local, nStack, stack);
+	}
+	
+	
+	
+	
 }

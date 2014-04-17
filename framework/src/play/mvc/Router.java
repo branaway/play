@@ -231,7 +231,7 @@ public class Router {
      */
     public static List<Route> routes = new CopyOnWriteArrayList<Route>();
 
-    public static void routeOnlyStatic(Http.Request request) {
+    public static void routeOnlyStatic(Http.Request request) throws RenderStatic, NotFound {
         for (Route route : routes) {
             try {
                 if (route.matches(request.method, request.path, request.format, request.domain) != null) {
@@ -248,7 +248,7 @@ public class Router {
         }
     }
 
-    public static Route route(Http.Request request) {
+    public static Route route(Http.Request request) throws NotFound, RenderStatic {
         if (Logger.isTraceEnabled()) {
             Logger.trace("Route: " + request.path + " - " + request.querystring);
         }
@@ -293,15 +293,15 @@ public class Router {
         throw new NotFound(request.method, request.path);
     }
 
-    public static Map<String, String> route(String method, String path) {
+    public static Map<String, String> route(String method, String path) throws NotFound, RenderStatic {
         return route(method, path, null, null);
     }
 
-    public static Map<String, String> route(String method, String path, String headers) {
+    public static Map<String, String> route(String method, String path, String headers) throws NotFound, RenderStatic {
         return route(method, path, headers, null);
     }
 
-    public static Map<String, String> route(String method, String path, String headers, String host) {
+    public static Map<String, String> route(String method, String path, String headers, String host) throws NotFound, RenderStatic {
         for (Route route : routes) {
             Map<String, String> args = route.matches(method, path, headers, host);
             if (args != null) {
@@ -806,11 +806,11 @@ public class Router {
             return contains;
         }
 
-        public Map<String, String> matches(String method, String path) {
+        public Map<String, String> matches(String method, String path) throws NotFound, RenderStatic {
             return matches(method, path, null, null);
         }
 
-        public Map<String, String> matches(String method, String path, String accept) {
+        public Map<String, String> matches(String method, String path, String accept) throws NotFound, RenderStatic {
             return matches(method, path, accept, null);
         }
 
@@ -822,8 +822,10 @@ public class Router {
          * @param accept Format, e.g. html.
          * @param domain The domain (host without port).
          * @return ???
+         * @throws NotFound 
+         * @throws RenderStatic 
          */
-        public Map<String, String> matches(String method, String path, String accept, String domain) {
+        public Map<String, String> matches(String method, String path, String accept, String domain) throws NotFound, RenderStatic {
             // Normalize
             if (path.equals(Play.ctxPath)) {
                 path = path + "/";

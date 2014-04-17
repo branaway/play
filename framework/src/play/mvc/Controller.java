@@ -40,6 +40,7 @@ import play.mvc.results.RenderJson;
 import play.mvc.results.RenderTemplate;
 import play.mvc.results.RenderText;
 import play.mvc.results.RenderXml;
+import play.mvc.results.Result;
 import play.mvc.results.Unauthorized;
 import play.templates.Template;
 import play.templates.TemplateLoader;
@@ -141,6 +142,7 @@ public class Controller implements ControllerSupport {
     /**
      * Return a 200 OK text/plain response
      * @param text The response content
+     * @throws RenderText 
      */
     protected static void renderText(Object text) {
         throw new RenderText(text == null ? "" : text.toString());
@@ -149,8 +151,9 @@ public class Controller implements ControllerSupport {
     /**
      * Return a 200 OK text/html response
      * @param html The response content
+     * @throws RenderHtml 
      */
-    protected static void renderHtml(Object html) {
+    protected static void renderHtml(Object html)  {
         throw new RenderHtml(html == null ? "" : html.toString());
     }
 
@@ -158,22 +161,25 @@ public class Controller implements ControllerSupport {
      * Return a 200 OK text/plain response
      * @param pattern The response content to be formatted (with String.format)
      * @param args Args for String.format
+     * @throws RenderText 
      */
-    protected static void renderText(CharSequence pattern, Object... args) {
+    protected static void renderText(CharSequence pattern, Object... args)  {
         throw new RenderText(pattern == null ? "" : String.format(pattern.toString(), args));
     }
 
     /**
      * Return a 200 OK text/xml response
      * @param xml The XML string
+     * @throws RenderXml 
      */
-    protected static void renderXml(String xml) {
+    protected static void renderXml(String xml)  {
         throw new RenderXml(xml);
     }
 
     /**
      * Return a 200 OK text/xml response
      * @param xml The DOM document object
+     * @throws RenderXml 
      */
     protected static void renderXml(Document xml) {
         throw new RenderXml(xml);
@@ -182,6 +188,7 @@ public class Controller implements ControllerSupport {
     /**
      * Return a 200 OK text/xml response. Use renderXml(Object, XStream) to customize the result.
      * @param o the object to serialize
+     * @throws RenderXml 
      */
     protected static void renderXml(Object o) {
         throw new RenderXml(o);
@@ -192,6 +199,7 @@ public class Controller implements ControllerSupport {
      * @param o the object to serialize
      * @param xstream the XStream object to use for serialization. See XStream's documentation
      *      for details about customizing the output.
+     * @throws RenderXml 
      */
     protected static void renderXml(Object o, XStream xstream) {
         throw new RenderXml(o, xstream);
@@ -200,6 +208,7 @@ public class Controller implements ControllerSupport {
     /**
      * Return a 200 OK application/binary response
      * @param is The stream to copy
+     * @
      */
     protected static void renderBinary(InputStream is) {
         throw new RenderBinary(is, null, true);
@@ -210,6 +219,7 @@ public class Controller implements ControllerSupport {
      *
      * @param is The stream to copy
      * @param length Stream's size in bytes.
+     * @
      */
     protected static void renderBinary(InputStream is, long length) {
         throw new RenderBinary(is, null, length, true);
@@ -220,6 +230,7 @@ public class Controller implements ControllerSupport {
      *
      * @param is The stream to copy
      * @param name Name of file user is downloading.
+     * @
      */
     protected static void renderBinary(InputStream is, String name) {
         throw new RenderBinary(is, name, false);
@@ -231,8 +242,9 @@ public class Controller implements ControllerSupport {
      * @param is The stream to copy. Content is streamed.
      * @param name Name of file user is downloading.
      * @param length Stream's size in bytes.
+     * @
      */
-    protected static void renderBinary(InputStream is, String name, long length) {
+    protected static void renderBinary(InputStream is, String name, long length){
         throw new RenderBinary(is, name, length, false);
     }
 
@@ -242,6 +254,7 @@ public class Controller implements ControllerSupport {
      * @param is The stream to copy
      * @param name Name of file user is downloading.
      * @param inline true to set the response Content-Disposition to inline
+     * @
      */
     protected static void renderBinary(InputStream is, String name, boolean inline) {
         throw new RenderBinary(is, name, inline);
@@ -254,6 +267,7 @@ public class Controller implements ControllerSupport {
      * @param name The attachment name
      * @param length Stream's size in bytes.
      * @param inline true to set the response Content-Disposition to inline
+     * @
      */
     protected static void renderBinary(InputStream is, String name, long length, boolean inline) {
         throw new RenderBinary(is, name, length, inline);
@@ -265,6 +279,7 @@ public class Controller implements ControllerSupport {
      * @param name The attachment name
      * @param contentType The content type of the attachment
      * @param inline true to set the response Content-Disposition to inline
+     * @
      */
     protected static void renderBinary(InputStream is, String name, String contentType, boolean inline) {
         throw new RenderBinary(is, name, contentType, inline);
@@ -278,6 +293,7 @@ public class Controller implements ControllerSupport {
      * @param length Content's byte size.
      * @param contentType The content type of the attachment
      * @param inline true to set the response Content-Disposition to inline
+     * @
      */
     protected static void renderBinary(InputStream is, String name, long length, String contentType, boolean inline) {
         throw new RenderBinary(is, name, length, contentType, inline);
@@ -286,6 +302,7 @@ public class Controller implements ControllerSupport {
     /**
      * Return a 200 OK application/binary response
      * @param file The file to copy
+     * @
      */
     protected static void renderBinary(File file) {
         throw new RenderBinary(file);
@@ -295,6 +312,7 @@ public class Controller implements ControllerSupport {
      * Return a 200 OK application/binary response with content-disposition attachment
      * @param file The file to copy
      * @param name The attachment name
+     * @
      */
     protected static void renderBinary(File file, String name) {
         throw new RenderBinary(file, name);
@@ -303,6 +321,7 @@ public class Controller implements ControllerSupport {
     /**
      * Render a 200 OK application/json response
      * @param jsonString The JSON string
+     * @
      */
     protected static void renderJSON(String jsonString) {
         throw new RenderJson(jsonString);
@@ -311,6 +330,7 @@ public class Controller implements ControllerSupport {
     /**
      * Render a 200 OK application/json response
      * @param o The Java object to serialize
+     * @
      */
     protected static void renderJSON(Object o) {
         throw new RenderJson(o);
@@ -320,6 +340,7 @@ public class Controller implements ControllerSupport {
      * Render a 200 OK application/json response
      * @param o The Java object to serialize
      * @param type The Type informations for complex generic types
+     * @
      */
     protected static void renderJSON(Object o, Type type) {
         throw new RenderJson(o, type);
@@ -329,6 +350,7 @@ public class Controller implements ControllerSupport {
      * Render a 200 OK application/json response.
      * @param o The Java object to serialize
      * @param adapters A set of GSON serializers/deserializers/instance creator to use
+     * @
      */
     protected static void renderJSON(Object o, JsonSerializer<?>... adapters) {
         throw new RenderJson(o, adapters);
@@ -336,6 +358,7 @@ public class Controller implements ControllerSupport {
 
     /**
      * Send a 304 Not Modified response
+     * @
      */
     protected static void notModified() {
         throw new NotModified();
@@ -343,6 +366,7 @@ public class Controller implements ControllerSupport {
 
     /**
      * Send a 400 Bad request
+     * @
      */
     protected static void badRequest() {
         throw new BadRequest();
@@ -351,6 +375,7 @@ public class Controller implements ControllerSupport {
     /**
      * Send a 401 Unauthorized response
      * @param realm The realm name
+     * @
      */
     protected static void unauthorized(String realm) {
         throw new Unauthorized(realm);
@@ -358,6 +383,7 @@ public class Controller implements ControllerSupport {
 
     /**
      * Send a 401 Unauthorized response
+     * @
      */
     protected static void unauthorized() {
         throw new Unauthorized("Unauthorized");
@@ -366,6 +392,7 @@ public class Controller implements ControllerSupport {
     /**
      * Send a 404 Not Found response
      * @param what The Not Found resource name
+     * @
      */
     protected static void notFound(String what) {
         throw new NotFound(what);
@@ -373,6 +400,7 @@ public class Controller implements ControllerSupport {
 
     /**
      * Send a 200 OK response
+     * @throws Ok 
      */
     protected static void ok() {
         throw new Ok();
@@ -380,6 +408,7 @@ public class Controller implements ControllerSupport {
 
     /**
      * Send a todo response
+     * @
      */
     protected static void todo() {
         notFound("This action has not been implemented Yet (" + request.action + ")");
@@ -388,6 +417,7 @@ public class Controller implements ControllerSupport {
     /**
      * Send a 404 Not Found response if object is null
      * @param o The object to check
+     * @
      */
     protected static void notFoundIfNull(Object o) {
         if (o == null) {
@@ -399,6 +429,7 @@ public class Controller implements ControllerSupport {
      * Send a 404 Not Found response if object is null
      * @param o The object to check
      * @param what The Not Found resource name
+     * @
      */
     protected static void notFoundIfNull(Object o, String what) {
         if (o == null) {
@@ -408,6 +439,7 @@ public class Controller implements ControllerSupport {
 
     /**
      * Send a 404 Not Found reponse
+     * @
      */
     protected static void notFound() {
         throw new NotFound("");
@@ -415,6 +447,7 @@ public class Controller implements ControllerSupport {
 
     /**
      * Check that the token submitted from a form is valid.
+     * @
      *
      * @see play.templates.FastTags._authenticityToken()
      */
@@ -427,6 +460,7 @@ public class Controller implements ControllerSupport {
     /**
      * Send a 403 Forbidden response
      * @param reason The reason
+     * @
      */
     protected static void forbidden(String reason) {
         throw new Forbidden(reason);
@@ -434,6 +468,7 @@ public class Controller implements ControllerSupport {
 
     /**
      * Send a 403 Forbidden response
+     * @
      */
     protected static void forbidden() {
         throw new Forbidden("Access denied");
@@ -443,6 +478,7 @@ public class Controller implements ControllerSupport {
      * Send a 5xx Error response
      * @param status The exact status code
      * @param reason The reason
+     * @
      */
     protected static void error(int status, String reason) {
         throw new Error(status, reason);
@@ -451,6 +487,7 @@ public class Controller implements ControllerSupport {
     /**
      * Send a 500 Error response
      * @param reason The reason
+     * @
      */
     protected static void error(String reason) {
         throw new Error(reason);
@@ -459,6 +496,7 @@ public class Controller implements ControllerSupport {
     /**
      * Send a 500 Error response
      * @param reason The reason
+     * @
      */
     protected static void error(Exception reason) {
         Logger.error(reason, "error()");
@@ -467,6 +505,7 @@ public class Controller implements ControllerSupport {
 
     /**
      * Send a 500 Error response
+     * @
      */
     protected static void error() {
         throw new Error("Internal Error");
@@ -492,6 +531,7 @@ public class Controller implements ControllerSupport {
     /**
      * Send a 302 redirect response.
      * @param file The Location to redirect
+     * @
      */
     protected static void redirectToStatic(String file) {
         try {
@@ -514,6 +554,7 @@ public class Controller implements ControllerSupport {
      * Send a Redirect response.
      * @param url The Location to redirect
      * @param permanent true -> 301, false -> 302
+     * @
      */
     protected static void redirect(String url, boolean permanent) {
         if (url.indexOf("/") == -1) { // fix Java !
@@ -526,6 +567,7 @@ public class Controller implements ControllerSupport {
      * 302 Redirect to another action
      * @param action The fully qualified action name (ex: Application.index)
      * @param args Method arguments
+     * @
      */
     public static void redirect(String action, Object... args) {
         redirect(action, false, args);
@@ -536,6 +578,7 @@ public class Controller implements ControllerSupport {
      * @param action The fully qualified action name (ex: Application.index)
      * @param permanent true -> 301, false -> 302
      * @param args Method arguments
+     * @
      */
     protected static void redirect(String action, boolean permanent, Object... args) {
         try {
@@ -596,6 +639,7 @@ public class Controller implements ControllerSupport {
      *
      * @param templateName The template name.
      * @param args The template data.
+     * @
      */
     protected static void renderTemplate(String templateName, Map<String,Object> args) {
         // Template datas
@@ -628,6 +672,7 @@ public class Controller implements ControllerSupport {
      * Render the template corresponding to the action's package-class-method name (@see <code>template()</code>).
      *
      * @param args The template data.
+     * @
      */
     protected static void renderTemplate(Map<String,Object> args) {
         renderTemplate(template(), args);
@@ -826,14 +871,14 @@ public class Controller implements ControllerSupport {
 	public static void await(int millis) {
 		throw new NotImplementedException();
 	}
-	
-	// bran: used to be inserted to the beginning of an action call
-	public static void beforeMethod(Method m, Object[] args) {
-	     if(!ControllerInstrumentation.isActionCallAllowed()) {
-                 redirect(m.getDeclaringClass().getName() + "." + m.getName(), args);
-	     }
-	     else {
-	    	 ControllerInstrumentation.stopActionCall();
-	     }
-	}
+//	
+//	// bran: used to be inserted to the beginning of an action call
+//	public static void beforeMethod(Method m, Object[] args) {
+//	     if(!ControllerInstrumentation.isActionCallAllowed()) {
+//                 redirect(m.getDeclaringClass().getName() + "." + m.getName(), args);
+//	     }
+//	     else {
+//	    	 ControllerInstrumentation.stopActionCall();
+//	     }
+//	}
 }

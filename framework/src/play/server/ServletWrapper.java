@@ -580,7 +580,7 @@ public class ServletWrapper extends HttpServlet implements ServletContextListene
         }
 
         @Override
-        public InvocationContext getInvocationContext() {
+        public InvocationContext getInvocationContext() throws NotFound, RenderStatic {
             ActionInvoker.resolve(request, response);
             return new InvocationContext(Http.invocationType,
                     request.invokedMethod.getAnnotations(),

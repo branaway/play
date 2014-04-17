@@ -65,7 +65,7 @@ public class OpenID {
         return this;
     }
 
-    public boolean verify() {
+    public boolean verify() throws Redirect {
         try {
             // Normalize
             String claimedId = normalize(id);

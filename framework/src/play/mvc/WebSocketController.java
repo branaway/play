@@ -39,7 +39,7 @@ public class WebSocketController implements ControllerSupport {
         Controller.await(future, callback);
     }
 
-    protected static void disconnect() {
+    protected static void disconnect() throws WebSocketDisconnect {
         throw new WebSocketDisconnect();
     }
 

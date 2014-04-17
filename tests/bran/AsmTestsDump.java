@@ -106,6 +106,44 @@ public class AsmTestsDump implements Opcodes {
 			mv.visitMaxs(3, 2);
 			mv.visitEnd();
 		}
+		{ // try catch
+			Label l0 = new Label();
+			Label l1 = new Label();
+			Label l2 = new Label();
+			mv.visitTryCatchBlock(l0, l1, l2, "java/lang/RuntimeException");
+			Label l3 = new Label();
+			mv.visitTryCatchBlock(l0, l1, l3, "java/lang/Throwable");
+			mv.visitLabel(l0);
+			mv.visitIntInsn(BIPUSH, 11);
+			mv.visitVarInsn(ISTORE, 7);
+			mv.visitLabel(l1);
+			Label l4 = new Label();
+			mv.visitJumpInsn(GOTO, l4);
+			mv.visitLabel(l2);
+			mv.visitFrame(Opcodes.F_SAME1, 0, null, 1, new Object[] {"java/lang/RuntimeException"});
+			mv.visitVarInsn(ASTORE, 7);
+			mv.visitIntInsn(BIPUSH, 100);
+			mv.visitVarInsn(ISTORE, 8);
+			mv.visitJumpInsn(GOTO, l4);
+			mv.visitLabel(l3);
+			mv.visitFrame(Opcodes.F_SAME1, 0, null, 1, new Object[] {"java/lang/Throwable"});
+			mv.visitVarInsn(ASTORE, 7);
+			mv.visitVarInsn(ALOAD, 7);
+			mv.visitTypeInsn(INSTANCEOF, "play/mvc/results/Result");
+			Label l5 = new Label();
+			mv.visitJumpInsn(IFNE, l5);
+			mv.visitVarInsn(ALOAD, 7);
+			mv.visitTypeInsn(INSTANCEOF, "play/Invoker$Suspend");
+			mv.visitJumpInsn(IFEQ, l4);
+			mv.visitLabel(l5);
+			mv.visitFrame(Opcodes.F_APPEND,1, new Object[] {"java/lang/Throwable"}, 0, null);
+			mv.visitVarInsn(ALOAD, 7);
+			mv.visitInsn(ATHROW);
+			mv.visitLabel(l4);
+			mv.visitFrame(Opcodes.F_CHOP,1, null, 0, null);
+
+		}
+		
 		cw.visitEnd();
 
 		return cw.toByteArray();

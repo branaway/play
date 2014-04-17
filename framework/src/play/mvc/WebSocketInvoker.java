@@ -4,10 +4,12 @@ import play.Play;
 import play.data.validation.Validation;
 import play.exceptions.PlayException;
 import play.exceptions.UnexpectedException;
+import play.mvc.results.NotFound;
+import play.mvc.results.RenderStatic;
 
 public class WebSocketInvoker {
 
-    public static void resolve(Http.Request request) {
+    public static void resolve(Http.Request request) throws NotFound, RenderStatic {
         ActionInvoker.resolve(request, null);
     }
 

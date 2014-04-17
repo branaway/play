@@ -273,7 +273,7 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
         }
 
         @Override
-        public InvocationContext getInvocationContext() {
+        public InvocationContext getInvocationContext() throws NotFound, RenderStatic {
             ActionInvoker.resolve(request, response);
             return new InvocationContext(Http.invocationType,
                     request.invokedMethod.getAnnotations(),
@@ -1267,7 +1267,7 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
         }
 
         @Override
-        public boolean init() {
+        public boolean init() throws NotFound, RenderStatic {
             Http.Request.current.set(request);
             Http.Inbound.current.set(inbound);
             Http.Outbound.current.set(outbound);
@@ -1275,7 +1275,7 @@ public class PlayHandler extends SimpleChannelUpstreamHandler {
         }
 
         @Override
-        public InvocationContext getInvocationContext() {
+        public InvocationContext getInvocationContext() throws NotFound, RenderStatic {
             WebSocketInvoker.resolve(request);
             return new InvocationContext(Http.invocationType,
                     request.invokedMethod.getAnnotations(),

@@ -12,8 +12,11 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.util.ASMifier;
 import org.objectweb.asm.util.TraceClassVisitor;
 
+import play.Invoker.Suspend;
 import play.classloading.enhancers.ControllersEnhancer.ControllerInstrumentation;
 import play.mvc.Controller;
+import play.mvc.results.Redirect;
+import play.mvc.results.Result;
 
 /**
  * @author bran
@@ -28,7 +31,7 @@ public class AsmTests {
 	}
 
 	// bran: used to be inserted to the beginning of an action call
-	public static void beforeMethod(Method m, Object... args) {
+	public static void beforeMethod(Method m, Object... args) throws Redirect {
 		if (!ControllerInstrumentation.isActionCallAllowed()) {
 			Controller.redirect(m.getDeclaringClass().getName() + "." + m.getName(), args);
 		} else {
@@ -38,7 +41,15 @@ public class AsmTests {
 
 	public static void so(String a, long b, boolean c, double d, String ee) {
 		
-		beforeMethod(null, "sss", b, c, d, ee, a, b);
+		try {
+//			beforeMethod(null, "sss", b, c, d, ee, a, b);
+			int s = 11;
+		}catch (RuntimeException e) {
+			int ss = 100;
+		}catch (Throwable e) {
+			if (e instanceof Result || e instanceof Suspend)
+				throw e;
+		}
 	}
 	
 }

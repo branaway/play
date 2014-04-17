@@ -42,6 +42,7 @@ import play.mvc.Router.Route;
 import play.mvc.results.NoResult;
 //import play.classloading.enhancers.ControllersEnhancer;
 import play.mvc.results.NotFound;
+import play.mvc.results.RenderStatic;
 import play.mvc.results.Result;
 import play.utils.Java;
 import play.utils.Utils;
@@ -55,7 +56,7 @@ import com.jamonapi.MonitorFactory;
 public class ActionInvoker {
 
     @SuppressWarnings("unchecked")
-    public static void resolve(Http.Request request, Http.Response response) {
+    public static void resolve(Http.Request request, Http.Response response) throws NotFound, RenderStatic {
 
         if (!Play.started) {
             return;
@@ -452,7 +453,7 @@ public class ActionInvoker {
     }
 
     @SuppressWarnings("unchecked")
-    public static void inferResult(Object o) {
+    public static void inferResult(Object o) throws Result {
         // Return type inference
         if (o != null) {
 

@@ -30,6 +30,8 @@ import play.mvc.Http.Request;
 import play.mvc.Http.Response;
 import play.mvc.Router.ActionDefinition;
 import play.mvc.Scope.RenderArgs;
+import play.mvc.results.NotFound;
+import play.mvc.results.RenderStatic;
 
 import com.ning.http.multipart.FilePart;
 import com.ning.http.multipart.MultipartRequestEntity;
@@ -306,7 +308,7 @@ public abstract class FunctionalTest extends BaseTest {
             }
 
             @Override
-            public InvocationContext getInvocationContext() {
+            public InvocationContext getInvocationContext() throws NotFound, RenderStatic {
                 ActionInvoker.resolve(request, response);
                 return new InvocationContext(Http.invocationType,
                         request.invokedMethod.getAnnotations(),
