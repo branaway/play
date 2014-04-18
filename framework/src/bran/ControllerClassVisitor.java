@@ -56,12 +56,6 @@ public class ControllerClassVisitor extends ClassVisitor implements Opcodes {
 
 	@Override
 	public void visitEnd() {
-		if (!isInterface) {
-			FieldVisitor fv = cv.visitField(ACC_PUBLIC + ACC_STATIC, "timer", "J", null, null);
-			if (fv != null) {
-				fv.visitEnd();
-			}
-		}
 		cv.visitEnd();
 	}
 

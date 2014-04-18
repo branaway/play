@@ -2,6 +2,10 @@ package play.db.jpa;
 
 import java.io.IOException;
 
+import org.objectweb.asm.ClassVisitor;
+
+import bran.ControllerClassVisitor;
+import bran.ModelClassVisitor;
 import javassist.CannotCompileException;
 import javassist.CtClass;
 import javassist.CtMethod;
@@ -43,7 +47,7 @@ public class JPAEnhancer extends Enhancer {
 	 * @return
 	 */
 	private byte[] enhancedWithASM(ApplicationClass applicationClass) {
-		throw new RuntimeException("not implemented.");
+	       return ModelClassVisitor.visitModel(applicationClass.enhancedByteCode);
 	}
 
 	// not compatible with JDK8

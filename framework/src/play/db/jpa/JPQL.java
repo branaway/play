@@ -115,8 +115,13 @@ public class JPQL {
         return (GenericModel) results.get(0);
     }
 
-    public <T extends GenericModel> T create(Class<T> entity, String name, Params params) throws Exception {
-        Object o = entity.newInstance();
+    public <T extends GenericModel> T create(Class<T> entity, String name, Params params) {
+        Object o;
+		try {
+			o = entity.newInstance();
+		} catch (InstantiationException | IllegalAccessException e) {
+			throw new RuntimeException(e);
+		}
 
         RootParamNode rootParamNode = ParamNode.convert(params.all());
 
