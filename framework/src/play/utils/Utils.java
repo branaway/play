@@ -240,6 +240,7 @@ public class Utils {
 	 * @return
 	 */
 	public static String[] getParamNames(Method method) {
-		return Arrays.stream(method.getParameters()).map(Parameter::getName).collect(Collectors.toList()).toArray(new String[] {});
+		return Arrays.stream(method.getParameters()).map(Parameter::getName).toArray(String[]::new);
+//		return Arrays.stream(method.getParameters()).map(Parameter::getName).collect(Collectors.toList()).toArray(new String[] {});
 	}
 }

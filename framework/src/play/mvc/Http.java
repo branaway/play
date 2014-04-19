@@ -250,7 +250,7 @@ public class Http {
          */
         public static ThreadLocal<Request> current = new ThreadLocal<Request>();
         /**
-         * The really invoker Java methid
+         * The really invoker Java method
          */
         public transient Method invokedMethod;
         /**

@@ -64,7 +64,7 @@
 	<classpathentry exported="true" kind="lib" path="framework/lib/junit-4.10.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/mysql-connector-java-5.1.20.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/netty-3.6.0.Final.jar"/>
-	<classpathentry kind="lib" path="framework/lib/org.eclipse.jdt.core_3.9.50.v20140317-1741.jar"/>
+	<classpathentry kind="lib" path="framework/lib/org.eclipse.jdt.core_3.9.50.v20140317-1741.jar" sourcepath="/Users/bran/.m2/repository/com/reubenpeeris/org.eclipse.jdt.core/3.9.50.v20140317-1741/org.eclipse.jdt.core-3.9.50.v20140317-1741-sources.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/classmate-1.0.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/jandex-1.1.0.Final.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/javassist-3.18.1-GA.jar" sourcepath="/Users/bran/.m2/repository/org/javassist/javassist/3.18.1-GA/javassist-3.18.1-GA-sources.jar"/>

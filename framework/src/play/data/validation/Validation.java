@@ -14,6 +14,8 @@ import java.util.regex.Pattern;
 import net.sf.oval.configuration.annotation.AbstractAnnotationCheck;
 import play.Play;
 import play.exceptions.UnexpectedException;
+import play.mvc.Http.Request;
+import play.utils.Utils;
 
 /**
  * 
@@ -436,11 +438,11 @@ public class Validation {
         check.maxSize = maxSize;
         return applyCheck(check, key, o);
     }
-//
-//    public ValidationResult maxSize(Object o, int maxSize) {
-//        String key = getLocalName(o);
-//        return Validation.maxSize(key, o, maxSize);
-//    }
+
+    public ValidationResult maxSize(Object o, int maxSize) {
+        String key = getLocalName(o);
+        return Validation.maxSize(key, o, maxSize);
+    }
 
     public static ValidationResult valid(String key, Object o) {
         ValidCheck check = new ValidCheck();
@@ -471,8 +473,7 @@ public class Validation {
     }
 
     /**
-     * bran: XXX should have another way around using the local name tracer. 
-     * @deprecated
+     * bran: XXX should have another way around using the local name tracer. not sure the new logic is sound enough.
      * @param o
      * @return
      */
@@ -481,9 +482,10 @@ public class Validation {
     // string instead of the object name.
     static String getLocalName(Object o) {
     	// bran don't know how yet
+    	String[] names = Utils.getParamNames(Request.current().invokedMethod);
 //        String[] names = LVEnhancerRuntime.getParamNames().params;
-//        if(names.length > 0 && names[0] != null)
-//            return names[0];
+        if(names.length > 0 && names[0] != null)
+            return names[0];
         return "";
     }
 
