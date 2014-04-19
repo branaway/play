@@ -1,6 +1,5 @@
 package play.classloading.enhancers;
 
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -11,7 +10,9 @@ import javassist.CtClass;
 import javassist.CtMethod;
 import javassist.expr.ExprEditor;
 import javassist.expr.MethodCall;
+
 import org.apache.commons.javaflow.bytecode.transformation.asm.AsmClassTransformer;
+
 import play.Play;
 import play.classloading.ApplicationClasses.ApplicationClass;
 
@@ -43,41 +44,35 @@ public class ContinuationEnhancer extends Enhancer {
         if (isScala(applicationClass)) {
             return;
         }
-
-        CtClass ctClass = makeClass(applicationClass);
-
-        if (!ctClass.subtypeOf(classPool.get(ControllersEnhancer.ControllerSupport.class.getName()))) {
-            return ;
+//
+        if (!applicationClass.name.startsWith("controllers.")) {
+        	return;
         }
-
-
-        boolean needsContinuations = shouldEnhance( ctClass );
+//        CtClass ctClass = makeClass(applicationClass);
+//
+//        if (!ctClass.subtypeOf(classPool.get(ControllersEnhancer.ControllerSupport.class.getName()))) {
+//            return ;
+//        }
+//
+//
+        boolean needsContinuations = shouldEnhance( applicationClass );
 
         if (!needsContinuations) {
             return;
         }
 
 
-        // To be able to runtime detect if a class is enhanced for Continuations,
-        // we add the interface EnhancedForContinuations to the class
-        CtClass enhancedForContinuationsInterface;
-        try {
-            InputStream in = getClass().getClassLoader().getResourceAsStream("play/classloading/enhancers/EnhancedForContinuations.class");
-            enhancedForContinuationsInterface = classPool.makeClass( in );
-            in.close();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        ctClass.addInterface( enhancedForContinuationsInterface );
-
+        Set<String> set = new HashSet<>();
+        set.add("play/classloading/enhancers/EnhancedForContinuations");
+        byte[] bytes = InterfaceAdder.visit(applicationClass.enhancedByteCode, set);
         // Apply continuations
-        applicationClass.enhancedByteCode = new AsmClassTransformer().transform( ctClass.toBytecode());
+        applicationClass.enhancedByteCode = new AsmClassTransformer().transform( bytes);
 
-        ctClass.defrost();
-        enhancedForContinuationsInterface.defrost();
+//        ctClass.defrost();
+//        enhancedForContinuationsInterface.defrost();
     }
 
-    private boolean shouldEnhance(CtClass ctClass) throws Exception {
+    private boolean shouldEnhanceJavassist(CtClass ctClass) throws Exception {
 
         if (ctClass == null || ctClass.getPackageName().startsWith("play.")) {
             // If we have not found any await-usage yet, we return false..
@@ -108,11 +103,30 @@ public class ContinuationEnhancer extends Enhancer {
 
         if (!_needsContinuations[0]) {
             // Check parent class
-            _needsContinuations[0] = shouldEnhance( ctClass.getSuperclass());
+            _needsContinuations[0] = shouldEnhanceJavassist( ctClass.getSuperclass());
         }
 
         return _needsContinuations[0];
 
+    }
+
+    private boolean shouldEnhance(ApplicationClass ctClass) throws Exception {
+    	
+    	if (ctClass == null || ctClass.name.startsWith("play.")) {
+    		// If we have not found any await-usage yet, we return false..
+    		return false;
+    	}
+    	
+    	boolean needsContinuations = false;
+    	
+    	needsContinuations = ContinuationMethodSearcher.visit(ctClass.enhancedByteCode, continuationMethods);
+//    	if (!_needsContinuations[0]) {
+//    		// Check parent class
+//    		_needsContinuations[0] = shouldEnhance( ctClass.getSuperclass());
+//    	}
+    	// XXX should consider superclass
+    	return needsContinuations;
+    	
     }
 
 

@@ -6,6 +6,7 @@ package bran;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
+import java.util.stream.Stream;
 
 import org.junit.Test;
 import org.objectweb.asm.ClassReader;
@@ -99,5 +100,9 @@ public class AsmTests extends GenericModel {
 	public static  AsmTests create(String name, play.mvc.Scope.Params params) {
 		AsmTests create = getJPAConfig(AsmTests.class).jpql.create(AsmTests.class, name, params);
 		return create;
+	}
+	
+	public void testMethRef() {
+		Stream.of("1", "2").forEach(AsmTests::findById);
 	}
 }

@@ -74,24 +74,6 @@ public class ControllerClassVisitor extends ClassVisitor implements Opcodes {
 
 	public byte[] output() {
 		byte[] byteArray = ((ClassWriter) super.cv).toByteArray();
-		verifyit(byteArray);
 		return byteArray;
 	}
-
-	/**
-	 * @author Bing Ran (bing.ran@gmail.com)
-	 * @param byteArray
-	 */
-	private void verifyit(byte[] byteArray) {
-//		not really working...
-//		ClassReader cr;
-//		try {
-//			cr = new ClassReader(new ByteArrayInputStream(byteArray));
-//			CheckClassAdapter.verify(cr, false, new PrintWriter(System.out));
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		}
-
-	}
-
 }

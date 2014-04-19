@@ -7,6 +7,7 @@ import java.util.Set;
 
 import javassist.CtField;
 
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -180,7 +181,14 @@ public class ControllerActionMethodVisitor extends MethodVisitor implements Opco
 	public void visitFrame(int type, int nLocal, Object[] local, int nStack, Object[] stack) {
 		super.visitFrame(type, nLocal, local, nStack, stack);
 	}
-	
+
+	/* (non-Javadoc)
+	 * @see org.objectweb.asm.MethodVisitor#visitInvokeDynamicInsn(java.lang.String, java.lang.String, org.objectweb.asm.Handle, java.lang.Object[])
+	 */
+	@Override
+	public void visitInvokeDynamicInsn(String name, String desc, Handle bsm, Object... bsmArgs) {
+		super.visitInvokeDynamicInsn(name, desc, bsm, bsmArgs);
+	}
 	
 	
 	

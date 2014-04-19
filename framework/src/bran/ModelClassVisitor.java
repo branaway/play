@@ -5,6 +5,7 @@ import java.io.ByteArrayInputStream;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -99,8 +100,8 @@ public class ModelClassVisitor extends ClassVisitor implements Opcodes {
 		mv.visitLdcInsn(en());
 		mv.visitVarInsn(ALOAD, 0);
 		mv.visitVarInsn(ALOAD, 1);
-		mv.visitMethodInsn(INVOKEVIRTUAL, JPQL, name,
-				"(Ljava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)J", false);
+		mv.visitMethodInsn(INVOKEVIRTUAL, JPQL, name, "(Ljava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)J",
+				false);
 		mv.visitInsn(LRETURN);
 		mv.visitMaxs(4, 2);
 		mv.visitEnd();
@@ -120,13 +121,12 @@ public class ModelClassVisitor extends ClassVisitor implements Opcodes {
 
 	private void findQuery() {
 		String name = "find";
-		MethodVisitor mv = cv.visitMethod(ACC_PUBLIC + ACC_STATIC, name, "()Lplay/db/jpa/GenericModel$JPAQuery;",
-				null, null);
+		MethodVisitor mv = cv.visitMethod(ACC_PUBLIC + ACC_STATIC, name, "()Lplay/db/jpa/GenericModel$JPAQuery;", null,
+				null);
 		mv.visitCode();
 		getJPQL(mv);
 		mv.visitLdcInsn(en());
-		mv.visitMethodInsn(INVOKEVIRTUAL, JPQL, name,
-				"(Ljava/lang/String;)Lplay/db/jpa/GenericModel$JPAQuery;", false);
+		mv.visitMethodInsn(INVOKEVIRTUAL, JPQL, name, "(Ljava/lang/String;)Lplay/db/jpa/GenericModel$JPAQuery;", false);
 		mv.visitInsn(ARETURN);
 		mv.visitMaxs(2, 0);
 		mv.visitEnd();
@@ -149,13 +149,12 @@ public class ModelClassVisitor extends ClassVisitor implements Opcodes {
 
 	private void allQuery() {
 		String name = "all";
-		MethodVisitor mv = cv.visitMethod(ACC_PUBLIC + ACC_STATIC, name, "()Lplay/db/jpa/GenericModel$JPAQuery;",
-				null, null);
+		MethodVisitor mv = cv.visitMethod(ACC_PUBLIC + ACC_STATIC, name, "()Lplay/db/jpa/GenericModel$JPAQuery;", null,
+				null);
 		mv.visitCode();
 		getJPQL(mv);
 		mv.visitLdcInsn(en());
-		mv.visitMethodInsn(INVOKEVIRTUAL, JPQL, name,
-				"(Ljava/lang/String;)Lplay/db/jpa/GenericModel$JPAQuery;", false);
+		mv.visitMethodInsn(INVOKEVIRTUAL, JPQL, name, "(Ljava/lang/String;)Lplay/db/jpa/GenericModel$JPAQuery;", false);
 		mv.visitInsn(ARETURN);
 		mv.visitMaxs(2, 0);
 		mv.visitEnd();
@@ -179,15 +178,15 @@ public class ModelClassVisitor extends ClassVisitor implements Opcodes {
 
 	private void delete() {
 		String name = "delete";
-		MethodVisitor mv = cv.visitMethod(ACC_PUBLIC + ACC_STATIC, name,
-				"(Ljava/lang/String;[Ljava/lang/Object;)I", null, null);
+		MethodVisitor mv = cv.visitMethod(ACC_PUBLIC + ACC_STATIC, name, "(Ljava/lang/String;[Ljava/lang/Object;)I",
+				null, null);
 		mv.visitCode();
 		getJPQL(mv);
 		mv.visitLdcInsn(en());
 		mv.visitVarInsn(ALOAD, 0);
 		mv.visitVarInsn(ALOAD, 1);
-		mv.visitMethodInsn(INVOKEVIRTUAL, JPQL, name,
-				"(Ljava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)I", false);
+		mv.visitMethodInsn(INVOKEVIRTUAL, JPQL, name, "(Ljava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)I",
+				false);
 		mv.visitInsn(IRETURN);
 		mv.visitMaxs(4, 2);
 		mv.visitEnd();
@@ -223,8 +222,7 @@ public class ModelClassVisitor extends ClassVisitor implements Opcodes {
 
 	private void getJPQL(MethodVisitor mv) {
 		mv.visitLdcInsn(t());
-		mv.visitMethodInsn(INVOKESTATIC, JPA_BASE, GET_JPA_CONFIG, "(Ljava/lang/Class;)Lplay/db/jpa/JPAConfig;",
-				false);
+		mv.visitMethodInsn(INVOKESTATIC, JPA_BASE, GET_JPA_CONFIG, "(Ljava/lang/Class;)Lplay/db/jpa/JPAConfig;", false);
 		mv.visitFieldInsn(GETFIELD, "play/db/jpa/JPAConfig", "jpql", "Lplay/db/jpa/JPQL;");
 	}
 
@@ -261,4 +259,38 @@ public class ModelClassVisitor extends ClassVisitor implements Opcodes {
 		return ((ClassWriter) super.cv).toByteArray();
 	}
 
+	private void MetRef() {
+		MethodVisitor mv = cv.visitMethod(ACC_PUBLIC, "testMethRef", "()V", null, null);
+		mv.visitCode();
+		mv.visitInsn(ICONST_2);
+		mv.visitTypeInsn(ANEWARRAY, "java/lang/String");
+		mv.visitInsn(DUP);
+		mv.visitInsn(ICONST_0);
+		mv.visitLdcInsn("1");
+		mv.visitInsn(AASTORE);
+		mv.visitInsn(DUP);
+		mv.visitInsn(ICONST_1);
+		mv.visitLdcInsn("2");
+		mv.visitInsn(AASTORE);
+		mv.visitMethodInsn(INVOKESTATIC, "java/util/stream/Stream", "of",
+				"([Ljava/lang/Object;)Ljava/util/stream/Stream;", true);
+		mv.visitInvokeDynamicInsn(
+				"accept",
+				"()Ljava/util/function/Consumer;",
+				new Handle(
+						Opcodes.H_INVOKESTATIC,
+						"java/lang/invoke/LambdaMetafactory",
+						"metafactory",
+						"(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;"),
+				new Object[] {
+						Type.getType("(Ljava/lang/Object;)V"),
+						new Handle(Opcodes.H_INVOKESTATIC, "bran/AsmTests", "findById",
+								"(Ljava/lang/Object;)Lplay/db/jpa/GenericModel;"),
+						Type.getType("(Ljava/lang/String;)V") });
+		mv.visitMethodInsn(INVOKEINTERFACE, "java/util/stream/Stream", "forEach", "(Ljava/util/function/Consumer;)V",
+				true);
+		mv.visitInsn(RETURN);
+		mv.visitMaxs(4, 1);
+		mv.visitEnd();
+	}
 }

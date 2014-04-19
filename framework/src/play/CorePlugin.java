@@ -9,6 +9,7 @@ import org.apache.commons.lang.StringUtils;
 
 import play.Play.Mode;
 import play.classloading.ApplicationClasses.ApplicationClass;
+import play.classloading.enhancers.ContinuationEnhancer;
 import play.classloading.enhancers.ControllersEnhancer;
 import play.classloading.enhancers.Enhancer;
 import play.classloading.enhancers.SigEnhancer;
@@ -286,7 +287,7 @@ public class CorePlugin extends PlayPlugin {
     @Override
     public void enhance(ApplicationClass applicationClass) throws Exception {
         Class<? extends Enhancer>[] enhancers = new Class[]{
-//                ContinuationEnhancer.class,
+//                ContinuationEnhancer.class,  // not working yet
                 SigEnhancer.class,
                 ControllersEnhancer.class,
 //                MailerEnhancer.class,
