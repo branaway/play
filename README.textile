@@ -9,6 +9,7 @@ It contains
 2. special code to work with Japid for better japid views' error reporting in DEV mode. Most of japid grammar errors will be pointed back to the original view files. 
 
 History:
+2014.4.22, mostly replaced javassist with ASM for enhancers. controller and model enhancers seemed to work now.    
 2013.9.3, roll back a unfinished hack on error pages.  
 2013.8.14, merged upstream master. 
 2013.8.5, version 1.2.5.3, tested with japid 0.9.22
@@ -76,6 +77,15 @@ cd to framework and "ant". To create a new release, create a new version tag and
 
 "ant package" will create a disrtibution in the dist. 
 
+h2. JDK 8 compatibility
+
+The jdk8 branch is a rework some of the internal enhancers which used to use Javassist, which is not JDK8 compatible. The new work uses ASM. 
+
+To build a jdk8 compatible play, issue a command:
+
+git switch jdk8
+
+before you create a distribution. 
 
 h2. Reporting bugs
 
