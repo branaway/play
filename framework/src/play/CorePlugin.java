@@ -288,9 +288,11 @@ public class CorePlugin extends PlayPlugin {
     public void enhance(ApplicationClass applicationClass) throws Exception {
         Class<? extends Enhancer>[] enhancers = new Class[]{
 //                ContinuationEnhancer.class,  // not working yet
-                SigEnhancer.class,
-                ControllersEnhancer.class,
-//                MailerEnhancer.class,
+
+        		                SigEnhancer.class,
+        		                ControllersEnhancer.class,
+
+        		//                MailerEnhancer.class,
 //                PropertiesEnhancer.class,
 //                LocalvariablesNamesEnhancer.class
             };

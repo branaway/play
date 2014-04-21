@@ -213,7 +213,8 @@ public abstract class Enhancer {
     }
 
     boolean isAnon(ApplicationClass app) {
-        return app.name.contains("$anonfun$") || app.name.contains("$anon$");
+//        return app.name.contains("$anonfun$") || app.name.contains("$anon$");
+        return app.name.contains("$"); // bran: widen the coverage
     }
     
 }

@@ -32,7 +32,6 @@ public class ControllerActionMethodVisitor extends MethodVisitor implements Opco
 	@Override
 	public void visitCode() {
 		redirect();
-		// alert();
 	}
 
 	/**
@@ -104,16 +103,16 @@ public class ControllerActionMethodVisitor extends MethodVisitor implements Opco
 			// autoboxing
 			if (t == int.class) {
 				mv.visitVarInsn(ILOAD, currentSlot);
-				mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(J)Ljava/lang/Integer;", false);
+				mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false);
 			} else if (t == long.class) {
 				mv.visitVarInsn(LLOAD, currentSlot);
 				mv.visitMethodInsn(INVOKESTATIC, "java/lang/Long", "valueOf", "(J)Ljava/lang/Long;", false);
 			} else if (t == float.class) {
 				mv.visitVarInsn(FLOAD, currentSlot);
-				mv.visitMethodInsn(INVOKESTATIC, "java/lang/Float", "valueOf", "(J)Ljava/lang/Float;", false);
+				mv.visitMethodInsn(INVOKESTATIC, "java/lang/Float", "valueOf", "(F)Ljava/lang/Float;", false);
 			} else if (t == double.class) {
 				mv.visitVarInsn(DLOAD, currentSlot);
-				mv.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf", "(J)Ljava/lang/Double;", false);
+				mv.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false);
 			} else
 				mv.visitVarInsn(ALOAD, currentSlot);
 
@@ -148,7 +147,7 @@ public class ControllerActionMethodVisitor extends MethodVisitor implements Opco
 
 	@Override
 	public void visitMaxs(int maxStack, int maxLocals) {
-		mv.visitMaxs(maxStack + 3, maxLocals + 2); // should be ignored
+		mv.visitMaxs(0, 0); // should be ignored
 	}
 
 	/* (non-Javadoc)

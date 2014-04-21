@@ -41,23 +41,23 @@ public class MethodDescr {
 	}
 
 	static Function<String, Type> mapper = c -> {
-		if (c == "I")
+		if (c.equals("I"))
 			return (int.class);
-		else if (c == "Z")
+		else if (c.equals("Z"))
 			return (boolean.class);
-		else if (c == "B")
+		else if (c.equals("B"))
 			return (byte.class);
-		else if (c == "C")
+		else if (c.equals("C"))
 			return (char.class);
-		else if (c == "S")
+		else if (c.equals("S"))
 			return (short.class);
-		else if (c == "D")
+		else if (c.equals("D"))
 			return (double.class);
-		else if (c == "F")
+		else if (c.equals("F"))
 			return (float.class);
-		else if (c == "S")
+		else if (c.equals("S"))
 			return (short.class);
-		else if (c == "J")
+		else if (c.equals("J"))
 			return (long.class);
 		else if (c.startsWith("L"))
 			return Object.class;

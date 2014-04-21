@@ -35,9 +35,10 @@ public class AsmTests extends GenericModel {
 	}
 
 	// bran: used to be inserted to the beginning of an action call
-	public static void beforeMethod(Method m, Object... args) throws Redirect {
+	public static void beforeMethod(/*Method m, */String xx, long a, Object b, int in, double dd ) throws Redirect {
 		if (!ControllerInstrumentation.isActionCallAllowed()) {
-			Controller.redirect(m.getDeclaringClass().getName() + "." + m.getName(), args);
+//			Controller.redirect(m.getDeclaringClass().getName() + "." + m.getName(), xx, a, b);
+			Controller.redirect("target method", xx, a, b, in, dd);
 		} else {
 			ControllerInstrumentation.stopActionCall();
 		}

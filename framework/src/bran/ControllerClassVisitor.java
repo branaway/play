@@ -46,10 +46,14 @@ public class ControllerClassVisitor extends ClassVisitor implements Opcodes {
 	@Override
 	public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
 		MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
-
-		MethodDescr md = new MethodDescr(access, name, desc, signature, exceptions);
-		if (!isInterface && mv != null && !name.equals("<init>") && !name.contains("$")) {
-			mv = new ControllerActionMethodVisitor(controllerName, md, mv);
+		// check signature
+		if (((access & Opcodes.ACC_PUBLIC) !=0)
+				&& ((access & Opcodes.ACC_STATIC) !=0)
+				) {
+			if (!isInterface && mv != null && !name.equals("<init>") && !name.contains("$")) {
+				MethodDescr md = new MethodDescr(access, name, desc, signature, exceptions);
+				mv = new ControllerActionMethodVisitor(controllerName, md, mv);
+			}
 		}
 		return mv;
 	}

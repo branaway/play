@@ -65,45 +65,37 @@ public class AsmTestsDump implements Opcodes {
 			mv.visitEnd();
 		}
 		{
-			mv = cw.visitMethod(ACC_PUBLIC + ACC_STATIC, "beforeMethod",
-					"(Ljava/lang/reflect/Method;[Ljava/lang/Object;)V", null, null);
+			mv = cw.visitMethod(ACC_PUBLIC + ACC_STATIC, "beforeMethod", "(Ljava/lang/String;JLjava/lang/Object;)V", null, new String[] { "play/mvc/results/Redirect" });
 			mv.visitCode();
-			mv.visitMethodInsn(INVOKESTATIC,
-					"play/classloading/enhancers/ControllersEnhancer$ControllerInstrumentation", "isActionCallAllowed",
-					"()Z", false);
+			mv.visitMethodInsn(INVOKESTATIC, "play/classloading/enhancers/ControllersEnhancer$ControllerInstrumentation", "isActionCallAllowed", "()Z", false);
 			Label l0 = new Label();
 			mv.visitJumpInsn(IFNE, l0);
-			mv.visitTypeInsn(NEW, "java/lang/StringBuilder");
+			mv.visitLdcInsn("target method");
+			mv.visitInsn(ICONST_3);
+			mv.visitTypeInsn(ANEWARRAY, "java/lang/Object");
 			mv.visitInsn(DUP);
+			mv.visitInsn(ICONST_0);
 			mv.visitVarInsn(ALOAD, 0);
-			mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/reflect/Method", "getDeclaringClass", "()Ljava/lang/Class;",
-					false);
-			mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Class", "getName", "()Ljava/lang/String;", false);
-			mv.visitMethodInsn(INVOKESTATIC, "java/lang/String", "valueOf", "(Ljava/lang/Object;)Ljava/lang/String;",
-					false);
-			mv.visitMethodInsn(INVOKESPECIAL, "java/lang/StringBuilder", "<init>", "(Ljava/lang/String;)V", false);
-			mv.visitLdcInsn(".");
-			mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append",
-					"(Ljava/lang/String;)Ljava/lang/StringBuilder;", false);
-			mv.visitVarInsn(ALOAD, 0);
-			mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/reflect/Method", "getName", "()Ljava/lang/String;", false);
-			mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append",
-					"(Ljava/lang/String;)Ljava/lang/StringBuilder;", false);
-			mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "toString", "()Ljava/lang/String;", false);
-			mv.visitVarInsn(ALOAD, 1);
-			mv.visitMethodInsn(INVOKESTATIC, "play/mvc/Controller", "redirect",
-					"(Ljava/lang/String;[Ljava/lang/Object;)V", false);
+			mv.visitInsn(AASTORE);
+			mv.visitInsn(DUP);
+			mv.visitInsn(ICONST_1);
+			mv.visitVarInsn(LLOAD, 1);
+			mv.visitMethodInsn(INVOKESTATIC, "java/lang/Long", "valueOf", "(J)Ljava/lang/Long;", false);
+			mv.visitInsn(AASTORE);
+			mv.visitInsn(DUP);
+			mv.visitInsn(ICONST_2);
+			mv.visitVarInsn(ALOAD, 3);
+			mv.visitInsn(AASTORE);
+			mv.visitMethodInsn(INVOKESTATIC, "play/mvc/Controller", "redirect", "(Ljava/lang/String;[Ljava/lang/Object;)V", false);
 			Label l1 = new Label();
 			mv.visitJumpInsn(GOTO, l1);
 			mv.visitLabel(l0);
 			mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
-			mv.visitMethodInsn(INVOKESTATIC,
-					"play/classloading/enhancers/ControllersEnhancer$ControllerInstrumentation", "stopActionCall",
-					"()V", false);
+			mv.visitMethodInsn(INVOKESTATIC, "play/classloading/enhancers/ControllersEnhancer$ControllerInstrumentation", "stopActionCall", "()V", false);
 			mv.visitLabel(l1);
 			mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
 			mv.visitInsn(RETURN);
-			mv.visitMaxs(3, 2);
+			mv.visitMaxs(6, 4);
 			mv.visitEnd();
 		}
 		{ // try catch

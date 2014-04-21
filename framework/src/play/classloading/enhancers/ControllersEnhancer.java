@@ -47,13 +47,12 @@ public class ControllersEnhancer extends Enhancer {
 //            return;
 //        }
 
-
-//        byte[] bytecode = enhanceByJavassist(applicationClass);
+        
         byte[] bytecode = ControllerClassVisitor.visitController(applicationClass.enhancedByteCode);
         
         if (bytecode != null)
         	applicationClass.enhancedByteCode = bytecode;
-
+//
 
     }
     
