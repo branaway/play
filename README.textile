@@ -5,7 +5,6 @@ bing.ran@gmail.com
 This fork came from the HEAD of master in the original Play framework, at about a post 1.2.4 version. 2013/8/15: Changes in the latest HEAD of the original repository has been merged back. 
 
 
-
 It contains 
 1. a few patches that make using Play in dev mode faster.
 2. special code to work with Japid for better japid views' error reporting in DEV mode. Most of japid grammar errors will be pointed back to the original view files. 
@@ -30,8 +29,8 @@ History:
   
 For More changes I have made, please see the bottom of this page. 
 
-h1. Welcome to Play framework  "!https://travis-ci.org/playframework/play.png!":https://travis-ci.org/playframework/play
 
+h1. Welcome to Play framework  "!https://jenkins-ci.org/sites/default/files/images/CloudBees-logo.thumbnail.png!":https://playone.ci.cloudbees.com
 
 Play framework makes it easier to build Web applications with Java. It is a clean alternative to bloated Enterprise Java stacks. It focuses on developer productivity and targets RESTful architectures. Play is a perfect companion to agile software development.
 
