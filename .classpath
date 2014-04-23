@@ -5,9 +5,6 @@
 	<classpathentry exported="true" kind="lib" path="framework/lib/activation-1.1.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/c3p0-0.9.1.2.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/commons-beanutils-1.8.3.jar"/>
-	<classpathentry exported="true" kind="lib" path="framework/lib/commons-codec-1.4.jar"/>
-	<classpathentry exported="true" kind="lib" path="framework/lib/commons-email-1.2.jar"/>
-	<classpathentry exported="true" kind="lib" path="framework/lib/commons-logging-1.1.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/dom4j-1.6.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/ezmorph-1.0.3.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/jamon-2.7.jar"/>
@@ -18,23 +15,14 @@
 	<classpathentry exported="true" kind="lib" path="framework/lib/jj-wikitext.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/jregex-1.2_01.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/jsr107cache-1.0.jar"/>
-	<classpathentry exported="true" kind="lib" path="framework/lib/oval-1.50.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/signpost-core-1.2.jar"/>
-	<classpathentry exported="true" kind="lib" path="framework/lib/slf4j-api-1.6.1.jar"/>
-	<classpathentry exported="true" kind="lib" path="framework/lib/slf4j-log4j12-1.6.1.jar"/>
 	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/commons-httpclient.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/geronimo-servlet_2.5_spec-1.2.jar"/>
-	<classpathentry exported="true" kind="lib" path="framework/lib/ivy-2.2.0.jar"/>
-	<classpathentry exported="true" kind="lib" path="framework/lib/mail-1.4.3.jar"/>
-	<classpathentry exported="true" kind="lib" path="framework/lib/snakeyaml-1.7.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/bcprov-jdk15-1.45.jar"/>
-	<classpathentry exported="true" kind="lib" path="framework/lib/cglib-nodep-2.2.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/hibernate-spatial-1.1-trunk.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/hibernate-spatial-postgis-1.1-trunk.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/javax.inject-1.0.jar"/>
-	<classpathentry exported="true" kind="lib" path="framework/lib/commons-fileupload-1.2.2.jar"/>
-	<classpathentry exported="true" kind="lib" path="framework/lib/commons-io-2.0.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/commons-lang-2.6.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/antlr-2.7.7.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/commons-javaflow-1209105.jar"/>
@@ -42,7 +30,6 @@
 	<classpathentry exported="true" kind="lib" path="framework/lib/groovy-all-1.8.6.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/jackson-all-1.7.5.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/jboss-transaction-api_1.1_spec-1.0.0.Final.jar"/>
-	<classpathentry exported="true" kind="lib" path="framework/lib/log4j-1.2.16.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/memcached-2.6.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/postgresql-9.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib-test/ant.jar"/>
@@ -57,13 +44,8 @@
 	<classpathentry exported="true" kind="lib" path="framework/lib/spring-context.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/spring-core.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/async-http-client-1.7.8.jar"/>
-	<classpathentry exported="true" kind="lib" path="framework/lib/gson-2.2.jar"/>
-	<classpathentry exported="true" kind="lib" path="framework/lib/h2-1.3.166.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/jboss-logging-3.1.0.GA.jar"/>
-	<classpathentry exported="true" kind="lib" path="framework/lib/joda-time-2.1.jar"/>
-	<classpathentry exported="true" kind="lib" path="framework/lib/junit-4.10.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/mysql-connector-java-5.1.20.jar"/>
-	<classpathentry exported="true" kind="lib" path="framework/lib/netty-3.6.0.Final.jar"/>
 	<classpathentry kind="lib" path="framework/lib/org.eclipse.jdt.core_3.9.50.v20140317-1741.jar" sourcepath="/Users/bran/.m2/repository/com/reubenpeeris/org.eclipse.jdt.core/3.9.50.v20140317-1741/org.eclipse.jdt.core-3.9.50.v20140317-1741-sources.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/classmate-1.0.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/jandex-1.1.0.Final.jar"/>
@@ -87,5 +69,25 @@
 	<classpathentry kind="lib" path="framework/lib/asm-tree-5.0.1.jar"/>
 	<classpathentry kind="lib" path="framework/lib/asm-util-5.0.1.jar" sourcepath="/Users/bran/.m2/repository/org/ow2/asm/asm-util/5.0.1/asm-util-5.0.1-sources.jar"/>
 	<classpathentry kind="lib" path="framework/lib/asm-xml-5.0.1.jar"/>
+	<classpathentry kind="lib" path="framework/lib/cglib-nodep-3.1.jar"/>
+	<classpathentry kind="lib" path="framework/lib/commons-codec-1.8.jar"/>
+	<classpathentry kind="lib" path="framework/lib/commons-email-1.3.1.jar"/>
+	<classpathentry kind="lib" path="framework/lib/commons-fileupload-1.3.jar"/>
+	<classpathentry kind="lib" path="framework/lib/commons-io-2.4.jar"/>
+	<classpathentry kind="lib" path="framework/lib/commons-logging-1.1.3.jar"/>
+	<classpathentry kind="lib" path="framework/lib/gson-2.2.4.jar"/>
+	<classpathentry kind="lib" path="framework/lib/h2-1.3.173.jar"/>
+	<classpathentry kind="lib" path="framework/lib/hamcrest-core-1.3.jar"/>
+	<classpathentry kind="lib" path="framework/lib/ivy-2.3.0.jar"/>
+	<classpathentry kind="lib" path="framework/lib/joda-time-2.3.jar"/>
+	<classpathentry kind="lib" path="framework/lib/junit-4.11.jar"/>
+	<classpathentry kind="lib" path="framework/lib/log4j-1.2.17.jar"/>
+	<classpathentry kind="lib" path="framework/lib/mail-1.4.7.jar"/>
+	<classpathentry kind="lib" path="framework/lib/netty-3.6.6.Final.jar"/>
+	<classpathentry kind="lib" path="framework/lib/org.eclipse.jdt.core-3.9.50.v20140317-1741.jar"/>
+	<classpathentry kind="lib" path="framework/lib/oval-1.82.jar"/>
+	<classpathentry kind="lib" path="framework/lib/slf4j-api-1.7.5.jar"/>
+	<classpathentry kind="lib" path="framework/lib/slf4j-log4j12-1.7.5.jar"/>
+	<classpathentry kind="lib" path="framework/lib/snakeyaml-1.12.jar"/>
 	<classpathentry kind="output" path="framework/classes"/>
 </classpath>
