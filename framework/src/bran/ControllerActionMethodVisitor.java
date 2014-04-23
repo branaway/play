@@ -52,12 +52,12 @@ public class ControllerActionMethodVisitor extends MethodVisitor implements Opco
 		super.visitFieldInsn(opcode, owner, name, desc);
 	}
 
-	private void alert() {
-		mv.visitCode();
-		mv.visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
-		mv.visitLdcInsn("method called: " + owner + "." + methodDesc.name);
-		mv.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", false);
-	}
+//	private void alert() {
+//		mv.visitCode();
+//		mv.visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
+//		mv.visitLdcInsn("method called: " + owner + "." + methodDesc.name);
+//		mv.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", false);
+//	}
 
 	boolean isSpecialFieldAccess(String owner, String fname) {
 		if (owner.equals(this.owner) || owner.equals("play.mvc.WebSocketController")) {
@@ -166,11 +166,11 @@ public class ControllerActionMethodVisitor extends MethodVisitor implements Opco
 	 */
 	@Override
 	public void visitLabel(Label label) {
+		super.visitLabel(label);
 		if (handlers.contains(label)) {
 			// let inject something
 //			System.out.println("caught you");
 		}
-		super.visitLabel(label);
 	}
 
 	/* (non-Javadoc)

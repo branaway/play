@@ -25,6 +25,7 @@ import java.util.NoSuchElementException;
 import org.apache.commons.fileupload.disk.DiskFileItem;
 import org.apache.commons.io.FileCleaningTracker;
 import org.apache.commons.io.output.DeferredFileOutputStream;
+
 import play.Logger;
 import play.Play;
 import play.data.FileUpload;
@@ -141,6 +142,11 @@ public class ApacheMultipartParser extends DataParser {
          * Output stream for this item.
          */
         private DeferredFileOutputStream dfos;
+        
+        /**
+         * The file items headers. 
+         */
+        private FileItemHeaders headers;
 
         public AutoFileItem(FileItemStream stream) {
             this.fieldName = stream.getFieldName();
@@ -557,6 +563,27 @@ public class ApacheMultipartParser extends DataParser {
         @Override
 		public String toString() {
             return "name=" + this.getName() + ", StoreLocation=" + String.valueOf(this.getStoreLocation()) + ", size=" + this.getSize() + "bytes, " + "isFormField=" + isFormField() + ", FieldName=" + this.getFieldName();
+        }
+
+        /**
+         * Returns the file item headers. 
+         * 
+         * @return The file items headers.
+         */
+        @Override
+        public FileItemHeaders getHeaders() {
+            return headers;
+        }
+
+        /**
+         * Sets the file item headers.
+         * 
+         * @param pHeaders
+         *            The file items headers.
+         */
+        @Override
+        public void setHeaders(FileItemHeaders pHeaders) {
+            headers = pHeaders;     
         }
     }
 

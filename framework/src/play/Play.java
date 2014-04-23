@@ -263,7 +263,11 @@ public class Play {
 			Logger.error("Illegal mode '%s', use either prod or dev", configuration.getProperty("application.mode"));
 			fatalServerErrorOccurred();
 		}
-		if (usePrecompiled || forceProd) {
+	
+        // Force the Production mode if forceProd or precompile is activate
+        // Set to the Prod mode must be done before loadModules call
+        // as some modules (e.g. DocViewver) is only available in DEV
+        if (usePrecompiled || forceProd || System.getProperty("precompile") != null) {
             mode = Mode.PROD;
         }
 
@@ -315,8 +319,7 @@ public class Play {
         pluginCollection.loadPlugins();
 
         // Done !
-        if (mode == Mode.PROD || System.getProperty("precompile") != null) {
-            mode = Mode.PROD;
+        if (mode == Mode.PROD) {
             if (preCompile() && System.getProperty("precompile") == null) {
                 start();
             } else {
@@ -853,16 +856,19 @@ public class Play {
 		// See #781
 		// the yaml parser wants play.version as an environment variable
 		System.setProperty("play.version", Play.version);
-		DependenciesManager dm = new DependenciesManager(applicationPath, frameworkPath, null);
+		System.setProperty("application.path", applicationPath.getAbsolutePath());
 
 		File localModules = Play.getFile("modules");
 		List<String> modules = new ArrayList<String>();
-		if (localModules.exists() && localModules.isDirectory()) {
+		if (localModules != null && localModules.exists() && localModules.isDirectory()) {
 			try {
+			        File userHome  = new File(System.getProperty("user.home"));
+			        DependenciesManager dm = new DependenciesManager(applicationPath, frameworkPath, userHome);
 				modules = dm.retrieveModules();
 			} catch (Exception e) {
-				throw new UnexpectedException("There was a problem parsing "+ DependenciesManager.MODULE_ORDER_CONF);
-				
+				Logger.error("There was a problem parsing depencies.yml (module will not be loaded in order of the dependencies.yml)", e);
+				// Load module without considering the dependencies.yml order
+				modules = Arrays.asList(localModules.list());		
 			}
 			for (java.util.Iterator iter = modules.iterator(); iter.hasNext();) {
 				String moduleName = (String) iter.next();
@@ -873,7 +879,9 @@ public class Play {
 					moduleName = moduleName.substring(0, moduleName.indexOf("-"));
 				}
 
-				if (module.isDirectory()) {
+				if(module == null || !module.exists()){
+				        Logger.error("Module %s will not be loaded because %s does not exist", moduleName, module.getAbsolutePath());
+				} else if (module.isDirectory()) {
 					addModule(moduleName, module);
 				} else {
 

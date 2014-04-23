@@ -21,6 +21,7 @@ import static play.db.jpa.JPABase.*;
 import play.mvc.Controller;
 import play.mvc.results.Redirect;
 import play.mvc.results.Result;
+import play.utils.FastRuntimeException;
 
 /**
  * @author bran
@@ -49,11 +50,16 @@ public class AsmTests extends GenericModel {
 		try {
 			// beforeMethod(null, "sss", b, c, d, ee, a, b);
 			int s = 11;
-		} catch (RuntimeException e) {
+		} catch (FastRuntimeException e) {
+			if (e instanceof Result)
+				throw e;
 			int ss = 100;
+		} catch (RuntimeException e) {
+			int ss = 99;
 		} catch (Throwable e) {
 			if (e instanceof Result || e instanceof Suspend)
 				throw e;
+			int ss = 101;
 		}
 	}
 

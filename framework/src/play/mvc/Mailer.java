@@ -1,5 +1,10 @@
 package play.mvc;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -9,17 +14,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import javax.activation.DataSource;
-import javax.mail.internet.InternetAddress;
-
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.mail.Email;
-import org.apache.commons.mail.EmailAttachment;
-import org.apache.commons.mail.EmailException;
-import org.apache.commons.mail.HtmlEmail;
-import org.apache.commons.mail.MultiPartEmail;
-import org.apache.commons.mail.SimpleEmail;
+import org.apache.commons.mail.*;
 
 import play.Logger;
+import play.Play;
 import play.exceptions.MailException;
 import play.exceptions.TemplateNotFoundException;
 import play.exceptions.UnexpectedException;
@@ -31,6 +32,8 @@ import play.templates.Template;
 import play.templates.TemplateLoader;
 import play.utils.Utils;
 
+import javax.activation.DataSource;
+import javax.activation.URLDataSource;
 /**
  * Application mailer support
  */
@@ -159,6 +162,165 @@ public class Mailer {
         infos.set(map);
     }
 
+    private static class InlineImage {
+        /** content id */
+        private final String cid;
+        /** <code>DataSource</code> for the content */
+        private final DataSource dataSource;
+
+        public InlineImage(String cid, DataSource dataSource) {
+            super();
+            this.cid = cid;
+            this.dataSource = dataSource;
+        }
+
+        public String getCid() {
+            return this.cid;
+        }
+
+        public DataSource getDataSource() {
+            return this.dataSource;
+        }
+    }
+    
+    private static class VirtualFileDataSource implements DataSource {
+        private final VirtualFile virtualFile;
+
+        public VirtualFileDataSource(VirtualFile virtualFile) {
+            this.virtualFile = virtualFile;
+        }
+
+        public VirtualFileDataSource(String relativePath) {
+            this.virtualFile = VirtualFile.fromRelativePath(relativePath);
+        }
+
+        @Override
+        public String getContentType() {
+            return MimeTypes.getContentType(this.virtualFile.getName());
+        }
+
+        @Override
+        public InputStream getInputStream() throws IOException {
+            return this.virtualFile.inputstream();
+        }
+
+        @Override
+        public String getName() {
+            return this.virtualFile.getName();
+        }
+
+        @Override
+        public OutputStream getOutputStream() throws IOException {
+            return this.virtualFile.outputstream();
+        }
+
+        public VirtualFile getVirtualFile() {
+            return this.virtualFile;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (!(obj instanceof VirtualFileDataSource)) {
+                return false;
+            }
+
+            VirtualFileDataSource rhs = (VirtualFileDataSource) obj;
+
+            return this.virtualFile.equals(rhs.virtualFile);
+        }
+    }
+    
+    public static String getEmbedddedSrc(String urlString, String name) {
+        HashMap<String, Object> map = infos.get();
+        if (map == null) {
+            throw new UnexpectedException("Mailer not instrumented ?");
+        }
+        
+        DataSource dataSource = null;
+        URL url = null;
+
+        VirtualFile img = Play.getVirtualFile(urlString);
+        if (img == null) {
+            // Not a local image, check for a distant image
+            try {
+                url = new URL(urlString);
+            } catch (MalformedURLException e1) {
+                throw new UnexpectedException(
+                        "Invalid URL '" + urlString + "'", e1);
+            }
+
+            if (name == null || name.isEmpty()) {
+                String[] parts = url.getPath().split("/");
+                name = parts[parts.length - 1];
+            }
+
+            if (StringUtils.isEmpty(name)) {
+                throw new UnexpectedException("name cannot be null or empty");
+            }
+
+            dataSource = url.getProtocol().equals("file") ? new VirtualFileDataSource(
+                    url.getFile()) : new URLDataSource(url);
+        }else{
+            dataSource = new VirtualFileDataSource(img);
+        }
+
+        Map<String, InlineImage> inlineEmbeds = (Map<String, InlineImage>) map
+                .get("inlineEmbeds");
+
+        // Check if a URLDataSource for this name has already been attached;
+        // if so, return the cached CID value.
+        if (inlineEmbeds != null && inlineEmbeds.containsKey(name)) {
+            InlineImage ii = inlineEmbeds.get(name);
+
+            if (ii.getDataSource() instanceof URLDataSource) {
+                URLDataSource urlDataSource = (URLDataSource) ii
+                        .getDataSource();
+                // Make sure the supplied URL points to the same thing
+                // as the one already associated with this name.
+                // NOTE: Comparing URLs with URL.equals() is a blocking
+                // operation
+                // in the case of a network failure therefore we use
+                // url.toExternalForm().equals() here.
+                if (url == null || urlDataSource == null || !url.toExternalForm().equals(
+                        urlDataSource.getURL().toExternalForm())) {
+                    throw new UnexpectedException("embedded name '" + name
+                            + "' is already bound to URL "
+                            + urlDataSource.getURL()
+                            + "; existing names cannot be rebound");
+                }
+            } else if (!ii.getDataSource().equals(dataSource)) {
+                throw new UnexpectedException("embedded name '" + name
+                        + "' is already bound to URL " + dataSource.getName()
+                        + "; existing names cannot be rebound");
+            }
+
+            return "cid:" + ii.getCid();
+        }
+
+        // Verify that the data source is valid.
+        InputStream is = null;
+        try {
+            is = dataSource.getInputStream();
+        } catch (IOException e) {
+            throw new UnexpectedException("Invalid URL", e);
+        } finally {
+            IOUtils.closeQuietly(is);
+        }
+
+        String cid = RandomStringUtils.randomAlphabetic(HtmlEmail.CID_LENGTH)
+                .toLowerCase();
+        InlineImage ii = new InlineImage(cid, dataSource);
+
+        if (inlineEmbeds == null) {
+            inlineEmbeds = new HashMap<String, InlineImage>();
+            map.put("inlineEmbeds", inlineEmbeds);
+        }
+        inlineEmbeds.put(name, ii);
+        infos.set(map);
+
+        return "cid:" + cid;
+    }
+
     /**
      * Can be of the form xxx <m@m.com>
      *
@@ -283,7 +445,7 @@ public class Mailer {
             final Object replyTo = infos.get().get("replyTo");
 
             Email email = null;
-            if (infos.get().get("attachments") == null && infos.get().get("datasources") == null ) {
+            if (infos.get().get("attachments") == null && infos.get().get("datasources") == null && infos.get().get("inlineEmbeds") == null ) {
                 if (StringUtils.isEmpty(bodyHtml)) {
                     email = new SimpleEmail();
                     email.setMsg(bodyText);
@@ -307,6 +469,13 @@ public class Mailer {
                         htmlEmail.setTextMsg(bodyText);
                     }
                     email = htmlEmail;
+                    
+                    Map<String, InlineImage> inlineEmbeds = (Map<String, InlineImage>) infos.get().get("inlineEmbeds");
+                    if (inlineEmbeds != null) {
+                        for (Map.Entry<String, InlineImage> entry : inlineEmbeds.entrySet()) {
+	                    	htmlEmail.embed(entry.getValue().getDataSource(), entry.getKey(), entry.getValue().getCid());
+	                }
+                    }
                 }
                 MultiPartEmail multiPartEmail = (MultiPartEmail) email;
                 List<EmailAttachment> objectList = (List<EmailAttachment>) infos.get().get("attachments");
@@ -318,7 +487,8 @@ public class Mailer {
 				}
 		
 			    //Handle DataSource
-			    List<T4<DataSource, String, String, String>> datasourceList = (List<T4<DataSource, String, String, String>>) infos.get().get("datasources");
+                List<T4<DataSource, String, String, String>> datasourceList = (List<T4<DataSource, String, String, String>>) infos
+                        .get().get("datasources");
 				if(datasourceList != null) {
 			          for(T4<DataSource, String, String, String> ds : datasourceList) {
 			             multiPartEmail.attach(ds._1, ds._2, ds._3, ds._4);

@@ -23,8 +23,8 @@ public class F {
 
     public static class Promise<V> implements Future<V>, F.Action<V> {
 
-        final CountDownLatch taskLock = new CountDownLatch(1);
-        boolean cancelled = false;
+        protected final CountDownLatch taskLock = new CountDownLatch(1);
+        protected boolean cancelled = false;
 
         @Override
 		public boolean cancel(boolean mayInterruptIfRunning) {
@@ -55,19 +55,21 @@ public class F {
             return result;
         }
 
-        @Override
-		public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-            taskLock.await(timeout, unit);
+        public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+            if(!taskLock.await(timeout, unit)) {
+              throw new TimeoutException(String.format("Promise didn't redeem in %s %s", timeout, unit));
+            }
+            
             if (exception != null) {
                 // The result of the promise is an exception - throw it
                 throw new ExecutionException(exception);
             }
             return result;
         }
-        List<F.Action<Promise<V>>> callbacks = new ArrayList<F.Action<Promise<V>>>();
-        boolean invoked = false;
-        V result = null;
-        Throwable exception = null;
+        protected List<F.Action<Promise<V>>> callbacks = new ArrayList<F.Action<Promise<V>>>();
+        protected boolean invoked = false;
+        protected V result = null;
+        protected Throwable exception = null;
 
         public void invoke(V result) {
             invokeWithResultOrException(result, null);

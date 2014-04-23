@@ -98,7 +98,7 @@ public class JPA {
                 try {
                     jpaConfig.getJPAContext().closeTx(rollback);
                 } catch (Exception e) {
-                    Logger.error("Error closing transaction "+jpaConfig.getConfigName(), e);
+                    Logger.error(e, "Error closing transaction "+jpaConfig.getConfigName());
                     error=true;
                 }
             }
