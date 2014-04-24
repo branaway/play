@@ -2,15 +2,17 @@ h2. About
 
 bing.ran@gmail.com
 
-This fork came from the HEAD of master in the original Play framework, at about a post 1.2.4 version. 
+This fork came from the HEAD of master in the original Play framework, at about a post 1.2.6 version. 
 
-2013/8/15: Changes in the latest HEAD of the original repository has been merged back. 
 
 It contains 
-1. a few patches that make using Play in dev mode faster.
+1. basic JDK8 support: JPA and controller enhancing works. Dropped build-in groovy support
+a few patches that make using Play in dev mode faster.
 2. special code to work with Japid for better japid views' error reporting in DEV mode. Most of japid grammar errors will be pointed back to the original view files. 
+3.
 
 History:
+2014.4.24, fixed integer group of arguments support in controller redirect    
 2014.4.22, mostly replaced javassist with ASM for enhancers. controller and model enhancers seemed to work now.    
 2013.9.3, roll back a unfinished hack on error pages.  
 2013.8.14, merged upstream master. 
