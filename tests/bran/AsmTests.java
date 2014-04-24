@@ -45,11 +45,15 @@ public class AsmTests extends GenericModel {
 		}
 	}
 
-	public static void so(String a, long b, boolean c, double d, String ee) {
+	public static void so1(Object...args) {
+	}
+
+	public static void so(String a, long b, boolean c, double d, String ee, boolean bool, short sh, char ch) {
 
 		try {
 			// beforeMethod(null, "sss", b, c, d, ee, a, b);
 			int s = 11;
+			so1 (a, b, c, d, ee, bool, sh, ch);
 		} catch (FastRuntimeException e) {
 			if (e instanceof Result)
 				throw e;

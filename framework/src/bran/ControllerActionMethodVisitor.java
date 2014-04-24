@@ -104,6 +104,15 @@ public class ControllerActionMethodVisitor extends MethodVisitor implements Opco
 			if (t == int.class) {
 				mv.visitVarInsn(ILOAD, currentSlot);
 				mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false);
+			} else if (t == boolean.class) {
+				mv.visitVarInsn(ILOAD, currentSlot);
+				mv.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", false);
+			} else if (t == short.class) {
+				mv.visitVarInsn(ILOAD, currentSlot);
+				mv.visitMethodInsn(INVOKESTATIC, "java/lang/Short", "valueOf", "(S)Ljava/lang/Short;", false);
+			} else if (t == char.class) {
+				mv.visitVarInsn(ILOAD, currentSlot);
+				mv.visitMethodInsn(INVOKESTATIC, "java/lang/Character", "valueOf", "(C)Ljava/lang/Character;", false);
 			} else if (t == long.class) {
 				mv.visitVarInsn(LLOAD, currentSlot);
 				mv.visitMethodInsn(INVOKESTATIC, "java/lang/Long", "valueOf", "(J)Ljava/lang/Long;", false);

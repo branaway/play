@@ -14,6 +14,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import javax.activation.DataSource;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
@@ -27,13 +28,16 @@ import play.exceptions.UnexpectedException;
 import play.libs.F;
 import play.libs.F.T4;
 import play.libs.Mail;
+import play.libs.MimeTypes;
 import play.mvc.Http.Request;
 import play.templates.Template;
 import play.templates.TemplateLoader;
 import play.utils.Utils;
+import play.vfs.VirtualFile;
 
 import javax.activation.DataSource;
 import javax.activation.URLDataSource;
+import javax.mail.internet.InternetAddress;
 /**
  * Application mailer support
  */
