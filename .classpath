@@ -71,9 +71,9 @@
 	<classpathentry kind="lib" path="framework/lib/asm-xml-5.0.1.jar"/>
 	<classpathentry kind="lib" path="framework/lib/cglib-nodep-3.1.jar"/>
 	<classpathentry kind="lib" path="framework/lib/commons-codec-1.8.jar"/>
-	<classpathentry kind="lib" path="framework/lib/commons-email-1.3.1.jar"/>
+	<classpathentry exported="true" kind="lib" path="framework/lib/commons-email-1.3.1.jar"/>
 	<classpathentry kind="lib" path="framework/lib/commons-fileupload-1.3.jar"/>
-	<classpathentry kind="lib" path="framework/lib/commons-io-2.4.jar"/>
+	<classpathentry exported="true" kind="lib" path="framework/lib/commons-io-2.4.jar"/>
 	<classpathentry kind="lib" path="framework/lib/commons-logging-1.1.3.jar"/>
 	<classpathentry kind="lib" path="framework/lib/gson-2.2.4.jar"/>
 	<classpathentry kind="lib" path="framework/lib/h2-1.3.173.jar"/>
@@ -82,12 +82,13 @@
 	<classpathentry kind="lib" path="framework/lib/joda-time-2.3.jar"/>
 	<classpathentry kind="lib" path="framework/lib/junit-4.11.jar"/>
 	<classpathentry kind="lib" path="framework/lib/log4j-1.2.17.jar"/>
-	<classpathentry kind="lib" path="framework/lib/mail-1.4.7.jar"/>
+	<classpathentry exported="true" kind="lib" path="framework/lib/mail-1.4.7.jar"/>
 	<classpathentry kind="lib" path="framework/lib/netty-3.6.6.Final.jar"/>
 	<classpathentry kind="lib" path="framework/lib/org.eclipse.jdt.core-3.9.50.v20140317-1741.jar"/>
 	<classpathentry kind="lib" path="framework/lib/oval-1.82.jar"/>
 	<classpathentry kind="lib" path="framework/lib/slf4j-api-1.7.5.jar"/>
 	<classpathentry kind="lib" path="framework/lib/slf4j-log4j12-1.7.5.jar"/>
 	<classpathentry kind="lib" path="framework/lib/snakeyaml-1.12.jar"/>
+	<classpathentry exported="true" kind="lib" path="framework/lib/hibernate-ehcache-4.1.3.Final.jar"/>
 	<classpathentry kind="output" path="framework/classes"/>
 </classpath>
