@@ -899,9 +899,9 @@ public class Play {
         if (Play.runningInTestMode()) {
             addModule("_testrunner", new File(Play.frameworkPath, "modules/testrunner"));
         }
-        if (Play.mode == Mode.DEV) {
-            addModule("_docviewer", new File(Play.frameworkPath, "modules/docviewer"));
-        }
+//        if (Play.mode == Mode.DEV) {
+//            addModule("_docviewer", new File(Play.frameworkPath, "modules/docviewer"));
+//        }
     }
 
     /**
