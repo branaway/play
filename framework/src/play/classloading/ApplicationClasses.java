@@ -15,7 +15,6 @@ import play.Logger;
 import play.Play;
 import play.PlayPlugin;
 import play.classloading.enhancers.Enhancer;
-import play.classloading.enhancers.SigEnhancer;
 import play.exceptions.UnexpectedException;
 import play.vfs.VirtualFile;
 
@@ -184,6 +183,16 @@ public class ApplicationClasses {
          * Signatures checksum
          */
         public int sigChecksum;
+		public String sigChecksumString;
+        
+        public int getSigChecksum() {
+        	return sigChecksum;
+        }
+        
+        public String getSigChecksumString() {
+        	return sigChecksumString;
+        }
+        
 
         public ApplicationClass() {
         }

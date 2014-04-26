@@ -46,8 +46,15 @@ public class JPA {
     private final static Map<String, JPAConfig> jpaConfigs = new HashMap<String, JPAConfig>(1);
 
     protected static void addConfiguration(String configName, Ejb3Configuration cfg) {
+    	JPAConfig put = jpaConfigs.get(configName);
+    	if (put != null) {
+    		jpaConfigs.remove(configName);
+    		put.close();
+    	}
+    	
         JPAConfig jpaConfig = new JPAConfig(cfg, configName);// bran: this is where the schemas are checked
         jpaConfigs.put(configName, jpaConfig);
+        
         if( DBConfig.defaultDbConfigName.equals(configName)) {
             _defaultJPAConfig = jpaConfig;
             JPQL.createSingleton();
@@ -74,14 +81,14 @@ public class JPA {
     }
 
     protected static void close() {
-        for( JPAConfig jpaConfig : jpaConfigs.values()) {
-            // do our best to close the JPA config
-            try {
-                jpaConfig.close();
-            } catch (Exception e) {
-                Logger.error("Error closing JPA config "+jpaConfig.getConfigName(), e);
-            }
-        }
+        // do our best to close the JPA config
+    	jpaConfigs.values().forEach( c -> {
+    		try {
+    			c.close();
+	        } catch (Exception e) {
+	            Logger.error("Error closing JPA config ", e);
+	        }
+    	});
         jpaConfigs.clear();
         _defaultJPAConfig = null;
     }

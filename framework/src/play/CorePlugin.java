@@ -286,7 +286,8 @@ public class CorePlugin extends PlayPlugin {
 
     @Override
     public void enhance(ApplicationClass applicationClass) throws Exception {
-        Class<? extends Enhancer>[] enhancers = new Class[]{
+        @SuppressWarnings("unchecked")
+		Class<? extends Enhancer>[] enhancers = new Class[]{
 //                ContinuationEnhancer.class,  // not working yet
 
         		                SigEnhancer.class,

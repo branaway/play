@@ -1,5 +1,41 @@
 package play.db.jpa;
 
+import java.beans.PropertyDescriptor;
+import java.io.Serializable;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import javax.persistence.Embeddable;
+import javax.persistence.EmbeddedId;
+import javax.persistence.Entity;
+import javax.persistence.EntityManager;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.IdClass;
+import javax.persistence.ManyToMany;
+import javax.persistence.ManyToOne;
+import javax.persistence.MappedSuperclass;
+import javax.persistence.NoResultException;
+import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
+import javax.persistence.PersistenceException;
+import javax.persistence.Query;
+import javax.persistence.Transient;
+
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Level;
@@ -8,6 +44,7 @@ import org.hibernate.EmptyInterceptor;
 import org.hibernate.collection.spi.PersistentCollection;
 import org.hibernate.ejb.Ejb3Configuration;
 import org.hibernate.type.Type;
+
 import play.Logger;
 import play.Play;
 import play.PlayPlugin;
@@ -23,28 +60,6 @@ import play.exceptions.JPAException;
 import play.exceptions.UnexpectedException;
 import play.utils.Utils;
 
-import javax.persistence.EmbeddedId;
-import javax.persistence.Entity;
-import javax.persistence.EntityManager;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.ManyToMany;
-import javax.persistence.ManyToOne;
-import javax.persistence.NoResultException;
-import javax.persistence.OneToMany;
-import javax.persistence.OneToOne;
-import javax.persistence.PersistenceException;
-import javax.persistence.Query;
-import javax.persistence.Transient;
-import javax.persistence.*;
-import java.beans.PropertyDescriptor;
-import java.io.Serializable;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.lang.reflect.ParameterizedType;
-import java.util.*;
-
 /**
  * JPA Plugin
  */
@@ -52,9 +67,13 @@ public class JPAPlugin extends PlayPlugin {
 
     public static boolean autoTxs = true;
 	private boolean enabled = true;
+	private String _entityConfigs = "";
+	String _entitiesChecksum = "";
+	private String _mappingFile = "";
+	int _startCount = 0;
 
     @Override
-    public Object bind(RootParamNode rootParamNode, String name, Class clazz, java.lang.reflect.Type type, Annotation[] annotations) {
+    public Object bind(RootParamNode rootParamNode, String name, @SuppressWarnings("rawtypes") Class clazz, java.lang.reflect.Type type, Annotation[] annotations) {
         // TODO need to be more generic in order to work with JPASupport
         if (JPABase.class.isAssignableFrom(clazz)) {
 
@@ -130,8 +149,11 @@ public class JPAPlugin extends PlayPlugin {
     }
 
 
-    @Override
+    @SuppressWarnings("deprecation")
+	@Override
     public void onApplicationStart() {
+    	_startCount++;
+    	
     	// bran: added check for db=null 
     	String dbprop = Play.configuration.getProperty("db");
     	if ("null".equals(dbprop)) {
@@ -155,111 +177,101 @@ public class JPAPlugin extends PlayPlugin {
                 if (!DBConfig.defaultDbConfigName.equalsIgnoreCase(configName)) {
                     propPrefix = "db_" + configName + ".";
                 }
-                List<Class> classes = findEntityClassesForThisConfig(configName, propPrefix);
-                if (classes == null) continue;
-
+       
                 // we're ready to configure this instance of JPA
-                final String hibernateDataSource = Play.configuration.getProperty(propPrefix + "hibernate.connection.datasource");
+// bran: dead code
+//                final String hibernateDataSource = Play.configuration.getProperty(propPrefix + "hibernate.connection.datasource");
+//                if (StringUtils.isEmpty(hibernateDataSource) && dbConfig == null) {
+//                    throw new JPAException("Cannot start a JPA manager without a properly configured database" + getConfigInfoString(configName),
+//                            new NullPointerException("No datasource configured"));
+//                }
 
-                if (StringUtils.isEmpty(hibernateDataSource) && dbConfig == null) {
-                    throw new JPAException("Cannot start a JPA manager without a properly configured database" + getConfigInfoString(configName),
-                            new NullPointerException("No datasource configured"));
+                Ejb3Configuration cfg = newConfig(dbConfig, propPrefix);
+                
+                Map<Boolean, List<ApplicationClass>> entityGroups = this.groupEntities(configName);
+                List<ApplicationClass> changedEntities = entityGroups.get(CHANGED);
+                List<ApplicationClass> unchangedEntities = entityGroups.get(UNCHANGED);
+                
+                Logger.info("changed entities/unchanged: " + changedEntities.size() + "/" + unchangedEntities.size());
+                
+				boolean entitiesChanged = changedEntities.size() > 0;
+
+				// put in the changed for the first run
+				changedEntities.forEach(ac -> {
+					cfg.addAnnotatedClass(ac.javaClass); 
+					if (Logger.isTraceEnabled()) Logger.trace("JPA Model : %s", ac.name);
+				});
+				
+//                findEntityClassesForThisConfig(configName).forEach(clazz -> { 
+//                });
+//                
+//                boolean entitiesChanged = _startCount == 1 ? true : anyEntitiesChanged();
+                
+                String entityConfigs = Play.configuration.getProperty(propPrefix + "jpa.entities", "");
+                if (!_entityConfigs.equals(entityConfigs)) {
+                	entitiesChanged = true;
+                	_entityConfigs = entityConfigs;
                 }
+                
+				String[] moreEntities = entityConfigs.split(", ");
+                
+				Stream.of(moreEntities)
+					.filter(StringUtils::isNotBlank)
+					.forEach(entity -> {
+						try {
+							cfg.addAnnotatedClass(Play.classloader.loadClass(entity.trim()));
+						} catch (Exception e) {
+							Logger.warn("JPA -> Entity not found: %s", entity);
+						}
+					});
 
-                Ejb3Configuration cfg = new Ejb3Configuration();
-
-                if (dbConfig.getDatasource() != null) {
-                    cfg.setDataSource(dbConfig.getDatasource());
-                }
-
-                if (!Play.configuration.getProperty(propPrefix + "jpa.ddl", Play.mode.isDev() ? "update" : "none").equals("none")) {
-                    cfg.setProperty("hibernate.hbm2ddl.auto", Play.configuration.getProperty(propPrefix + "jpa.ddl", "update"));
-                }
-
-                String driver = null;
-                if (StringUtils.isEmpty(propPrefix)) {
-                    driver = Play.configuration.getProperty("db.driver");
-                } else {
-                    driver = Play.configuration.getProperty(propPrefix + "driver");
-                }
-                cfg.setProperty("hibernate.dialect", getDefaultDialect(propPrefix, driver));
-                cfg.setProperty("javax.persistence.transaction", "RESOURCE_LOCAL");
-
-
-                cfg.setInterceptor(new PlayInterceptor());
-
-                // This setting is global for all JPAs - only configure if configuring default JPA
-                if (StringUtils.isEmpty(propPrefix)) {
-                    if (Play.configuration.getProperty(propPrefix + "jpa.debugSQL", "false").equals("true")) {
-                        org.apache.log4j.Logger.getLogger("org.hibernate.SQL").setLevel(Level.ALL);
-                    } else {
-                        org.apache.log4j.Logger.getLogger("org.hibernate.SQL").setLevel(Level.OFF);
-                    }
-                }
-                // inject additional  hibernate.* settings declared in Play! configuration
-                Properties additionalProperties = (Properties) Utils.Maps.filterMap(Play.configuration, "^" + propPrefix + "hibernate\\..*");
-                // We must remove prefix from names
-                Properties transformedAdditionalProperties = new Properties();
-                for (Map.Entry<Object, Object> entry : additionalProperties.entrySet()) {
-                    Object key = entry.getKey();
-                    if (!StringUtils.isEmpty(propPrefix)) {
-                        key = ((String) key).substring(propPrefix.length()); // chop off the prefix
-                    }
-                    transformedAdditionalProperties.put(key, entry.getValue());
-                }
-                cfg.addProperties(transformedAdditionalProperties);
-
-
-                try {
-                    // nice hacking :) I like it..
-                    Field field = cfg.getClass().getDeclaredField("overridenClassLoader");
-                    field.setAccessible(true);
-                    field.set(cfg, Play.classloader);
-                } catch (Exception e) {
-                    Logger.error(e, "Error trying to override the hibernate classLoader (new hibernate version ???)");
-                }
-
-                for (Class<?> clazz : classes) {
-                    cfg.addAnnotatedClass(clazz);
-                    if (Logger.isTraceEnabled()) {
-                        Logger.trace("JPA Model : %s", clazz);
-                    }
-                }
-                String[] moreEntities = Play.configuration.getProperty(propPrefix + "jpa.entities", "").split(", ");
-                for (String entity : moreEntities) {
-                    if (entity.trim().equals("")) {
-                        continue;
-                    }
-                    try {
-                        cfg.addAnnotatedClass(Play.classloader.loadClass(entity));
-                    } catch (Exception e) {
-                        Logger.warn("JPA -> Entity not found: %s", entity);
-                    }
-                }
-
-                for (ApplicationClass applicationClass : Play.classes.all()) {
-                    if (applicationClass.isClass() || applicationClass.javaPackage == null) {
-                        continue;
-                    }
-                    Package p = applicationClass.javaPackage;
-                    Logger.info("JPA -> Adding package: %s", p.getName());
-                    cfg.addPackage(p.getName());
-                }
-
+				// bran: not sure how to detect package changes.. corner case not dealt with for now
+				Play.classes.all().forEach( c -> {
+					if (!c.isClass() && c.javaPackage != null ) {
+						String pkgName = c.javaPackage.getName();
+						cfg.addPackage(pkgName);
+						Logger.info("JPA -> Adding package: %s", pkgName);
+					}
+				});
+				
                 String mappingFile = Play.configuration.getProperty(propPrefix + "jpa.mapping-file", "");
-                if (mappingFile != null && mappingFile.length() > 0) {
+                if (!_mappingFile.equals(mappingFile)) {
+                	entitiesChanged = true;
+                	_mappingFile = mappingFile;
+                }
+                
+                if (StringUtils.isNotBlank(mappingFile)) {
                     cfg.addResource(mappingFile);
                 }
+                
+                Logger.info("Initializing JPA" + getConfigInfoString(configName) + " ...");
 
-                if (Logger.isTraceEnabled()) {
-                    Logger.trace("Initializing JPA" + getConfigInfoString(configName) + " ...");
+                if (entitiesChanged) {
+                	try {
+                		JPA.addConfiguration(configName, cfg);
+                	} catch (PersistenceException e) {
+                		throw new JPAException(e.getMessage() + getConfigInfoString(configName), e.getCause() != null ? e.getCause() : e);
+                	}
+                	
                 }
+                else {
+                	Logger.info("JPAPlugin: entity models not changed. No DDL update.");
+                }
+                
+               	cfg.setProperty("hibernate.hbm2ddl.auto", "none");
+            	// let's add the unchanged entities
+				unchangedEntities.forEach(ac -> {
+					cfg.addAnnotatedClass(ac.javaClass); 
+					if (Logger.isTraceEnabled()) Logger.trace("JPA Model : %s", ac.name);
+				});
+				try {
+					if (unchangedEntities.size() > 0)
+						JPA.addConfiguration(configName, cfg);
+				} catch (PersistenceException e) {
+					throw new JPAException(e.getMessage() + getConfigInfoString(configName), e.getCause() != null ? e.getCause() : e);
+				}
 
-                try {
-                    JPA.addConfiguration(configName, cfg);
-                } catch (PersistenceException e) {
-                    throw new JPAException(e.getMessage() + getConfigInfoString(configName), e.getCause() != null ? e.getCause() : e);
-                }
+                
 
             }
 
@@ -268,7 +280,7 @@ public class JPAPlugin extends PlayPlugin {
         // must look for Entity-objects referring to none-existing JPAConfig
         List<Class> allEntityClasses = Play.classloader.getAnnotatedClasses(Entity.class);
         for (Class clazz : allEntityClasses) {
-            String configName = Entity2JPAConfigResolver.getJPAConfigNameForEntityClass(clazz);
+            String configName = getConfig(clazz);
             if (JPA.getJPAConfig(configName, true) == null) {
                 throw new JPAException("Found Entity-class (" + clazz.getName() + ") referring to none-existing JPAConfig" + getConfigInfoString(configName) + ". " +
                         "Is JPA properly configured?");
@@ -276,29 +288,130 @@ public class JPAPlugin extends PlayPlugin {
         }
     }
 
-    private List<Class> findEntityClassesForThisConfig(String configName, String propPrefix) {
-        //look and see if we have any Entity-objects for this db config
-        List<Class> classes = Play.classloader.getAnnotatedClasses(Entity.class);
+    /**
+	 * @author Bing Ran (bing.ran@gmail.com)
+	 * @return
+	 */
+	@SuppressWarnings("deprecation")
+	private Ejb3Configuration newConfig(DBConfig dbConfig, String propPrefix) {
+		Ejb3Configuration cfg = new Ejb3Configuration();
 
-        // filter list on Entities meant for us..
-        List<Class> filteredClasses = new ArrayList<Class>(classes.size());
-        for (Class clazz : classes) {
-            if (configName.equals(Entity2JPAConfigResolver.getJPAConfigNameForEntityClass(clazz))) {
-                filteredClasses.add(clazz);
+        if (dbConfig.getDatasource() != null) {
+            cfg.setDataSource(dbConfig.getDatasource());
+        }
+
+        if (!Play.configuration.getProperty(propPrefix + "jpa.ddl", Play.mode.isDev() ? "update" : "none").equals("none")) {
+            cfg.setProperty("hibernate.hbm2ddl.auto", Play.configuration.getProperty(propPrefix + "jpa.ddl", "update"));
+        }
+
+        String driver = null;
+        if (StringUtils.isEmpty(propPrefix)) {
+            driver = Play.configuration.getProperty("db.driver");
+        } else {
+            driver = Play.configuration.getProperty(propPrefix + "driver");
+        }
+        cfg.setProperty("hibernate.dialect", getDefaultDialect(propPrefix, driver));
+        cfg.setProperty("javax.persistence.transaction", "RESOURCE_LOCAL");
+
+
+        cfg.setInterceptor(new PlayInterceptor());
+
+        // This setting is global for all JPAs - only configure if configuring default JPA
+        if (StringUtils.isEmpty(propPrefix)) {
+            if (Play.configuration.getProperty(propPrefix + "jpa.debugSQL", "false").equals("true")) {
+                org.apache.log4j.Logger.getLogger("org.hibernate.SQL").setLevel(Level.ALL);
+            } else {
+                org.apache.log4j.Logger.getLogger("org.hibernate.SQL").setLevel(Level.OFF);
             }
         }
+        // inject additional  hibernate.* settings declared in Play! configuration
+        Properties additionalProperties = (Properties) Utils.Maps.filterMap(Play.configuration, "^" + propPrefix + "hibernate\\..*");
+        // We must remove prefix from names
+        Properties transformedAdditionalProperties = new Properties();
+        for (Map.Entry<Object, Object> entry : additionalProperties.entrySet()) {
+            Object key = entry.getKey();
+            if (!StringUtils.isEmpty(propPrefix)) {
+                key = ((String) key).substring(propPrefix.length()); // chop off the prefix
+            }
+            transformedAdditionalProperties.put(key, entry.getValue());
+        }
+        cfg.addProperties(transformedAdditionalProperties);
 
 
-        if (!Play.configuration.getProperty(propPrefix + "jpa.entities", "").equals("")) {
-            return filteredClasses;
+        try {
+            // nice hacking :) I like it..
+            Field field = cfg.getClass().getDeclaredField("overridenClassLoader");
+            field.setAccessible(true);
+            field.set(cfg, Play.classloader);
+        } catch (Exception e) {
+            Logger.error(e, "Error trying to override the hibernate classLoader (new hibernate version ???)");
         }
 
-        if (filteredClasses.isEmpty()) {
-            return null;
-        }
+        return cfg;
+	}
 
-        return filteredClasses;
+	private List<Class> findEntityClassesForThisConfig(String configName) {
+        //look and see if we have any Entity-objects for this db config
+        // filter list on Entities meant for us..
+        return Play.classloader.getAnnotatedClasses(Entity.class).stream().filter(clazz -> configName.equals(getConfig(clazz))).collect(Collectors.toList());
+
+// bran: no idea why the condition. no diff at all 
+//        if (!Play.configuration.getProperty(propPrefix + "jpa.entities", "").equals("")) {
+//            return filteredClasses;
+//        }
+
+//         return filteredClasses;
     }
+	
+	boolean anyEntitiesChanged() {
+		List<ApplicationClass> cs = Play.classes.getAnnotatedClasses(Entity.class);
+		String newSum = cs.stream().map(ApplicationClass::getSigChecksumString).reduce("", (a, b) -> a + b);
+		if (!newSum.equals(_entitiesChecksum)) {
+			_entitiesChecksum = newSum;
+			return true;
+		}
+		return false;
+	}
+
+	private Map<Boolean, List<ApplicationClass>> groupEntities(String configName) {
+		List<ApplicationClass> allEnt = Play.classes.getAnnotatedClasses(Entity.class);
+	
+		Map<Boolean, List<ApplicationClass>> groups = 
+			allEnt
+				.stream()
+				.filter(ac -> configName.equals(getConfig(ac.javaClass)))
+				.collect(Collectors.groupingBy(ac -> {
+						if (_startCount <= 1 /*|| true*/) {
+							// first time, treat all as changed
+							return CHANGED;
+						}
+						else
+							return ac.getSigChecksumString() == null? 
+									UNCHANGED : 
+										ac.getSigChecksumString().equals(entityChecksums.get(ac.name));
+					})
+				);
+
+		if (!groups.containsKey(CHANGED))
+			groups.put(CHANGED, Collections.<ApplicationClass> emptyList());
+		if (!groups.containsKey(UNCHANGED))
+			groups.put(UNCHANGED, Collections.<ApplicationClass> emptyList());
+
+		// update the checksums
+		groups.get(CHANGED).forEach(ac -> {entityChecksums.put(ac.name, ac.getSigChecksumString());});
+
+		return groups;
+	}
+
+	
+	Map<String, String> entityChecksums = new HashMap<>();
+	private static final Boolean CHANGED = false;
+	private static final Boolean UNCHANGED = true;
+
+	
+	private String getConfig(Class clazz) {
+		return Entity2JPAConfigResolver.getJPAConfigNameForEntityClass(clazz);
+	}
 
 
     public static String getDefaultDialect(String propPrefix, String driver) {

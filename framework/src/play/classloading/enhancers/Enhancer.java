@@ -216,5 +216,13 @@ public abstract class Enhancer {
 //        return app.name.contains("$anonfun$") || app.name.contains("$anon$");
         return app.name.contains("$"); // bran: widen the coverage
     }
-    
+
+    // bran: these implementation need to improve the accuracy
+    protected boolean isController(ApplicationClass app) {
+    	return app.name.startsWith("controllers.");
+    }
+
+    protected boolean isModel(ApplicationClass app) {
+    	return app.name.startsWith("models.");
+    }
 }

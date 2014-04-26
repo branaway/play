@@ -11,7 +11,7 @@ import play.classloading.ApplicationClasses.ApplicationClass;
 /**
  * Compute a unique hash for the class signature.
  */
-public class SigEnhancer2{
+abstract class SigEnhancer2{
 
     public void enhanceThisClass(ApplicationClass applicationClass) throws Exception {
 

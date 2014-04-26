@@ -6,12 +6,17 @@ package bran;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
+import java.util.List;
 import java.util.stream.Stream;
 
 import org.junit.Test;
 import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.LocalVariableNode;
+import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.util.ASMifier;
 import org.objectweb.asm.util.TraceClassVisitor;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import play.Invoker.Suspend;
 import play.classloading.enhancers.ControllersEnhancer.ControllerInstrumentation;
@@ -115,5 +120,25 @@ public class AsmTests extends GenericModel {
 	
 	public void testMethRef() {
 		Stream.of("1", "2").forEach(AsmTests::findById);
+	}
+	
+	@SuppressWarnings({ "unchecked" })
+	@Test
+	public void testTree() throws IOException {
+        
+        ClassReader cr=new ClassReader(AsmTests.class.getName());
+        ClassNode classNode=new ClassNode();
+        
+        //ClassNode is a ClassVisitor
+        cr.accept(classNode, 0);
+        
+        //Let's move through all the methods
+        
+		List<MethodNode> methods = classNode.methods;
+		for(MethodNode methodNode : methods){
+            System.out.println(methodNode.name+"  "+methodNode.desc);
+            List<LocalVariableNode> locals = methodNode.localVariables;
+            locals.forEach(l -> System.out.println( " " + l.desc + " " + l.name + " "));
+        }
 	}
 }
