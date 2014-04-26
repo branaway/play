@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -39,6 +40,7 @@ import javax.persistence.Transient;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Level;
+import org.hibernate.AnnotationException;
 import org.hibernate.CallbackException;
 import org.hibernate.EmptyInterceptor;
 import org.hibernate.collection.spi.PersistentCollection;
@@ -196,6 +198,13 @@ public class JPAPlugin extends PlayPlugin {
                 
 				boolean entitiesChanged = changedEntities.size() > 0;
 
+				// bran: XXX I need to find out exactly the related group of entities that should go together. 
+				// before I can have optimal algorithm, let's do a full refresh 
+				if (entitiesChanged) {
+					changedEntities.addAll(unchangedEntities);
+					unchangedEntities.clear();
+				}
+				
 				// put in the changed for the first run
 				changedEntities.forEach(ac -> {
 					cfg.addAnnotatedClass(ac.javaClass); 
@@ -247,11 +256,7 @@ public class JPAPlugin extends PlayPlugin {
                 Logger.info("Initializing JPA" + getConfigInfoString(configName) + " ...");
 
                 if (entitiesChanged) {
-                	try {
-                		JPA.addConfiguration(configName, cfg);
-                	} catch (PersistenceException e) {
-                		throw new JPAException(e.getMessage() + getConfigInfoString(configName), e.getCause() != null ? e.getCause() : e);
-                	}
+                	addConfig(configName, cfg);
                 	
                 }
                 else {
@@ -264,15 +269,9 @@ public class JPAPlugin extends PlayPlugin {
 					cfg.addAnnotatedClass(ac.javaClass); 
 					if (Logger.isTraceEnabled()) Logger.trace("JPA Model : %s", ac.name);
 				});
-				try {
-					if (unchangedEntities.size() > 0)
-						JPA.addConfiguration(configName, cfg);
-				} catch (PersistenceException e) {
-					throw new JPAException(e.getMessage() + getConfigInfoString(configName), e.getCause() != null ? e.getCause() : e);
-				}
 
-                
-
+				if (unchangedEntities.size() > 0)
+					addConfig(configName, cfg);
             }
 
         }
@@ -288,7 +287,54 @@ public class JPAPlugin extends PlayPlugin {
         }
     }
 
+	@SuppressWarnings("deprecation")
+	private void addConfig(String configName, Ejb3Configuration cfg) {
+		try {
+			JPA.addConfiguration(configName, cfg);
+		} catch (AnnotationException e) {
+			dealAnnoEx(configName, cfg, e);
+		} catch (PersistenceException e) {
+			Throwable cause = e.getCause();
+			if (cause instanceof AnnotationException) {
+				dealAnnoEx(configName, cfg, (AnnotationException) cause);
+			}
+			else
+				throw new JPAException(e.getMessage() + getConfigInfoString(configName), cause != null ? cause : e);
+		}
+	}
+
+	private void dealAnnoEx(String configName, Ejb3Configuration cfg, AnnotationException e) {
+		String msg = e.getMessage();
+		if (msg.contains("unknown entity") || msg.contains("unmapped class")) {
+			String unknown = msg.substring(msg.lastIndexOf("models.")).trim();
+			if (unknown.endsWith("]"))
+					unknown =  unknown.substring(0, unknown.length() - 1);
+			Optional<Class> cls = getEntityClass(configName, unknown);
+			if (cls.isPresent()) {
+				cfg.addAnnotatedClass(cls.get());
+				Logger.info("added entity class: %s. trying again.", unknown);
+				addConfig(configName, cfg); // recursive
+			}
+			else {
+				throw e;
+			}
+		}
+	}
+
     /**
+	 * @author Bing Ran (bing.ran@gmail.com)
+	 * @param configName
+	 * @return
+	 */
+	private Optional<Class> getEntityClass(String configName, String cname) {
+		Optional<Class> f = Play.classloader.getAnnotatedClasses(Entity.class).stream()
+			.filter(clazz -> configName.equals(getConfig(clazz)))
+			.filter(c -> c.getName().equals(cname))
+			.findFirst();
+		return f;
+	}
+
+	/**
 	 * @author Bing Ran (bing.ran@gmail.com)
 	 * @return
 	 */
