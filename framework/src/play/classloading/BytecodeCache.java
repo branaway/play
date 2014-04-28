@@ -1,9 +1,11 @@
 package play.classloading;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.security.MessageDigest;
+
 import play.Logger;
 import play.Play;
 import play.PlayPlugin;
@@ -44,7 +46,7 @@ public class BytecodeCache {
             }
             File f = cacheFile(name.replace("/", "_").replace("{", "_").replace("}", "_").replace(":", "_"));
             if (f.exists()) {
-                FileInputStream fis = new FileInputStream(f);
+                BufferedInputStream fis = new BufferedInputStream(new FileInputStream(f));
                 // Read hash
                 int offset = 0;
                 int read = -1;
@@ -134,7 +136,8 @@ public class BytecodeCache {
      * Retrieve the real file that will be used as cache.
      */
     static File cacheFile(String id) {
-        File dir = new File(Play.tmpDir, "bytecode/" + Play.mode.name());
+    	// bran: added version as part of the path
+        File dir = new File(Play.tmpDir, "bytecode/" + Play.mode.name() + "_" + Play.version);
         if (!dir.exists() && Play.tmpDir != null && !Play.readOnlyTmp) {
             dir.mkdirs();
         }

@@ -5,10 +5,18 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
+import org.objectweb.asm.ClassReader;
+
+import bran.model.dependency.DependencyVisitor;
 import javassist.ClassPool;
 import javassist.CtClass;
 import play.Logger;
@@ -193,20 +201,22 @@ public class ApplicationClasses {
         	return sigChecksumString;
         }
         
-
+        // bran: the direct application class this class is depending on, 
+        Set<String> immediateDependencies = new HashSet<>();
+        
         public ApplicationClass() {
         }
 
         public ApplicationClass(String name) {
             this.name = name;
             this.javaFile = getJava(name);
-            this.refresh();
+            this.reset();
         }
 
         /**
-         * Need to refresh this class !
+         * Need to refresh this class ! bran: renamed from refresh()
          */
-        public void refresh() {
+        public void reset() {
             if (this.javaFile != null) {
                 this.javaSource = this.javaFile.contentAsString();
             }
@@ -265,11 +275,21 @@ public class ApplicationClasses {
                     e.printStackTrace();
                 }
             }
+            calcDependencies();
             return this.enhancedByteCode;
-
+            
         }
 
         /**
+		 * @author Bing Ran (bing.ran@gmail.com)
+		 */
+		private void calcDependencies() {
+//			DependencyVisitor dv = new DependencyVisitor("models/", "controllers/");
+//			new ClassReader(this.enhancedByteCode).accept(dv, 0);
+			this.immediateDependencies = DependencyVisitor.getDependencies(this.enhancedByteCode, "models/", "controllers/");
+		}
+
+		/**
          * Is this class already compiled but not defined ?
          * @return if the class is compiled but not defined
          */
@@ -327,6 +347,13 @@ public class ApplicationClasses {
         public String toString() {
             return name + " (compiled:" + compiled + ")";
         }
+
+		/**
+		 * @return the immediateDependencies
+		 */
+		public Set<String> getImmediateDependencies() {
+			return immediateDependencies;
+		}
     }
 
     // ~~ Utils

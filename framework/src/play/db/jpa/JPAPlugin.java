@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -200,15 +201,26 @@ public class JPAPlugin extends PlayPlugin {
 
 				// bran: XXX I need to find out exactly the related group of entities that should go together. 
 				// before I can have optimal algorithm, let's do a full refresh 
-				if (entitiesChanged) {
-					changedEntities.addAll(unchangedEntities);
-					unchangedEntities.clear();
-				}
+//				if (entitiesChanged) {
+//					changedEntities.addAll(unchangedEntities);
+//					unchangedEntities.clear();
+//				}
+				// find out all dependencies
+				Set<ApplicationClass> resolved = new HashSet<>(changedEntities);
+				Set<ApplicationClass> unresolved = new HashSet<>(changedEntities);
+				
+				resolveAllDeps(resolved, unresolved);
+				
+				
+				// now all the dependencies are in the resolved
+				// move over from unchanged
+				changedEntities = new  ArrayList<>(resolved);
+				unchangedEntities.removeAll(resolved);
 				
 				// put in the changed for the first run
 				changedEntities.forEach(ac -> {
 					cfg.addAnnotatedClass(ac.javaClass); 
-					if (Logger.isTraceEnabled()) Logger.trace("JPA Model : %s", ac.name);
+					if (Logger.isDebugEnabled()) Logger.debug("JPA Model to be updated : %s", ac.name);
 				});
 				
 //                findEntityClassesForThisConfig(configName).forEach(clazz -> { 
@@ -253,11 +265,10 @@ public class JPAPlugin extends PlayPlugin {
                     cfg.addResource(mappingFile);
                 }
                 
-                Logger.info("Initializing JPA" + getConfigInfoString(configName) + " ...");
+                Logger.info("Initializing JPA" + getConfigInfoString(configName) + "...");
 
                 if (entitiesChanged) {
                 	addConfig(configName, cfg);
-                	
                 }
                 else {
                 	Logger.info("JPAPlugin: entity models not changed. No DDL update.");
@@ -267,7 +278,7 @@ public class JPAPlugin extends PlayPlugin {
             	// let's add the unchanged entities
 				unchangedEntities.forEach(ac -> {
 					cfg.addAnnotatedClass(ac.javaClass); 
-					if (Logger.isTraceEnabled()) Logger.trace("JPA Model : %s", ac.name);
+					if (Logger.isDebugEnabled()) Logger.debug("JPA Model DDL not to be updated : %s", ac.name);
 				});
 
 				if (unchangedEntities.size() > 0)
@@ -286,6 +297,33 @@ public class JPAPlugin extends PlayPlugin {
             }
         }
     }
+
+	/**
+	 * @author Bing Ran (bing.ran@gmail.com)
+	 * @param depends
+	 */
+	private void resolveAllDeps(Set<ApplicationClass> resolved, Set<ApplicationClass> unresolved) {
+		if (unresolved.size() ==0)
+			return;
+		
+		Set<ApplicationClass> newUnresolved =
+				unresolved.stream()
+					.map(ApplicationClass::getImmediateDependencies)
+					.flatMap( Set<String>::stream)
+					.filter(s -> s.startsWith("models."))
+					.map(s -> Play.classes.getApplicationClass(s))
+					.filter(ac1 -> !resolved.contains(ac1))
+					.collect(Collectors.toSet());
+			
+		resolved.addAll(unresolved);
+		unresolved.clear();
+		
+		if (newUnresolved.size() ==0)
+			return;
+		else
+			resolveAllDeps(resolved, newUnresolved);
+	}
+
 
 	@SuppressWarnings("deprecation")
 	private void addConfig(String configName, Ejb3Configuration cfg) {

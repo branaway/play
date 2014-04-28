@@ -319,7 +319,7 @@ public class ApplicationClassloader extends ClassLoader {
 			Long lastModified = javaFile.lastModified();
 			Long timestamp = applicationClass.timestamp;
 			if (timestamp < lastModified) {
-                applicationClass.refresh();
+                applicationClass.reset();
                 modifieds.add(applicationClass);
             }
         }
