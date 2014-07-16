@@ -68,7 +68,15 @@ import play.utils.Utils;
  */
 public class JPAPlugin extends PlayPlugin {
 
-    public static boolean autoTxs = true;
+    /**
+	 * 
+	 */
+	private static final String DIALECT = "hibernate.dialect";
+	/**
+	 * 
+	 */
+	private static final String HBM2DDL = "hibernate.hbm2ddl.auto";
+	public static boolean autoTxs = true;
 	private boolean enabled = true;
 	private String _entityConfigs = "";
 	String _entitiesChecksum = "";
@@ -182,12 +190,6 @@ public class JPAPlugin extends PlayPlugin {
                 }
        
                 // we're ready to configure this instance of JPA
-// bran: dead code
-//                final String hibernateDataSource = Play.configuration.getProperty(propPrefix + "hibernate.connection.datasource");
-//                if (StringUtils.isEmpty(hibernateDataSource) && dbConfig == null) {
-//                    throw new JPAException("Cannot start a JPA manager without a properly configured database" + getConfigInfoString(configName),
-//                            new NullPointerException("No datasource configured"));
-//                }
 
                 Ejb3Configuration cfg = newConfig(dbConfig, propPrefix);
                 
@@ -199,12 +201,6 @@ public class JPAPlugin extends PlayPlugin {
                 
 				boolean entitiesChanged = changedEntities.size() > 0;
 
-				// bran: XXX I need to find out exactly the related group of entities that should go together. 
-				// before I can have optimal algorithm, let's do a full refresh 
-//				if (entitiesChanged) {
-//					changedEntities.addAll(unchangedEntities);
-//					unchangedEntities.clear();
-//				}
 				// find out all dependencies
 				Set<ApplicationClass> resolved = new HashSet<>(changedEntities);
 				Set<ApplicationClass> unresolved = new HashSet<>(changedEntities);
@@ -223,10 +219,6 @@ public class JPAPlugin extends PlayPlugin {
 					if (Logger.isDebugEnabled()) Logger.debug("JPA Model to be updated : %s", ac.name);
 				});
 				
-//                findEntityClassesForThisConfig(configName).forEach(clazz -> { 
-//                });
-//                
-//                boolean entitiesChanged = _startCount == 1 ? true : anyEntitiesChanged();
                 
                 String entityConfigs = Play.configuration.getProperty(propPrefix + "jpa.entities", "");
                 if (!_entityConfigs.equals(entityConfigs)) {
@@ -274,15 +266,16 @@ public class JPAPlugin extends PlayPlugin {
                 	Logger.info("JPAPlugin: entity models not changed. No DDL update.");
                 }
                 
-               	cfg.setProperty("hibernate.hbm2ddl.auto", "none");
-            	// let's add the unchanged entities
-				unchangedEntities.forEach(ac -> {
-					cfg.addAnnotatedClass(ac.javaClass); 
-					if (Logger.isDebugEnabled()) Logger.debug("JPA Model DDL not to be updated : %s", ac.name);
-				});
+                if (unchangedEntities.size() > 0) {
+	               	cfg.setProperty(HBM2DDL, "none");
+	            	// let's add the unchanged entities
+					unchangedEntities.forEach(ac -> {
+						cfg.addAnnotatedClass(ac.javaClass); 
+	//					if (Logger.isDebugEnabled()) Logger.debug("JPA Model DDL not to be updated : %s", ac.name);
+					});
 
-				if (unchangedEntities.size() > 0)
 					addConfig(configName, cfg);
+				}
             }
 
         }
@@ -385,7 +378,7 @@ public class JPAPlugin extends PlayPlugin {
         }
 
         if (!Play.configuration.getProperty(propPrefix + "jpa.ddl", Play.mode.isDev() ? "update" : "none").equals("none")) {
-            cfg.setProperty("hibernate.hbm2ddl.auto", Play.configuration.getProperty(propPrefix + "jpa.ddl", "update"));
+            cfg.setProperty(HBM2DDL, Play.configuration.getProperty(propPrefix + "jpa.ddl", "update"));
         }
 
         String driver = null;
@@ -394,7 +387,7 @@ public class JPAPlugin extends PlayPlugin {
         } else {
             driver = Play.configuration.getProperty(propPrefix + "driver");
         }
-        cfg.setProperty("hibernate.dialect", getDefaultDialect(propPrefix, driver));
+        cfg.setProperty(DIALECT, getDefaultDialect(propPrefix, driver));
         cfg.setProperty("javax.persistence.transaction", "RESOURCE_LOCAL");
 
 

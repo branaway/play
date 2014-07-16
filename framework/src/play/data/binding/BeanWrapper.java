@@ -7,13 +7,13 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 
 import play.Logger;
 import play.exceptions.UnexpectedException;
@@ -117,12 +117,10 @@ public abstract class BeanWrapper {
             return;
         }
         for (Field field : getFields(clazz)) {
-            if (wrappers.containsKey(field.getName())) {
-                continue;
+            if (!wrappers.containsKey(field.getName())) {
+	            field.setAccessible(true);
+	            wrappers.put(field.getName(), new Property(field));
             }
-            field.setAccessible(true);
-            Property w = new Property(field);
-            wrappers.put(field.getName(), w);
         }
         registerFields(clazz.getSuperclass());
     }
@@ -138,9 +136,8 @@ public abstract class BeanWrapper {
             if (!isSetter(method)) {
                 continue;
             }
-            final String propertyname = getPropertyName(method);
-            Property wrapper = new Property(propertyname, method);
-            wrappers.put(propertyname, wrapper);
+            String propertyname = getPropertyName(method);
+            wrappers.put(propertyname, new Property(propertyname, method));
         }
     }
 
@@ -159,14 +156,9 @@ public abstract class BeanWrapper {
             return (/*!method.isAnnotationPresent(PlayPropertyAccessor.class) && */method.getName().startsWith("set") && method.getName().length() > 3 && method.getParameterTypes().length == 1 && (method.getModifiers() & notaccessibleMethod) == 0);
         }
         @Override Collection<Field> getFields(Class<?> forClass) {
-            final Collection<Field> fields = new ArrayList<Field>();
-            for (Field field : forClass.getFields()) {
-                if ((field.getModifiers() & notwritableField) != 0) {
-                    continue;
-                }
-                fields.add(field);
-            }
-            return fields;
+        	return Arrays.stream(forClass.getFields())
+        		.filter(f -> (f.getModifiers() & notwritableField) == 0)
+        		.collect(Collectors.toList());
         }
     }
 

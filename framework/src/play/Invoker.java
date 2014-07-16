@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -132,21 +133,13 @@ public class Invoker {
 
         @SuppressWarnings("unchecked")
         public <T extends Annotation> T getAnnotation(Class<T> clazz) {
-            for (Annotation annotation : annotations) {
-                if (annotation.annotationType().isAssignableFrom(clazz)) {
-                    return (T) annotation;
-                }
-            }
-            return null;
+        	return (T)annotations.stream().filter(a -> a.annotationType().isAssignableFrom(clazz)).findFirst().orElse(null);
         }
 
         public <T extends Annotation> boolean isAnnotationPresent(Class<T> clazz) {
-            for (Annotation annotation : annotations) {
-                if (annotation.annotationType().isAssignableFrom(clazz)) {
-                    return true;
-                }
-            }
-            return false;
+        	return annotations.stream().anyMatch(
+        			a -> a.annotationType().isAssignableFrom(clazz)
+        	);
         }
 
         /**

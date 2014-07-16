@@ -40,13 +40,13 @@ public class ApplicationClasses {
     /**
      * Cache of all compiled classes
      */
-    Map<String, ApplicationClass> classes = new HashMap<String, ApplicationClass>();
+    Map<String, ApplicationClass> classes = new HashMap<>();
 
     /**
      * Clear the classes cache
      */
     public void clear() {
-        classes = new HashMap<String, ApplicationClass>();
+        classes = new HashMap<>();
     }
 
     /**

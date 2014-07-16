@@ -84,12 +84,11 @@ public class GenericModel extends JPABase {
         return (T)edit( rootParamNode, name, o, annotations);
     }
 
-    @SuppressWarnings("deprecation")
     public static <T extends JPABase> T edit(ParamNode rootParamNode, String name, Object o, Annotation[] annotations) {
         // #1601 - If name is empty, we're dealing with "root" request parameters (without prefixes).
         // Must not call rootParamNode.getChild in that case, as it returns null. Use rootParamNode itself instead.
         ParamNode paramNode = StringUtils.isEmpty(name) ? rootParamNode : rootParamNode.getChild(name, true);
-        // #1195 - Needs to keep track of whick keys we remove so that we can restore it before
+        // #1195 - Needs to keep track of which keys we remove so that we can restore it before
         // returning from this method.
         List<ParamNode.RemovedNode> removedNodesList = new ArrayList<ParamNode.RemovedNode>();
         try {
@@ -280,7 +279,7 @@ public class GenericModel extends JPABase {
 
 
     public static <T extends GenericModel> T create(String name, Params params) {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation. JPA enhancer process must be functional.");
     }
 
     /**
@@ -299,14 +298,14 @@ public class GenericModel extends JPABase {
      * @return A long
      */
     public static long count(String query, Object... params) {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation. JPA enhancer process must be functional.");
     }
 
     /**
      * Find all entities of this type
      */
     public static <T extends GenericModel> List<T> findAll() {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation. JPA enhancer process must be functional.");
     }
 
     /**
@@ -315,7 +314,7 @@ public class GenericModel extends JPABase {
      * @return The entity
      */
     public static <T extends GenericModel> T findById(Object id) {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation. JPA enhancer process must be functional.");
     }
 
     /**
@@ -328,7 +327,7 @@ public class GenericModel extends JPABase {
      * @return
      */
     public static <T extends GenericModel> T findOneBy(String query, Object[] params) {
-    	throw new UnsupportedOperationException("Model not enhanced. Please annotate your JPA model with @javax.persistence.Entity annotation.");
+    	throw new UnsupportedOperationException("Model not enhanced. Please annotate your JPA model with @javax.persistence.Entity annotation. JPA enhancer process must be functional.");
     }
 
     /**
@@ -338,7 +337,7 @@ public class GenericModel extends JPABase {
      * @return A JPAQuery
      */
     public static JPAQuery find(String query, Object... params) {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation. JPA enhancer process must be functional.");
     }
 
     /**
@@ -346,7 +345,7 @@ public class GenericModel extends JPABase {
      * @return A JPAQuery
      */
     public static JPAQuery all() {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation. JPA enhancer process must be functional.");
     }
 
     /**
@@ -356,7 +355,7 @@ public class GenericModel extends JPABase {
      * @return Number of entities deleted
      */
     public static int delete(String query, Object... params) {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation. JPA enhancer process must be functional.");
     }
 
     /**
@@ -364,7 +363,7 @@ public class GenericModel extends JPABase {
      * @return Number of entities deleted
      */
     public static int deleteAll() {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation. JPA enhancer process must be functional.");
     }
 
     /**

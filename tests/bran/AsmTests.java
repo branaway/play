@@ -121,24 +121,34 @@ public class AsmTests extends GenericModel {
 	public void testMethRef() {
 		Stream.of("1", "2").forEach(AsmTests::findById);
 	}
-	
-	@SuppressWarnings({ "unchecked" })
-	@Test
-	public void testTree() throws IOException {
-        
-        ClassReader cr=new ClassReader(AsmTests.class.getName());
-        ClassNode classNode=new ClassNode();
-        
-        //ClassNode is a ClassVisitor
-        cr.accept(classNode, 0);
-        
-        //Let's move through all the methods
-        
-		List<MethodNode> methods = classNode.methods;
-		for(MethodNode methodNode : methods){
-            System.out.println(methodNode.name+"  "+methodNode.desc);
-            List<LocalVariableNode> locals = methodNode.localVariables;
-            locals.forEach(l -> System.out.println( " " + l.desc + " " + l.name + " "));
-        }
+
+	static class Food{
+		public String a;
 	}
+//
+//	@SuppressWarnings({ "unchecked" })
+//	@Test
+//	public void testTree() throws IOException {
+//        
+//        ClassReader cr=new ClassReader(AsmTests.class.getName());
+//        ClassNode classNode=new ClassNode();
+//        
+//        //ClassNode is a ClassVisitor
+//        cr.accept(classNode, 0);
+//        
+//        //Let's move through all the methods
+//        
+//		List<MethodNode> methods = classNode.methods;
+//		for(MethodNode methodNode : methods){
+//            System.out.println(methodNode.name+"  "+methodNode.desc);
+//            List<LocalVariableNode> locals = methodNode.localVariables;
+//            locals.forEach(l -> System.out.println( " " + l.desc + " " + l.name + " "));
+//        }
+//	}
+	public void testField() {
+		Food f = new Food();
+		System.out.println(f.a);
+		System.out.println(new Food().a);
+	}
+	
 }

@@ -56,7 +56,15 @@ import com.google.gson.JsonParser;
  */
 public class WS extends PlayPlugin {
 
-    private static WSImpl wsImpl = null;
+    /**
+	 * 
+	 */
+	private static final String URLFETCH = "urlfetch";
+	/**
+	 * 
+	 */
+	private static final String ASYNC = "async";
+	private static WSImpl wsImpl = null;
 
     public enum Scheme {
         BASIC, DIGEST, NTLM, KERBEROS, SPNEGO
@@ -71,7 +79,7 @@ public class WS extends PlayPlugin {
     /**
      * Internal class exposing all the methods previously exposed by WS.
      * This impl has information about encoding.
-     * When calling original static methos on WS, then a singleton of
+     * When calling original static methods on WS, then a singleton of
      * WSWithEncoding is called - configured with default encoding.
      * This makes this encoding-enabling backward compatible
      */
@@ -159,20 +167,20 @@ public class WS extends PlayPlugin {
 
     private synchronized static void init() {
         if (wsImpl != null) return;
-        String implementation = "async";
+        String implementation = ASYNC;
         try {
-        	implementation = Play.configuration.getProperty("webservice", "async");
+        	implementation = Play.configuration.getProperty("webservice", ASYNC);
         }
         catch(Exception e){
-        	implementation = "async";
+        	implementation = ASYNC;
         }
         
-        if (implementation.equals("urlfetch")) {
+        if (implementation.equals(URLFETCH)) {
             wsImpl = new WSUrlFetch();
             if (Logger.isTraceEnabled()) {
                 Logger.trace("Using URLFetch for web service");
             }
-        } else if (implementation.equals("async")) {
+        } else if (implementation.equals(ASYNC)) {
             if (Logger.isTraceEnabled()) {
                 Logger.trace("Using Async for web service");
             }

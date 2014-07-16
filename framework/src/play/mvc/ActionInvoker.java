@@ -126,14 +126,15 @@ public class ActionInvoker {
 
             // 2. Easy debugging ...
             if (Play.mode == Play.Mode.DEV) {
-                Controller.class.getDeclaredField("params").set(null, Scope.Params.current());
-                Controller.class.getDeclaredField("request").set(null, Http.Request.current());
-                Controller.class.getDeclaredField("response").set(null, Http.Response.current());
-                Controller.class.getDeclaredField("session").set(null, Scope.Session.current());
-                Controller.class.getDeclaredField("flash").set(null, Scope.Flash.current());
-                Controller.class.getDeclaredField("renderArgs").set(null, Scope.RenderArgs.current());
-                Controller.class.getDeclaredField("routeArgs").set(null, Scope.RouteArgs.current());
-                Controller.class.getDeclaredField("validation").set(null, Validation.current());
+                Class<Controller> cclass = Controller.class;
+				cclass.getDeclaredField("params").set(null, Scope.Params.current());
+                cclass.getDeclaredField("request").set(null, Http.Request.current());
+                cclass.getDeclaredField("response").set(null, Http.Response.current());
+                cclass.getDeclaredField("session").set(null, Scope.Session.current());
+                cclass.getDeclaredField("flash").set(null, Scope.Flash.current());
+                cclass.getDeclaredField("renderArgs").set(null, Scope.RenderArgs.current());
+                cclass.getDeclaredField("routeArgs").set(null, Scope.RouteArgs.current());
+                cclass.getDeclaredField("validation").set(null, Validation.current());
             }
 
             ControllerInstrumentation.stopActionCall();
