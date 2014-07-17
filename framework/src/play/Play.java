@@ -709,7 +709,7 @@ public class Play {
 	public static CompilationException mapJapidJavCodeError(
 			CompilationException e) {
 		// testing the error%00ForPlay
-		boolean test = true;
+		boolean test = false;
 		if (test)
 			return e;
 		

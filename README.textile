@@ -12,6 +12,7 @@ a few patches that make using Play in dev mode faster.
 3.
 
 History:
+2014.7.17, removed artificial code in Play.mapJapidError() to activate the mapping.    
 2014.4.24, fixed integer group of arguments support in controller redirect    
 2014.4.22, mostly replaced javassist with ASM for enhancers. controller and model enhancers seemed to work now.    
 2013.9.3, roll back a unfinished hack on error pages.  
