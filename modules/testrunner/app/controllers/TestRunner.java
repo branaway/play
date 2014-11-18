@@ -3,7 +3,9 @@ package controllers;
 import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import play.Logger;
 import play.Play;
@@ -11,11 +13,12 @@ import play.cache.Cache;
 import play.jobs.Job;
 import play.libs.IO;
 import play.libs.Mail;
-import play.mvc.*;
+import play.mvc.Controller;
+import play.mvc.Router;
 import play.templates.Template;
 import play.templates.TemplateLoader;
-import play.test.*;
-import play.vfs.*;
+import play.test.TestEngine;
+import play.vfs.VirtualFile;
 
 public class TestRunner extends Controller {
 
@@ -23,7 +26,15 @@ public class TestRunner extends Controller {
         List<Class> unitTests = TestEngine.allUnitTests();
         List<Class> functionalTests = TestEngine.allFunctionalTests();
         List<String> seleniumTests = TestEngine.allSeleniumTests();
-        render(unitTests, functionalTests, seleniumTests);
+        
+        Map<String, Object> options = new HashMap<String, Object>();
+        options.put("unitTests", unitTests);
+        options.put("functionalTests", functionalTests);
+        options.put("seleniumTests", seleniumTests);
+        options.put("play", new play.Play());
+        String result = TemplateLoader.load("TestRunner/index.html").render(options);
+        renderHtml(result);
+//        render(unitTests, functionalTests, seleniumTests);
     }
 
     public static void list() {
@@ -65,12 +76,14 @@ public class TestRunner extends Controller {
         if (test.endsWith(".class")) {
             Play.getFile("test-result").mkdir();
             final String testname = test.substring(0, test.length() - 6);
-            final TestEngine.TestResults results = await(new Job<TestEngine.TestResults>() {
-                @Override
-                public TestEngine.TestResults doJobWithResult() throws Exception {
-                    return TestEngine.run(testname);
-                }
-            }.now());
+//            final TestEngine.TestResults results = await(new Job<TestEngine.TestResults>() {
+//                @Override
+//                public TestEngine.TestResults doJobWithResult() throws Exception {
+//                    return TestEngine.run(testname);
+//                }
+//            }.now());
+            final TestEngine.TestResults results = TestEngine.run(testname);
+
             response.status = results.passed ? 200 : 500;
             Template resultTemplate = TemplateLoader.load("TestRunner/results.html");
             Map<String, Object> options = new HashMap<String, Object>();
@@ -94,7 +107,11 @@ public class TestRunner extends Controller {
         }
         if (test.endsWith(".test.html.suite")) {
             test = test.substring(0, test.length() - 6);
-            render("TestRunner/selenium-suite.html", test);
+            
+            Map<String, Object> options = new HashMap<String, Object>();
+            options.put("test", test);
+            renderHtml(TemplateLoader.load("TestRunner/selenium-suite.html").render(options));
+//            render("TestRunner/selenium-suite.html", test);
         }
         if (test.endsWith(".test.html")) {
             File testFile = Play.getFile("test/" + test);

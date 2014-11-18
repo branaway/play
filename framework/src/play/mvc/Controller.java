@@ -851,7 +851,7 @@ public class Controller implements ControllerSupport {
 	 * @param timeout
 	 */
 	public static void await(String timeout) {
-		throw new NotImplementedException();
+		throw new NotImplementedException("bran: not impl yet because cotinuation not working");
 	}
 	
 	/**
@@ -859,7 +859,7 @@ public class Controller implements ControllerSupport {
 	 * @param timeout
 	 */
 	public static <T> T await(Future<T> future) {
-		throw new NotImplementedException();
+		throw new NotImplementedException("bran: not impl yet because cotinuation not working");
 	}
 
 	/**
@@ -867,7 +867,7 @@ public class Controller implements ControllerSupport {
 	 * @param millis
 	 */
 	public static void await(int millis) {
-		throw new NotImplementedException();
+		throw new NotImplementedException("bran: not impl yet because cotinuation not working");
 	}
 //	
 //	// bran: used to be inserted to the beginning of an action call
