@@ -82,7 +82,7 @@ h2. Compiling the source
 
 cd to framework and "ant". To create a new release, create a new version tag and associate the tag with the recent version and ant again. 
 
-"ant package" will create a disrtibution in the dist. 
+"ant package" will create a distribution in the dist. 
 
 h2. JDK 8 compatibility
 

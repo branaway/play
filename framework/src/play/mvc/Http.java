@@ -185,20 +185,12 @@ public class Http {
          */
         public String querystring;
         /**
-<<<<<<< HEAD
-         * URL path (excluding scheme, host and port), starting with '/'<br/>
-         * 
-         * <b>Example:</b><br/>
-         * With this full URL <code>http://localhost:9000/path0/path1</code> <br/>
-         * => <b>url</b> will be <code>/path0/path1</code>
-=======
          * URL path (excluding scheme, host and port), starting with '/'<br>
          * 
          * <b>Example:</b><br>
          * With this full URL <code>http://localhost:9000/path0/path1</code>
          * <br>
          * =&gt; <b>url</b> will be <code>/path0/path1</code>
->>>>>>> refs/remotes/upstream/master
          */
         public String url;
         /**
@@ -460,15 +452,8 @@ public class Http {
         }
 
         /**
-<<<<<<< HEAD
-         * Automatically resolve request format from the Accept header
-         * (in this order : html > xml > json > text)
-         * 
-         * bran: the intern() method seems unnecessary since all constants are interned automatically, as explained in the JDK. 
-=======
          * Automatically resolve request format from the Accept header (in this
          * order : html &gt; xml &gt; json &gt; text)
->>>>>>> refs/remotes/upstream/master
          */
         public void resolveFormat() {
 
