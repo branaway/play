@@ -31,7 +31,7 @@ public class FastRuntimeException extends RuntimeException {
      * @return always null
      */
     @Override
-	public Throwable fillInStackTrace() {
+    public Throwable fillInStackTrace() {
         return null;
     }
 }

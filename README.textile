@@ -12,6 +12,7 @@ a few patches that make using Play in dev mode faster.
 3.
 
 History:
+2016.3.2, merged with the original git://github.com/playframework/play1 master branch, which was about post 1.4. added latest javassist.jar for better compatible with hibernate and JDK8.
 2014.11.18, fixed the TestRunner controller in the TestRunner module to avoid not implemented methods in Controller.   
 2014.7.17, removed artificial code in Play.mapJapidError() to activate the mapping.    
 2014.4.24, fixed integer group of arguments support in controller redirect    
@@ -38,7 +39,7 @@ h1. Welcome to Play framework  "!https://travis-ci.org/playframework/play.png!":
 
 Play framework makes it easier to build Web applications with Java. It is a clean alternative to bloated Enterprise Java stacks. It focuses on developer productivity and targets RESTful architectures. Play is a perfect companion to agile software development.
 
-Learn more on the "http://www.playframework.org":http://www.playframework.org website.
+Learn more on the "https://www.playframework.com":https://www.playframework.com website.
 
 h2. Getting started
 
@@ -62,10 +63,10 @@ bc. play run /opt/myFirstApp
 
 6. Start developing your new application:
 
-* "Your first application — the ‘Hello World’ tutorial":http://www.playframework.org/documentation/1.1/firstapp
-* "Tutorial — Play guide, a real world app step-by-step":http://www.playframework.org/documentation/1.1/guide1
-* "The essential documentation":http://www.playframework.org/documentation/1.0.3/main
-* "Java API":http://www.playframework.org/@api/index.html
+* "Your first application — the ‘Hello World’ tutorial":https://www.playframework.com/documentation/1.3.0-RC1/firstapp
+* "Tutorial — Play guide, a real world app step-by-step":https://www.playframework.com/documentation/1.3.0-RC1/guide1
+* "The essential documentation":https://www.playframework.com/documentation/1.3.0-RC1/home
+* "Java API":https://www.playframework.com/@api/index.html
 
 h2. Get the source
 
@@ -129,6 +130,4 @@ After a successful merge,
 
 $ git push origin master
 
-
-Play framework is distributed under "Apache 2 licence":http://www.apache.org/licenses/LICENSE-2.0.html.
 

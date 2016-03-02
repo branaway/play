@@ -18,7 +18,7 @@ public class ValidCheck extends AbstractAnnotationCheck<Required> {
     String key;
 
     @Override
-	public boolean isSatisfied(Object validatedObject, Object value, OValContext context, Validator validator) {
+    public boolean isSatisfied(Object validatedObject, Object value, OValContext context, Validator validator) {
         String superKey = ValidationPlugin.keys.get().get(validatedObject);
         if (value == null) {
             return true;
@@ -73,7 +73,13 @@ public class ValidCheck extends AbstractAnnotationCheck<Required> {
                 if (violation.getContext() instanceof FieldContext) {
                     final FieldContext ctx = (FieldContext) violation.getContext();
                     final String fkey = (key == null ? "" : key + ".") + ctx.getField().getName();
-                    final Error error = new Error(fkey, violation.getMessage(), violation.getMessageVariables() == null ? new String[0] : violation.getMessageVariables().values().toArray(new String[0]));
+                    final Error error = new Error(
+                            fkey,
+                            violation.getMessage(),
+                            violation.getMessageVariables() == null ? new String[0]
+                                    : violation.getMessageVariables().values()
+                                            .toArray(new String[0]),
+                            violation.getSeverity());
                     Validation.current().errors.add(error);
                 }
             }

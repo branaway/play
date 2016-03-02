@@ -5,18 +5,12 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
-import org.objectweb.asm.ClassReader;
-
-import bran.model.dependency.DependencyVisitor;
 import javassist.ClassPool;
 import javassist.CtClass;
 import play.Logger;
@@ -25,6 +19,7 @@ import play.PlayPlugin;
 import play.classloading.enhancers.Enhancer;
 import play.exceptions.UnexpectedException;
 import play.vfs.VirtualFile;
+import bran.model.dependency.DependencyVisitor;
 
 /**
  * Application classes container.
@@ -55,8 +50,11 @@ public class ApplicationClasses {
      * @return The ApplicationClass or null
      */
     public ApplicationClass getApplicationClass(String name) {
-        if (!classes.containsKey(name) && getJava(name) != null) {
-            classes.put(name, new ApplicationClass(name));
+        if (!classes.containsKey(name)) {
+            VirtualFile javaFile = getJava(name);
+            if (javaFile != null) {
+                classes.put(name, new ApplicationClass(name, javaFile));
+            }
         }
         return classes.get(name);
     }
@@ -208,6 +206,10 @@ public class ApplicationClasses {
         }
 
         public ApplicationClass(String name) {
+            this(name, getJava(name));
+        }
+
+        public ApplicationClass(String name, VirtualFile javaFile) {
             this.name = name;
             this.javaFile = getJava(name);
             this.reset();
@@ -266,11 +268,15 @@ public class ApplicationClasses {
             if (System.getProperty("precompile") != null) {
                 try {
                     // emit bytecode to standard class layout as well
-                    File f = Play.getFile("precompiled/java/" + (name.replace(".", "/")) + ".class");
+                    File f = Play.getFile("precompiled/java/" + name.replace(".", "/") + ".class");
                     f.getParentFile().mkdirs();
                     FileOutputStream fos = new FileOutputStream(f);
-                    fos.write(this.enhancedByteCode);
-                    fos.close();
+                    try {
+                        fos.write(this.enhancedByteCode);
+                    }
+                    finally {
+                        fos.close();
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -368,10 +374,20 @@ public class ApplicationClasses {
         if (fileName.contains("$")) {
             fileName = fileName.substring(0, fileName.indexOf("$"));
         }
-        fileName = fileName.replace(".", "/") + ".java";
+        // the local variable fileOrDir is important!
+        String fileOrDir = fileName.replace(".", "/");
+        fileName = fileOrDir + ".java";
         for (VirtualFile path : Play.javaPath) {
-            VirtualFile javaFile = path.child(fileName);
-            if (javaFile.exists()) {
+            // 1. check if there is a folder (without extension)
+            VirtualFile javaFile = path.child(fileOrDir);
+                  
+            if (javaFile.exists() && javaFile.isDirectory() && javaFile.matchName(fileOrDir)) {
+                // we found a directory (package)
+                return null;
+            }
+            // 2. check if there is a file
+            javaFile = path.child(fileName);
+            if (javaFile.exists() && javaFile.matchName(fileName)) {
                 return javaFile;
             }
         }

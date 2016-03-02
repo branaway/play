@@ -35,6 +35,7 @@ public class SslPlayHandler extends PlayHandler {
 
     private static final class SslListener implements ChannelFutureListener {
 
+        @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             if (!future.isSuccess()) {
                 Logger.debug(future.getCause(), "Invalid certificate");
@@ -52,7 +53,7 @@ public class SslPlayHandler extends PlayHandler {
             InetSocketAddress inet = ((InetSocketAddress) ctx.getAttachment());
             ctx.getPipeline().remove("ssl");
             HttpResponse nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.TEMPORARY_REDIRECT);
-            nettyResponse.setHeader(LOCATION, "https://" + inet.getHostName() + ":" + Server.httpsPort + "/");
+            nettyResponse.headers().set(LOCATION, "https://" + inet.getHostName() + ":" + Server.httpsPort + "/");
             ChannelFuture writeFuture = ctx.getChannel().write(nettyResponse);
             writeFuture.addListener(ChannelFutureListener.CLOSE);
         } else {

@@ -55,7 +55,7 @@ public class Evolutions extends PlayPlugin {
 
         Play.templatesPath = new ArrayList<VirtualFile>();
         Play.modulesRoutes = new HashMap<String, VirtualFile>();
-        Play.loadModules();
+        Play.loadModules(VirtualFile.open(Play.applicationPath));
 
 
         if (System.getProperty("modules") != null) {
@@ -131,9 +131,7 @@ public class Evolutions extends PlayPlugin {
                 System.out.println("~ Your database is up to date for " + moduleRoot.getKey());
                 System.out.println("~");
             } else {
-
                 if ("apply".equals(System.getProperty("mode"))) {
-
                     System.out.println("~ Applying evolutions for " + moduleRoot.getKey() + ":");
                     System.out.println("");
                     System.out.println("# ------------------------------------------------------------------------------");
@@ -219,15 +217,15 @@ public class Evolutions extends PlayPlugin {
     private static void populateModulesWithEvolutions() {
         /** Check that evolutions are enabled **/
         if(!isModuleEvolutionDisabled()){
-        for(Entry<String, VirtualFile> moduleRoot : Play.modules.entrySet()) {            
-            if(moduleRoot.getValue().child("db/evolutions").exists()) {
+            for(Entry<String, VirtualFile> moduleRoot : Play.modules.entrySet()) {
+                if(moduleRoot.getValue().child("db/evolutions").exists()) {
                     if(!isModuleEvolutionDisabled(moduleRoot.getKey())){
-                modulesWithEvolutions.put(moduleRoot.getKey(), moduleRoot.getValue().child("db/evolutions"));
+                        modulesWithEvolutions.put(moduleRoot.getKey(), moduleRoot.getValue().child("db/evolutions"));
                     } else {
                         System.out.println("~ '" + moduleRoot.getKey() + "' module evolutions are disabled.");
                     }
+                }
             }
-        }
         }else{
             System.out.println("~ Module evolutions are disabled.");
         }
@@ -347,9 +345,9 @@ public class Evolutions extends PlayPlugin {
             int applying = -1;
             try {
                 for (Evolution evolution : getEvolutionScript(moduleKey, evolutionsDirectory)) {
-                    applying = evolution.revision;
+                    applying = evolution.revision;                  
                     EvolutionQuery.apply(connection, runScript, evolution, moduleKey);               
-                            }
+                }
                 return true;
             } catch (Exception e) {
                 String message = e.getMessage();
@@ -469,9 +467,9 @@ public class Evolutions extends PlayPlugin {
 
                     int version = Integer.parseInt(evolution.getName().substring(0, evolution.getName().indexOf(".")));
                     String sql = IO.readContentAsString(evolution);
-                    StringBuffer sql_up = new StringBuffer();
-                    StringBuffer sql_down = new StringBuffer();
-                    StringBuffer current = new StringBuffer();
+                    StringBuilder sql_up = new StringBuilder();
+                    StringBuilder sql_down = new StringBuilder();
+                    StringBuilder current = new StringBuilder();
                     for (String line : sql.split("\r?\n")) {
                         if (line.trim().matches("^#.*[!]Ups")) {
                             current = sql_up;
@@ -522,7 +520,6 @@ public class Evolutions extends PlayPlugin {
                 checkAndUpdateEvolutionsForMultiModuleSupport(connection);                    
 
                 ResultSet databaseEvolutions = EvolutionQuery.getEvolutions(connection, moduleKey);
-                
                 while (databaseEvolutions.next()) {
                     Evolution evolution = new Evolution(moduleKey, databaseEvolutions.getInt(1), databaseEvolutions.getString(3), databaseEvolutions.getString(4), false);
                     evolutions.add(evolution);
@@ -542,10 +539,8 @@ public class Evolutions extends PlayPlugin {
 
     private static void checkAndUpdateEvolutionsForMultiModuleSupport(Connection connection) throws SQLException {
         ResultSet rs = connection.getMetaData().getColumns(null, null, "play_evolutions", "module_key");
-
-        if(!rs.next()) {
-            
-            System.out.println("!!! - Updating the play_evolutions table to cope with multiple modules - !!!");
+        if(!rs.next()) {       
+             System.out.println("!!! - Updating the play_evolutions table to cope with multiple modules - !!!");      
              EvolutionQuery.alterForModuleSupport(connection); 
         }
     }

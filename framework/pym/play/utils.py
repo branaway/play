@@ -241,16 +241,21 @@ def copy_directory(source, target, exclude = None):
 def isTestFrameworkId( framework_id ):
     return (framework_id == 'test' or (framework_id.startswith('test-') and framework_id.__len__() >= 6 ))
 
-def getJavaVersion():
-    sp = subprocess.Popen(["java", "-version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    javaVersion = sp.communicate()
-    javaVersion =  str( javaVersion)
-    
-    if re.compile('1.5').search(javaVersion) is not None:
-        return "1.5"  
-    elif re.compile('1.6').search(javaVersion) is not None:
-        return "1.6" 
-    elif re.compile('1.7').search(javaVersion) is not None:
-        return "1.7" 
+def java_path():
+    if not os.environ.has_key('JAVA_HOME'):
+        return "java"
     else:
-        return "1.8"
+        return os.path.normpath("%s/bin/java" % os.environ['JAVA_HOME'])
+
+def getJavaVersion():
+    sp = subprocess.Popen([java_path(), "-version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    javaVersion = sp.communicate()
+    javaVersion = str(javaVersion)
+    
+    result = re.search('version "([a-zA-Z0-9\.\-_]{1,})"', javaVersion)
+    
+    if result:
+        return result.group(1)
+    else:
+        print "Unable to retrieve java version from " + javaVersion
+        return ""

@@ -1,6 +1,7 @@
 package play;
 
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -14,8 +15,6 @@ import java.util.concurrent.TimeUnit;
 
 import com.jamonapi.Monitor;
 import com.jamonapi.MonitorFactory;
-
-import java.util.ArrayList;
 
 import play.Play.Mode;
 import play.exceptions.PlayException;
@@ -44,7 +43,9 @@ public class Invoker {
 
     /**
      * Run the code in a new thread took from a thread pool.
-     * @param invocation The code to run
+     * 
+     * @param invocation
+     *            The code to run
      * @return The future object, to know when the task is completed
      */
     public static Future<?> invoke(final Invocation invocation) {
@@ -56,8 +57,11 @@ public class Invoker {
 
     /**
      * Run the code in a new thread after a delay
-     * @param invocation The code to run
-     * @param millis The time to wait before, in milliseconds
+     * 
+     * @param invocation
+     *            The code to run
+     * @param millis
+     *            The time to wait before, in milliseconds
      * @return The future object, to know when the task is completed
      */
     public static Future<?> invoke(final Invocation invocation, long millis) {
@@ -68,7 +72,9 @@ public class Invoker {
 
     /**
      * Run the code in the same thread than caller.
-     * @param invocation The code to run
+     * 
+     * @param invocation
+     *            The code to run
      */
     public static void invokeInThread(DirectInvocation invocation) {
         boolean retry = true;
@@ -143,8 +149,8 @@ public class Invoker {
         }
 
         /**
-         * Returns the InvocationType for this invocation - Ie: A plugin can use this to
-         * find out if it runs in the context of a background Job
+         * Returns the InvocationType for this invocation - Ie: A plugin can use
+         * this to find out if it runs in the context of a background Job
          */
         public String getInvocationType() {
             return invocationType;
@@ -175,18 +181,19 @@ public class Invoker {
 
         /**
          * Override this method
+         * 
          * @throws java.lang.Exception
          */
         public abstract void execute() throws Exception;
 
-
         /**
-         * Needs this method to do stuff *before* init() is executed.
-         * The different Invocation-implementations does a lot of stuff in init()
+         * Needs this method to do stuff *before* init() is executed. The
+         * different Invocation-implementations does a lot of stuff in init()
          * and they might do it before calling super.init()
          */
         protected void preInit() {
-            // clear language for this request - we're resolving it later when it is needed
+            // clear language for this request - we're resolving it later when
+            // it is needed
             Lang.clear();
         }
 
@@ -220,15 +227,16 @@ public class Invoker {
         }
 
         /**
-         * Things to do after an Invocation.
-         * (if the Invocation code has not thrown any exception)
+         * Things to do after an Invocation. (if the Invocation code has not
+         * thrown any exception)
          */
         public void after() {
             Play.pluginCollection.afterInvocation();
         }
 
         /**
-         * Things to do when the whole invocation has succeeded (before + execute + after)
+         * Things to do when the whole invocation has succeeded (before +
+         * execute + after)
          */
         public void onSuccess() throws Exception {
             Play.pluginCollection.onInvocationSuccess();
@@ -247,6 +255,7 @@ public class Invoker {
 
         /**
          * The request is suspended
+         * 
          * @param suspendRequest
          */
         public void suspend(Suspend suspendRequest) {
@@ -269,7 +278,7 @@ public class Invoker {
          * It's time to execute.
          */
         @Override
-		public void run() {
+        public void run() {
             if (waitInQueue != null) {
                 waitInQueue.stop();
             }
@@ -329,7 +338,7 @@ public class Invoker {
          * Suspend for a timeout (in milliseconds).
          */
         long timeout;
-        
+
         /**
          * Wait for task execution.
          */
@@ -358,7 +367,8 @@ public class Invoker {
     }
 
     /**
-     * Utility that track tasks completion in order to resume suspended requests.
+     * Utility that track tasks completion in order to resume suspended
+     * requests.
      */
     static class WaitForTasksCompletion extends Thread {
 
@@ -376,6 +386,7 @@ public class Invoker {
             if (task instanceof Promise) {
                 Promise<V> smartFuture = (Promise<V>) task;
                 smartFuture.onRedeem(new F.Action<F.Promise<V>>() {
+                    @Override
                     public void invoke(Promise<V> result) {
                         executor.submit(invocation);
                     }

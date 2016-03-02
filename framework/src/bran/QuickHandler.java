@@ -155,15 +155,15 @@ public class QuickHandler extends SimpleChannelUpstreamHandler {
 		// Build the response object.
 		HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
 		response.setContent(ChannelBuffers.copiedBuffer(buf.toString(), CharsetUtil.UTF_8));
-		response.setHeader(CONTENT_TYPE, "text/plain; charset=UTF-8");
+		response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
 
 		if (keepAlive) {
 			// Add 'Content-Length' header only for a keep-alive connection.
-			response.setHeader(CONTENT_LENGTH, response.getContent().readableBytes());
+			response.headers().set(CONTENT_LENGTH, response.getContent().readableBytes());
 		}
 
 		// Encode the cookie.
-		String cookieString = request.getHeader(COOKIE);
+		String cookieString = request.headers().get(COOKIE);
 		if (cookieString != null) {
 			CookieDecoder cookieDecoder = new CookieDecoder();
 			Set<Cookie> cookies = cookieDecoder.decode(cookieString);
@@ -173,7 +173,7 @@ public class QuickHandler extends SimpleChannelUpstreamHandler {
 				for (Cookie cookie : cookies) {
 					cookieEncoder.addCookie(cookie);
 				}
-				response.addHeader(SET_COOKIE, cookieEncoder.encode());
+				response.headers().add(SET_COOKIE, cookieEncoder.encode());
 			}
 		}
 

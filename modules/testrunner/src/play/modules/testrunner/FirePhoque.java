@@ -24,13 +24,14 @@ import java.util.logging.Logger;
 
 import net.sourceforge.htmlunit.corejs.javascript.Context;
 import net.sourceforge.htmlunit.corejs.javascript.ScriptRuntime;
+import static org.apache.commons.io.IOUtils.closeQuietly;
 
 public class FirePhoque {
 
     public static void main(String[] args) throws Exception {
 
-        Logger logger = Logger.getLogger(DefaultCssErrorHandler.class.getName());
-        logger.setLevel(Level.OFF);
+        Logger.getLogger(DefaultCssErrorHandler.class.getName()).setLevel(Level.OFF);
+        Logger.getLogger("com.gargoylesoftware.htmlunit").setLevel(Level.OFF);
 
         String app = System.getProperty("application.url", "http://localhost:9000");
 
@@ -38,8 +39,27 @@ public class FirePhoque {
         File root = null;
         String selenium = null;
         List<String> tests = null;
+        BufferedReader in = null;
+        StringBuilder urlStringBuilder = new StringBuilder(app).append("/@tests.list");
+            
+        String runUnitTests = System.getProperty("runUnitTests");
+        String runFunctionalTests = System.getProperty("runFunctionalTests");
+        String runSeleniumTests = System.getProperty("runSeleniumTests");
+        
+        if(runUnitTests != null || runFunctionalTests != null || runSeleniumTests != null){
+            urlStringBuilder.append("?");
+            urlStringBuilder.append("runUnitTests=").append(runUnitTests != null ? true : false);
+            System.out.println("~ Run unit tests:" + (runUnitTests != null ? true : false));
+
+            urlStringBuilder.append("&runFunctionalTests=").append(runFunctionalTests != null ? true : false);
+            System.out.println("~ Run functional tests:" + (runFunctionalTests != null ? true : false));
+
+            urlStringBuilder.append("&runSeleniumTests=").append(runSeleniumTests != null ? true : false);
+            System.out.println("~ Run selenium tests:" + (runSeleniumTests != null ? true : false));
+        }
+        
         try {
-            BufferedReader in = new BufferedReader(new InputStreamReader(new URL(app + "/@tests.list").openStream(), "utf-8"));
+            in = new BufferedReader(new InputStreamReader(new URL(urlStringBuilder.toString()).openStream(), "utf-8"));
             String marker = in.readLine();
             if (!marker.equals("---")) {
                 throw new RuntimeException("Oops");
@@ -51,38 +71,31 @@ public class FirePhoque {
             while ((line = in.readLine()) != null) {
                 tests.add(line);
             }
-            in.close();
         } catch(Exception e) {
-            System.out.println("~ The application does not start. There are errors: " + e);
+            System.out.println("~ The application does not start. There are errors: " + e.getMessage());
+            e.printStackTrace();
             System.exit(-1);
+        } finally {
+            closeQuietly(in);
         }
 
         // Let's tweak WebClient
 
-	String headlessBrowser = System.getProperty("headlessBrowser",
-		"FIREFOX_17");
-	BrowserVersion browserVersion;
-	if ("CHROME".equals(headlessBrowser)) {
-	    browserVersion = BrowserVersion.CHROME;
-	} else if ("CHROME_16".equals(headlessBrowser)) {
-	    browserVersion = BrowserVersion.CHROME_16;
-	} else if ("FIREFOX_3_6".equals(headlessBrowser)) {
-	    browserVersion = BrowserVersion.FIREFOX_3_6;
-	} else if ("FIREFOX_10".equals(headlessBrowser)) {
-	    browserVersion = BrowserVersion.FIREFOX_10;
-	} else if ("FIREFOX_17".equals(headlessBrowser)) {
-	    browserVersion = BrowserVersion.FIREFOX_17;
-	} else if ("INTERNET_EXPLORER_6".equals(headlessBrowser)) {
-	    browserVersion = BrowserVersion.INTERNET_EXPLORER_6;
-	} else if ("INTERNET_EXPLORER_7".equals(headlessBrowser)) {
-	    browserVersion = BrowserVersion.INTERNET_EXPLORER_7;
-	} else if ("INTERNET_EXPLORER_8".equals(headlessBrowser)) {
-	    browserVersion = BrowserVersion.INTERNET_EXPLORER_8;
-	} else if ("INTERNET_EXPLORER_9".equals(headlessBrowser)) {
-	    browserVersion = BrowserVersion.INTERNET_EXPLORER_9;
-	} else {
-	    browserVersion = BrowserVersion.FIREFOX_17;
-	}
+        String headlessBrowser = System.getProperty("headlessBrowser", "FIREFOX_38");
+        BrowserVersion browserVersion;
+        if ("CHROME".equals(headlessBrowser)) {
+            browserVersion = BrowserVersion.CHROME;
+        } else if ("FIREFOX_31".equals(headlessBrowser)) {
+            browserVersion = BrowserVersion.FIREFOX_31;
+        } else if ("INTERNET_EXPLORER_8".equals(headlessBrowser)) {
+            browserVersion = BrowserVersion.INTERNET_EXPLORER_8;
+        } else if ("INTERNET_EXPLORER_11".equals(headlessBrowser)) {
+            browserVersion = BrowserVersion.INTERNET_EXPLORER_11;
+        } else if ("EDGE".equals(headlessBrowser)) {
+            browserVersion = BrowserVersion.EDGE;
+        } else {
+            browserVersion = BrowserVersion.FIREFOX_38;
+        }
 
         WebClient firephoque = new WebClient(browserVersion);
         firephoque.setPageCreator(new DefaultPageCreator() {
@@ -99,6 +112,11 @@ public class FirePhoque {
         });
         
         firephoque.getOptions().setThrowExceptionOnFailingStatusCode(false);
+        
+        Integer timeout = Integer.valueOf(System.getProperty("webclientTimeout", "-1"));
+        if(timeout >= 0){
+          firephoque.getOptions().setTimeout(timeout);
+        }
         
         firephoque.setAlertHandler(new AlertHandler() {
             public void handleAlert(Page page, String message) {
@@ -211,6 +229,7 @@ public class FirePhoque {
             }
         }
         firephoque.openWindow(new URL(app + "/@tests/end?result=" + (ok ? "passed" : "failed")), "headless");
-
+        
+        firephoque.close();
     }
 }

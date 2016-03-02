@@ -14,11 +14,18 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import javax.activation.DataSource;
+import javax.activation.URLDataSource;
+import javax.mail.internet.InternetAddress;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.mail.*;
+import org.apache.commons.mail.Email;
+import org.apache.commons.mail.EmailAttachment;
+import org.apache.commons.mail.EmailException;
+import org.apache.commons.mail.HtmlEmail;
+import org.apache.commons.mail.MultiPartEmail;
+import org.apache.commons.mail.SimpleEmail;
 
 import play.Logger;
 import play.Play;
@@ -34,10 +41,6 @@ import play.templates.Template;
 import play.templates.TemplateLoader;
 import play.utils.Utils;
 import play.vfs.VirtualFile;
-
-import javax.activation.DataSource;
-import javax.activation.URLDataSource;
-import javax.mail.internet.InternetAddress;
 /**
  * Application mailer support
  */
@@ -142,6 +145,25 @@ public class Mailer {
        attachDataSource(dataSource, name, description, EmailAttachment.ATTACHMENT);
     }
     
+	public static String attachInlineEmbed(DataSource dataSource, String name) {
+		HashMap<String, Object> map = infos.get();
+		if (map == null) {
+			throw new UnexpectedException("Mailer not instrumented ?");
+		}
+		
+		InlineImage inlineImage = new InlineImage(dataSource);
+		
+		Map<String, InlineImage> inlineEmbeds = (Map<String, InlineImage>) map.get("inlineEmbeds");
+		if (inlineEmbeds == null) {
+			inlineEmbeds = new HashMap<String, InlineImage>();
+			map.put("inlineEmbeds", inlineEmbeds);
+		}
+		
+		inlineEmbeds.put(name, inlineImage);
+		infos.set(map);
+		
+		return "cid:" + inlineImage.cid;
+	}
 
     public static void setContentType(String contentType) {
         HashMap<String, Object> map = infos.get();
@@ -153,7 +175,7 @@ public class Mailer {
     }
 
     /**
-     * Can be of the form xxx <m@m.com>
+     * Can be of the form xxx &lt;m@m.com&gt;
      *
      * @param from
      */
@@ -165,16 +187,20 @@ public class Mailer {
         map.put("from", from);
         infos.set(map);
     }
-
+    
     private static class InlineImage {
         /** content id */
         private final String cid;
         /** <code>DataSource</code> for the content */
         private final DataSource dataSource;
 
+        public InlineImage(DataSource dataSource) {
+        	this(null, dataSource);
+        }
+
         public InlineImage(String cid, DataSource dataSource) {
             super();
-            this.cid = cid;
+            this.cid = cid != null ? cid : RandomStringUtils.randomAlphabetic(HtmlEmail.CID_LENGTH).toLowerCase();
             this.dataSource = dataSource;
         }
 
@@ -311,22 +337,11 @@ public class Mailer {
             IOUtils.closeQuietly(is);
         }
 
-        String cid = RandomStringUtils.randomAlphabetic(HtmlEmail.CID_LENGTH)
-                .toLowerCase();
-        InlineImage ii = new InlineImage(cid, dataSource);
-
-        if (inlineEmbeds == null) {
-            inlineEmbeds = new HashMap<String, InlineImage>();
-            map.put("inlineEmbeds", inlineEmbeds);
-        }
-        inlineEmbeds.put(name, ii);
-        infos.set(map);
-
-        return "cid:" + cid;
+        return attachInlineEmbed(dataSource, name);
     }
 
     /**
-     * Can be of the form xxx <m@m.com>
+     * Can be of the form xxx &lt;m@m.com&gt;
      *
      * @param replyTo
      */
@@ -481,23 +496,23 @@ public class Mailer {
 	                }
                     }
                 }
+                
                 MultiPartEmail multiPartEmail = (MultiPartEmail) email;
                 List<EmailAttachment> objectList = (List<EmailAttachment>) infos.get().get("attachments");
-                
-	       		if(objectList != null) {
-	                  for (EmailAttachment object : objectList) {
-	                      multiPartEmail.attach(object);
-	                  }
-				}
-		
-			    //Handle DataSource
+                if (objectList != null) {
+                    for (EmailAttachment object : objectList) {
+                        multiPartEmail.attach(object);
+                    }
+                }
+
+                // Handle DataSource
                 List<T4<DataSource, String, String, String>> datasourceList = (List<T4<DataSource, String, String, String>>) infos
                         .get().get("datasources");
-				if(datasourceList != null) {
-			          for(T4<DataSource, String, String, String> ds : datasourceList) {
-			             multiPartEmail.attach(ds._1, ds._2, ds._3, ds._4);
-			          }
-				}
+                if (datasourceList != null) {
+                    for (T4<DataSource, String, String, String> ds : datasourceList) {
+                        multiPartEmail.attach(ds._1, ds._2, ds._3, ds._4);
+                    }
+                }
             }
             email.setCharset("utf-8");
 

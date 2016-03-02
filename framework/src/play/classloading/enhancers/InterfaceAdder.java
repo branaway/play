@@ -10,8 +10,6 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 
-import bran.ControllerClassVisitor;
-
 public class InterfaceAdder extends org.objectweb.asm.ClassVisitor implements Opcodes {
 	/**
 	 * @param api

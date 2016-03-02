@@ -50,6 +50,8 @@ public class Logger {
      */
     public static boolean configuredManually = false;
 
+    public static boolean usesJuli() { return forceJuli || log4j == null; }
+
     /**
      * Try to init stuff.
      */
@@ -675,6 +677,7 @@ public class Logger {
      */
     public static class JuliToLog4jHandler extends Handler {
 
+        @Override
         public void publish(LogRecord record) {
             org.apache.log4j.Logger log4j = getTargetLogger(record.getLoggerName());
             Priority priority = toLog4j(record.getLevel());
@@ -682,7 +685,7 @@ public class Logger {
         }
 
         static org.apache.log4j.Logger getTargetLogger(String loggerName) {
-            return org.apache.log4j.Logger.getLogger(loggerName);
+            return loggerName != null ? org.apache.log4j.Logger.getLogger(loggerName) : org.apache.log4j.Logger.getRootLogger(); 
         }
 
         public static org.apache.log4j.Logger getTargetLogger(Class<?> clazz) {

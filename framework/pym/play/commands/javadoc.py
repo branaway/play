@@ -36,7 +36,7 @@ def execute(**kargs):
         os.makedirs(outdir)      
     defineJavadocOptions(app, outdir, args)
     defineJavadocFiles(app, outdir)
-    javadoc_cmd = [javadoc_path, '@'+os.path.join('javadoc','javadocOptions'), '@'+os.path.join('javadoc','javadocFiles')]
+    javadoc_cmd = [javadoc_path, '@'+os.path.join(outdir,'javadocOptions'), '@'+os.path.join(outdir,'javadocFiles')]
     
     print "Generating Javadoc in " + outdir + "..."
     subprocess.call(javadoc_cmd, env=os.environ, stdout=sout, stderr=serr)
@@ -67,15 +67,16 @@ def defineJavadocOptions(app, outdir, args):
         # Add link to JavaDoc of JAVA
         
         javaVersion = getJavaVersion()
-        if javaVersion == "1.5":
+        print "~ using java version \"%s\"" % javaVersion
+        if javaVersion.startswith("1.5"):
             print "~    Java(TM) Platform, Platform Standard Edition 5.0"        
             print "~    Java(TM) EE 5 Specification APIs"
             f.write(' -link http://docs.oracle.com/javase/1.5.0/docs/api/')
             f.write(' -link http://docs.oracle.com/javaee/5/api/')   
         else:
-            urlVersion = javaVersion[2:]
+            urlVersion = javaVersion[2:3]
             print "~    Java(TM) Platform, Standard Edition " + urlVersion + " API Specification"        
-            print "~    Java(TM) EE " + urlVersion + "Specification APIs"
+            print "~    Java(TM) EE " + urlVersion + " Specification APIs"
             f.write(' -link http://docs.oracle.com/javase/' + urlVersion + '/docs/api/')
             f.write(' -link http://docs.oracle.com/javaee/' + urlVersion + '/api/')         
      
@@ -87,7 +88,7 @@ def defineJavadocOptions(app, outdir, args):
             playVersion = DEFAULT_API_VERSION
 
         print "~    Play Framework V" + playVersion + " API documentation"     
-        f.write(' -link http://www.playframework.com/documentation/' + playVersion + '/api/')
+        f.write(' -link https://www.playframework.com/documentation/' + playVersion + '/api/')
 
    
     argsCmd = ' '.join(args)

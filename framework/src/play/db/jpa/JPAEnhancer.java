@@ -50,7 +50,7 @@ public class JPAEnhancer extends Enhancer {
 	       return ModelClassVisitor.visitModel(applicationClass.enhancedByteCode);
 	}
 
-	// not compatible with JDK8
+	// not compatible with JDK8 with old javassist. might be OK with newer version of Javassist 16-3-1
 	private byte[] enhancedWithJavassist(ApplicationClass applicationClass) throws IOException, NotFoundException,
 			ClassNotFoundException, CannotCompileException {
 		CtClass ctClass = makeClass(applicationClass);

@@ -13,9 +13,10 @@ import play.Logger;
  * offload the database and simplify scalability. Ehcache is robust, proven and
  * full-featured and this has made it the most widely-used Java-based cache.</p>
  *
- * @see http://ehcache.org/
+ * Expiration is specified in seconds
+ * 
+ * @see <a href="http://ehcache.org/">http://ehcache.org/</a>
  *
- * expiration is specified in seconds
  */
 public class EhCacheImpl implements CacheImpl {
 
@@ -42,6 +43,7 @@ public class EhCacheImpl implements CacheImpl {
         return uniqueInstance;
     }
 
+    @Override
     public void add(String key, Object value, int expiration) {
         if (cache.get(key) != null) {
             return;
@@ -51,10 +53,12 @@ public class EhCacheImpl implements CacheImpl {
         cache.put(element);
     }
 
+    @Override
     public void clear() {
         cache.removeAll();
     }
 
+    @Override
     public synchronized long decr(String key, int by) {
         Element e = cache.get(key);
         if (e == null) {
@@ -67,15 +71,18 @@ public class EhCacheImpl implements CacheImpl {
         return newValue;
     }
 
+    @Override
     public void delete(String key) {
         cache.remove(key);
     }
 
+    @Override
     public Object get(String key) {
         Element e = cache.get(key);
         return (e == null) ? null : e.getValue();
     }
 
+    @Override
     public Map<String, Object> get(String[] keys) {
         Map<String, Object> result = new HashMap<String, Object>(keys.length);
         for (String key : keys) {
@@ -84,6 +91,7 @@ public class EhCacheImpl implements CacheImpl {
         return result;
     }
 
+    @Override
     public synchronized long incr(String key, int by) {
         Element e = cache.get(key);
         if (e == null) {
@@ -97,6 +105,7 @@ public class EhCacheImpl implements CacheImpl {
 
     }
 
+    @Override
     public void replace(String key, Object value, int expiration) {
         if (cache.get(key) == null) {
             return;
@@ -106,6 +115,7 @@ public class EhCacheImpl implements CacheImpl {
         cache.put(element);
     }
 
+    @Override
     public boolean safeAdd(String key, Object value, int expiration) {
         try {
             add(key, value, expiration);
@@ -115,6 +125,7 @@ public class EhCacheImpl implements CacheImpl {
         }
     }
 
+    @Override
     public boolean safeDelete(String key) {
         try {
             delete(key);
@@ -125,6 +136,7 @@ public class EhCacheImpl implements CacheImpl {
         }
     }
 
+    @Override
     public boolean safeReplace(String key, Object value, int expiration) {
         try {
             replace(key, value, expiration);
@@ -135,6 +147,7 @@ public class EhCacheImpl implements CacheImpl {
         }
     }
 
+    @Override
     public boolean safeSet(String key, Object value, int expiration) {
         try {
             set(key, value, expiration);
@@ -145,12 +158,14 @@ public class EhCacheImpl implements CacheImpl {
         }
     }
 
+    @Override
     public void set(String key, Object value, int expiration) {
         Element element = new Element(key, value);
         element.setTimeToLive(expiration);
         cache.put(element);
     }
 
+    @Override
     public void stop() {
         cacheManager.shutdown();
     }

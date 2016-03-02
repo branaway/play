@@ -4,6 +4,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -32,6 +33,7 @@ import org.apache.commons.lang.StringUtils;
 import play.Play;
 import play.data.binding.BeanWrapper;
 import play.data.binding.Binder;
+import play.data.binding.BindingAnnotations;
 import play.data.binding.ParamNode;
 import play.data.validation.Validation;
 import play.exceptions.UnexpectedException;
@@ -52,20 +54,20 @@ public class GenericModel extends JPABase {
     /**
      * This method is deprecated. Use this instead:
      *
-     *  public static <T extends JPABase> T create(ParamNode rootParamNode, String name, Class<?> type, Annotation[] annotations)
+     *  public static &lt;T extends JPABase&gt; T create(ParamNode rootParamNode, String name, Class&lt;?&gt; type, Annotation[] annotations)
      */
-    @Deprecated
-    public static <T extends JPABase> T create(Class<?> type, String name, Map<String, String[]> params, Annotation[] annotations) {
-        ParamNode rootParamNode = ParamNode.convert(params);
-        return (T)create(rootParamNode, name, type, annotations);
-    }
+//    @Deprecated
+//    public static Object create(Class<?> type, String name, Map<String, String[]> params, Annotation[] annotations) {
+//        ParamNode rootParamNode = ParamNode.convert(params);
+//        return create(rootParamNode, name, type, annotations);
+//    }
 
-    public static <T extends JPABase> T create(ParamNode rootParamNode, String name, Class<?> type, Annotation[] annotations) {
+    public static <T extends JPABase> T  create(ParamNode rootParamNode, String name, Class<T> type, Annotation[] annotations) {
         try {
-            Constructor<?> c = type.getDeclaredConstructor();
+            Constructor<T> c = type.getDeclaredConstructor();
             c.setAccessible(true);
-            Object model = c.newInstance();
-            return (T) edit(rootParamNode, name, model, annotations);
+            T model = c.newInstance();
+            return edit(rootParamNode, name, model, annotations);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -74,17 +76,19 @@ public class GenericModel extends JPABase {
     /**
      * This method is deprecated. Use this instead:
      *
-     *  public static <T extends JPABase> T edit(ParamNode rootParamNode, String name, Object o, Annotation[] annotations)
+     *  public static &lt;T extends JPABase&gt; T edit(ParamNode rootParamNode, String name, Object o, Annotation[] annotations)
      *
-     * @return
+     * @see GenericModel#edit(ParamNode, String, Object, Annotation[])
+     * 
+     * @return the entity
      */
-    @Deprecated
-    public static <T extends JPABase> T edit(Object o, String name, Map<String, String[]> params, Annotation[] annotations) {
-        ParamNode rootParamNode = ParamNode.convert(params);
-        return (T)edit( rootParamNode, name, o, annotations);
-    }
+//    @Deprecated
+//    public static Object edit(Object o, String name, Map<String, String[]> params, Annotation[] annotations) {
+//        ParamNode rootParamNode = ParamNode.convert(params);
+//        return edit( rootParamNode, name, o, annotations);
+//    }
 
-    public static <T extends JPABase> T edit(ParamNode rootParamNode, String name, Object o, Annotation[] annotations) {
+    public static <T extends JPABase> T edit(ParamNode rootParamNode, String name, T o, Annotation[] annotations) {
         // #1601 - If name is empty, we're dealing with "root" request parameters (without prefixes).
         // Must not call rootParamNode.getChild in that case, as it returns null. Use rootParamNode itself instead.
         ParamNode paramNode = StringUtils.isEmpty(name) ? rootParamNode : rootParamNode.getChild(name, true);
@@ -104,7 +108,15 @@ public class GenericModel extends JPABase {
                 boolean isEntity = false;
                 String relation = null;
                 boolean multiple = false;
-                //
+                
+                // First try the field 
+                Annotation[] fieldAnnotations = field.getAnnotations();
+                // and check with the profiles annotations
+                final BindingAnnotations bindingAnnotations = new BindingAnnotations(fieldAnnotations, new BindingAnnotations(annotations).getProfiles());
+                if (bindingAnnotations.checkNoBinding()) {
+                    continue;
+                }
+                
                 if (field.isAnnotationPresent(OneToOne.class) || field.isAnnotationPresent(ManyToOne.class)) {
                     isEntity = true;
                     relation = field.getType().getName();
@@ -136,7 +148,7 @@ public class GenericModel extends JPABase {
                                 // Remove it to prevent us from finding it again later
                                 fieldParamNode.removeChild(keyName, removedNodesList);
                                 for (String _id : ids) {
-                                    if (_id.equals("")) {
+                                    if (_id == null || _id.equals("")) {
                                         continue;
                                     }
                                     Query q = em.createQuery("from " + relation + " where " + keyName + " = ?1");
@@ -158,7 +170,7 @@ public class GenericModel extends JPABase {
                                 q.setParameter(1, Binder.directBind(rootParamNode.getOriginalKey(), annotations, ids[0], Model.Manager.factoryFor((Class<Model>) Play.classloader.loadClass(relation)).keyType(), null));
                                 try {
                                     Object to = q.getSingleResult();
-                                    edit(paramNode, field.getName(), to, field.getAnnotations());
+                                    edit(paramNode, field.getName(), (T) to, field.getAnnotations());
                                     // Remove it to prevent us from finding it again later
                                     paramNode.removeChild( field.getName(), removedNodesList);
                                     bw.set(field.getName(), o, to);
@@ -187,7 +199,7 @@ public class GenericModel extends JPABase {
             // Must not call rootParamNode.getChild in that case, as it returns null. Use rootParamNode itself instead.
             ParamNode beanNode = StringUtils.isEmpty(name) ? rootParamNode : rootParamNode.getChild(name, true);
             Binder.bindBean(beanNode, o, annotations);
-            return (T) o;
+            return o;
         } catch (Exception e) {
             throw new UnexpectedException(e);
         } finally {
@@ -199,7 +211,7 @@ public class GenericModel extends JPABase {
     /**
      * This method is deprecated. Use this instead:
      *
-     *  public <T extends GenericModel> T edit(ParamNode rootParamNode, String name)
+     *  public &lt;T extends GenericModel&gt; T edit(ParamNode rootParamNode, String name)
      */
     @Deprecated
     public <T extends GenericModel> T edit(String name, Map<String, String[]> params) {

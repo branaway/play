@@ -32,7 +32,7 @@ public class SigEnhancer extends Enhancer {
 
         StringBuilder sigChecksum = new StringBuilder();
 
-        sigChecksum.append("Class->" + ctClass.getName() + ":");
+        sigChecksum.append("Class->").append(ctClass.getName()).append(":");
         for (Annotation annotation : getAnnotations(ctClass).getAnnotations()) {
             sigChecksum.append(annotation + ",");
             addAnnoMembers(sigChecksum, annotation);
@@ -40,6 +40,9 @@ public class SigEnhancer extends Enhancer {
 
         for (CtField field : ctClass.getDeclaredFields()) {
             sigChecksum.append(" Field->" + field.toString() + ":" + field.getModifiers());
+// old code bran
+//            sigChecksum.append(" Field->").append(ctClass.getName()).append(" ").append(field.getSignature()).append(":");
+//            sigChecksum.append(field.getSignature());
             for (Annotation annotation : getAnnotations(field).getAnnotations()) {
                 sigChecksum.append(annotation + ",");
                 addAnnoMembers(sigChecksum, annotation);
@@ -51,34 +54,31 @@ public class SigEnhancer extends Enhancer {
             for (Annotation annotation : getAnnotations(method).getAnnotations()) {
                 sigChecksum.append(annotation + " ");
                 addAnnoMembers(sigChecksum, annotation);
-                
-                
             }
             if(javassist.Modifier.isAbstract(method.getModifiers()))
             		continue;
             // Signatures names
             if (isController(applicationClass)) {
 	            CodeAttribute codeAttribute = (CodeAttribute) method.getMethodInfo().getAttribute("Code");
-	            if (codeAttribute != null) {
-		            LocalVariableAttribute localVariableAttribute = (LocalVariableAttribute) codeAttribute.getAttribute("LocalVariableTable");
-		            if (localVariableAttribute != null) {
-		                for (int i = 0; i < localVariableAttribute.tableLength(); i++) {
-		                    sigChecksum.append(localVariableAttribute.variableName(i) + ",");
-		                }
-		            }
+	            if (codeAttribute == null || javassist.Modifier.isAbstract(method.getModifiers())) {
+	                continue;
+	            }
+	            LocalVariableAttribute localVariableAttribute = (LocalVariableAttribute) codeAttribute.getAttribute("LocalVariableTable");
+	            if (localVariableAttribute != null) {
+	                for (int i = 0; i < localVariableAttribute.tableLength(); i++) {
+	                    sigChecksum.append(localVariableAttribute.variableName(i)).append(",");
+	                }
 	            }
             }
         }
-
         if (ctClass.getClassInitializer() != null) {
             sigChecksum.append("Static Code->");
             for (CodeIterator i = ctClass.getClassInitializer().getMethodInfo().getCodeAttribute().iterator(); i.hasNext();) {
                 int index = i.next();
                 int op = i.byteAt(index);
                 sigChecksum.append(op);
-                if (op == Opcode.LDC) { // constants
-                    sigChecksum.append("[" + i.get().getConstPool().getLdcValue(i.byteAt(index + 1)) + "]");
-                    ;
+                if (op == Opcode.LDC) {
+                    sigChecksum.append("[").append(i.get().getConstPool().getLdcValue(i.byteAt(index + 1))).append("]");
                 }
                 sigChecksum.append(".");
             }
@@ -91,8 +91,7 @@ public class SigEnhancer extends Enhancer {
                 int op = i.byteAt(index);
                 sigChecksum.append(op);
                 if (op == Opcode.LDC) {
-                    sigChecksum.append("[" + i.get().getConstPool().getLdcValue(i.byteAt(index + 1)) + "]");
-                    ;
+                    sigChecksum.append("[").append(i.get().getConstPool().getLdcValue(i.byteAt(index + 1))).append("]");
                 }
                 sigChecksum.append(".");
             }

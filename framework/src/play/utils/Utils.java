@@ -30,9 +30,9 @@ public class Utils {
         if (!iter.hasNext()) {
             return "";
         }
-        StringBuffer toReturn = new StringBuffer(String.valueOf(iter.next()));
+        StringBuilder toReturn = new StringBuilder(String.valueOf(iter.next()));
         while (iter.hasNext()) {
-            toReturn.append(separator + String.valueOf(iter.next()));
+            toReturn.append(separator).append(iter.next());
         }
         return toReturn.toString();
     }
@@ -54,9 +54,9 @@ public class Utils {
         if (!iter.hasNext()) {
             return "";
         }
-        StringBuffer toReturn = new StringBuffer("@" + iter.next().annotationType().getSimpleName());
+        StringBuilder toReturn = new StringBuilder("@" + iter.next().annotationType().getSimpleName());
         while (iter.hasNext()) {
-            toReturn.append(", @" + iter.next().annotationType().getSimpleName());
+            toReturn.append(", @").append(iter.next().annotationType().getSimpleName());
         }
         return toReturn.toString();
     }

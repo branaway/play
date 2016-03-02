@@ -81,14 +81,14 @@ public class JPA {
     }
 
     protected static void close() {
-        // do our best to close the JPA config
-    	jpaConfigs.values().forEach( c -> {
-    		try {
-    			c.close();
-	        } catch (Exception e) {
-	            Logger.error("Error closing JPA config ", e);
-	        }
-    	});
+        for( JPAConfig jpaConfig : jpaConfigs.values()) {
+            // do our best to close the JPA config
+            try {
+                jpaConfig.close();
+            } catch (Exception e) {
+                Logger.error(e, "Error closing JPA config "+jpaConfig.getConfigName());
+            }
+        }
         jpaConfigs.clear();
         _defaultJPAConfig = null;
     }

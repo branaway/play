@@ -1,10 +1,14 @@
 ~ Name:
 ~ ~~~~~
 ~ auto-test -- Automatically run all application tests
-~ 
+~
+~ Alias:
+~ ~~~~~
+~ autotest
+~
 ~ Synopsis:
 ~ ~~~~~~~~~
-~ play auto-test [app_path] [--deps]
+~ play auto-test [app_path] [--deps] [--unit] [--functional] [--selenium] [--timeout=xxx]
 ~
 ~ Description:
 ~ ~~~~~~~~~~~~
@@ -35,4 +39,11 @@
 ~ ~~~~~~~~~
 ~ --deps: 
 ~ Resolve and install dependencies before running the command.
-~
+~ --unit: 
+~ Run the unit tests.
+~ --functional: 
+~ Run the functional tests.
+~ --selenium: 
+~ Run the selenium tests.
+~ --timeout=xxx: 
+~ Specify the timeout for the webclient (the value of the timeout in milliseconds, 0 for an infinite wait)

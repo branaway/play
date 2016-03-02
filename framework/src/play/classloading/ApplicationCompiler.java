@@ -9,13 +9,14 @@ import java.util.StringTokenizer;
 
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
 import org.eclipse.jdt.core.compiler.IProblem;
-import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.ClassFile;
 import org.eclipse.jdt.internal.compiler.CompilationResult;
+import org.eclipse.jdt.internal.compiler.Compiler;
 import org.eclipse.jdt.internal.compiler.DefaultErrorHandlingPolicies;
 import org.eclipse.jdt.internal.compiler.ICompilerRequestor;
 import org.eclipse.jdt.internal.compiler.IErrorHandlingPolicy;
 import org.eclipse.jdt.internal.compiler.IProblemFactory;
+import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileReader;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFormatException;
 import org.eclipse.jdt.internal.compiler.env.ICompilationUnit;
@@ -23,7 +24,6 @@ import org.eclipse.jdt.internal.compiler.env.INameEnvironment;
 import org.eclipse.jdt.internal.compiler.env.NameEnvironmentAnswer;
 import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
 import org.eclipse.jdt.internal.compiler.problem.DefaultProblemFactory;
-import org.eclipse.jdt.internal.compiler.Compiler;
 
 import play.Logger;
 import play.Play;
@@ -117,22 +117,22 @@ public class ApplicationCompiler {
         }
 
         @Override
-		public char[] getFileName() {
+        public char[] getFileName() {
             return fileName.toCharArray();
         }
 
         @Override
-		public char[] getContents() {
+        public char[] getContents() {
             return applicationClasses.getApplicationClass(clazzName).javaSource.toCharArray();
         }
 
         @Override
-		public char[] getMainTypeName() {
+        public char[] getMainTypeName() {
             return typeName;
         }
 
         @Override
-		public char[][] getPackageName() {
+        public char[][] getPackageName() {
             return packageName;
         }
 
@@ -167,8 +167,8 @@ public class ApplicationCompiler {
         INameEnvironment nameEnvironment = new INameEnvironment() {
 
             @Override
-			public NameEnvironmentAnswer findType(final char[][] compoundTypeName) {
-                final StringBuffer result = new StringBuffer();
+            public NameEnvironmentAnswer findType(final char[][] compoundTypeName) {
+                final StringBuilder result = new StringBuilder(compoundTypeName.length * 7);
                 for (int i = 0; i < compoundTypeName.length; i++) {
                     if (i != 0) {
                         result.append('.');
@@ -179,8 +179,8 @@ public class ApplicationCompiler {
             }
 
             @Override
-			public NameEnvironmentAnswer findType(final char[] typeName, final char[][] packageName) {
-                final StringBuffer result = new StringBuffer();
+            public NameEnvironmentAnswer findType(final char[] typeName, final char[][] packageName) {
+                final StringBuilder result = new StringBuilder(packageName.length * 7 + 1 + typeName.length);
                 for (int i = 0; i < packageName.length; i++) {
                     result.append(packageName[i]);
                     result.append('.');
@@ -231,22 +231,27 @@ public class ApplicationCompiler {
             }
 
             @Override
-			public boolean isPackage(char[][] parentPackageName, char[] packageName) {
+            public boolean isPackage(char[][] parentPackageName, char[] packageName) {
                 // Rebuild something usable
-                StringBuilder sb = new StringBuilder();
-                if (parentPackageName != null) {
+                String name;
+                if (parentPackageName == null) {
+                    name = new String(packageName);
+                }
+                else {
+                    StringBuilder sb = new StringBuilder(parentPackageName.length * 7 + packageName.length);
                     for (char[] p : parentPackageName) {
-                        sb.append(new String(p));
+                        sb.append(p);
                         sb.append(".");
                     }
+                    sb.append(new String(packageName));
+                    name = sb.toString();
                 }
-                sb.append(new String(packageName));
-                String name = sb.toString();
+                
                 if (packagesCache.containsKey(name)) {
-                    return packagesCache.get(name).booleanValue();
+                    return packagesCache.get(name);
                 }
-                // Check if thera a .java or .class for this ressource
-                if (Play.classloader.getClassDefinition(name) != null) {
+                // Check if there are .java or .class for this resource
+                if (Play.classloader.getResource(name.replace('.', '/') + ".class") != null) {
                     packagesCache.put(name, false);
                     return false;
                 }
@@ -259,7 +264,7 @@ public class ApplicationCompiler {
             }
 
             @Override
-			public void cleanup() {
+            public void cleanup() {
             }
         };
 
@@ -269,7 +274,7 @@ public class ApplicationCompiler {
         ICompilerRequestor compilerRequestor = new ICompilerRequestor() {
 
             @Override
-			public void acceptResult(CompilationResult result) {
+            public void acceptResult(CompilationResult result) {
                 // If error
                 if (result.hasErrors()) {
                 	// bran: sort the problems and report the first one
@@ -297,7 +302,7 @@ public class ApplicationCompiler {
                 for (int i = 0; i < clazzFiles.length; i++) {
                     final ClassFile clazzFile = clazzFiles[i];
                     final char[][] compoundName = clazzFile.getCompoundName();
-                    final StringBuffer clazzName = new StringBuffer();
+                    final StringBuilder clazzName = new StringBuilder();
                     for (int j = 0; j < compoundName.length; j++) {
                         if (j != 0) {
                             clazzName.append('.');

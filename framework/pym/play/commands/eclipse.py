@@ -29,12 +29,14 @@ def execute(**kargs):
     vm_arguments = app.readConf('jvm.memory')
     
     javaVersion = getJavaVersion()
-    if javaVersion == "1.7":
+    print "~ using java version \"%s\"" % javaVersion
+    if javaVersion.startswith("1.7"):
         # JDK 7 compat
         vm_arguments = vm_arguments +' -XX:-UseSplitVerifier'
-    elif javaVersion == "1.8":
-        # JDK 8 compatible
-        vm_arguments = vm_arguments +' -noverify'
+    elif javaVersion.startswith("1.8"):
+        # JDK 8 compatible bran: let's try the split verifier
+        vm_arguments = vm_arguments +' -XX:-UseSplitVerifier'
+        #vm_arguments = vm_arguments +' -noverify'
 
     if application_name:
         application_name = application_name.replace("/", " ")

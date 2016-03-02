@@ -93,6 +93,7 @@ public class NoRouteFoundException extends PlayException implements SourceAttach
         return source != null;
     }
 
+    @Override
     public String getSourceFile() {
         return sourceFile;
     }
@@ -102,10 +103,12 @@ public class NoRouteFoundException extends PlayException implements SourceAttach
     }
 
 
+    @Override
     public List<String> getSource() {
         return source;
     }
 
+    @Override
     public Integer getLineNumber() {
         return line;
     }
