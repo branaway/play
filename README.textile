@@ -12,6 +12,8 @@ a few patches that make using Play in dev mode faster.
 3.
 
 History:
+
+2016.3.3, update bytecode parser with invokedynamic support in controllers, which would blow out with LVEnhancer.
 2016.3.2, merged with the original git://github.com/playframework/play1 master branch, which was about post 1.4. added latest javassist.jar for better compatible with hibernate and JDK8.
 2014.11.18, fixed the TestRunner controller in the TestRunner module to avoid not implemented methods in Controller.   
 2014.7.17, removed artificial code in Play.mapJapidError() to activate the mapping.    
