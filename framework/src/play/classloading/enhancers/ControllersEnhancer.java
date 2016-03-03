@@ -39,20 +39,21 @@ public class ControllersEnhancer extends Enhancer {
         	return; 
         }
         
-        // did not work! possibley due to conflict between javassist and djk8
-//		CtClass ctClass = makeClass(applicationClass);
-//
-//        CtClass cc = classPool.get(ControllerSupport.class.getName());
-//		if (!ctClass.subtypeOf(cc)) {
-//            return;
-//        }
+        //  work? possibly due to conflict between javassist and djk8
+		CtClass ctClass = makeClass(applicationClass);
 
+        CtClass cc = classPool.get(ControllerSupport.class.getName());
+		if (!ctClass.subtypeOf(cc)) {
+            return;
+        }
+		
+		byte[] bytecode = enhanceByJavassist(ctClass, applicationClass);
         
-        byte[] bytecode = ControllerClassVisitor.visitController(applicationClass.enhancedByteCode);
-        
+// bran: my asm version of enhancer		
+//        byte[] bytecode = ControllerClassVisitor.visitController(applicationClass.enhancedByteCode);
+//        
         if (bytecode != null)
         	applicationClass.enhancedByteCode = bytecode;
-//
 
     }
     

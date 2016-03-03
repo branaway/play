@@ -341,7 +341,7 @@ public class ApplicationClassloader extends ClassLoader {
         boolean dirtySig = false;
 
         if (modifiedWithDependencies.size() > 0) {
-			Logger.info("start compiling %s modified classes", modifiedWithDependencies.size());
+			Logger.info("start compiling %s modified class(es)", modifiedWithDependencies.size());
 			long compileTime = 0;
 			long enhanceTime = 0;
 			for (ApplicationClass applicationClass : modifiedWithDependencies) {
@@ -503,7 +503,7 @@ public class ApplicationClassloader extends ClassLoader {
 
                     // bran: display compilation time
                     if (classNames.size() > 0) {
-		                System.out.println("start compiling all " + classNames.size() + " classes. ");
+		                System.out.println("start compiling all " + classNames.size() + " class(es). ");
 		                
 		                t= System.currentTimeMillis();
 		                try {

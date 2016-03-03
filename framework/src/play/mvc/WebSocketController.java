@@ -2,6 +2,7 @@ package play.mvc;
 
 import java.util.concurrent.Future;
 
+import play.classloading.enhancers.ControllersEnhancer.ControllerSupport;
 import play.data.validation.Validation;
 import play.libs.F;
 import play.mvc.results.WebSocketDisconnect;

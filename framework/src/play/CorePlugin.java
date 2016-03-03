@@ -6,6 +6,7 @@ import com.google.gson.JsonPrimitive;
 import com.jamonapi.Monitor;
 import com.jamonapi.MonitorFactory;
 import com.jamonapi.utils.Misc;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.text.SimpleDateFormat;
@@ -18,6 +19,7 @@ import play.classloading.ApplicationClasses.ApplicationClass;
 import play.classloading.enhancers.ContinuationEnhancer;
 import play.classloading.enhancers.ControllersEnhancer;
 import play.classloading.enhancers.Enhancer;
+import play.classloading.enhancers.LVEnhancer;
 import play.classloading.enhancers.SigEnhancer;
 import play.exceptions.UnexpectedException;
 import play.libs.Crypto;
@@ -305,7 +307,7 @@ public class CorePlugin extends PlayPlugin {
                 ControllersEnhancer.class,
 //                MailerEnhancer.class,
 //                PropertiesEnhancer.class,
-//                LocalvariablesNamesEnhancer.class
+                LVEnhancer.class
             };
             for (Class<? extends Enhancer> enhancer : enhancers) {
                 try {

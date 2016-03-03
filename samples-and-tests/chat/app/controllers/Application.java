@@ -15,6 +15,10 @@ public class Application extends Controller {
     public static void index() {
         render();
     }
+
+    public static void hello() {
+	index();
+    }
     
     public static void enterDemo(@Required String user, @Required String demo) {        
         if(validation.hasErrors()) {
@@ -35,7 +39,7 @@ public class Application extends Controller {
     }
 
 	public static void getDb() {
-		MsgDb first = MsgDb.find("name = ?", "我自己").first();
+		MsgDb first = MsgDb.find("name = ?", "我自己 ").first();
 		renderJSON(first);
 	}
 }

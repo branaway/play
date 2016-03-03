@@ -31,6 +31,9 @@ public class LongPolling extends Controller {
         ChatRoom.get().leave(user);
         Application.index();
     }
-    
+
+    public static void h33() {
+	render();
+    }
 }
 

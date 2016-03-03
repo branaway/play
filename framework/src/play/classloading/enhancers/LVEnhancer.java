@@ -27,120 +27,126 @@ import play.classloading.ApplicationClasses.ApplicationClass;
 import play.exceptions.UnexpectedException;
 import play.libs.Codec;
 
+/**
+ * 
+ * bran: the original concept of this class was to create a markers to remember 
+ * local variables in action methods for use in Groovy templates. 
+ *
+ */
 public class LVEnhancer extends Enhancer {
     @Override
     public void enhanceThisClass(ApplicationClass applicationClass)
             throws Exception {    	
-//        CtClass ctClass = makeClass(applicationClass);
-//        if(ctClass.isAnnotation() || ctClass.isInterface())
-//            return;
-//        for(CtBehavior behavior : ctClass.getDeclaredMethods()) {
-//            try {
-//                if(behavior.isEmpty() || behavior.getMethodInfo().getCodeAttribute() == null || Utils.getLocalVariableAttribute(behavior) == null) {
-//                    CtField signature = CtField.make("public static String[] $" + behavior.getName() + "0 = new String[0];", ctClass);
-//                    ctClass.addField(signature);
-//                    continue;
-//                }
-//
-//                StackAnalyzer parser = new StackAnalyzer(behavior);
-//
-//                // first, compute hash for parameter names
-//                CtClass[] signatureTypes = behavior.getParameterTypes();
-//                int memberShift = Modifier.isStatic(behavior.getModifiers()) ? 0 : 1;
-//
-//                if(signatureTypes.length > parser.context.localVariables.size() - memberShift) {
-//                    Logger.debug("ignoring method: %s %s (local vars numbers differs : %s != %s)", Modifier.toString(behavior.getModifiers()), behavior.getLongName(), signatureTypes.length, parser.context.localVariables.size() - memberShift);
-//                    continue;
-//                }
-//
-//                StringBuffer signatureNames;
-//                if(signatureTypes.length == 0)
-//                    signatureNames = new StringBuffer("new String[0];");
-//                else {
-//                    signatureNames = new StringBuffer("new String[] {");
-//
-//                    for(int i = memberShift; i < signatureTypes.length + memberShift; i++) {
-//                        if(i > memberShift)
-//                            signatureNames.append(",");
-//
-//                        signatureNames.append("\"").append(parser.context.localVariables.get(i).name).append("\"");
-//                    }
-//                    signatureNames.append("};");
-//                }
-//
-//                CtField signature = CtField.make("public static String[] $" + behavior.getName() + computeMethodHash(signatureTypes) + " = " + signatureNames.toString(), ctClass);
-//                ctClass.addField(signature);
-//                // end
-//
-//                Frames frames = parser.analyze();
-//                CodeAttribute codeAttribute = behavior.getMethodInfo().getCodeAttribute();
-//                FrameIterator iterator = frames.iterator();
-//                while(iterator.hasNext()) {
-//                    Frame frame = iterator.next();
-//                    if(!frame.isAccessible) {
-//                        Logger.debug("WARNING : frame " + frame.index + " is NOT accessible");
-//                        continue;
-//                    }
-//                    if(frame.decodedOp instanceof DecodedMethodInvocationOp) {
-//                        DecodedMethodInvocationOp dmio = (DecodedMethodInvocationOp) frame.decodedOp;
-//                        if(!dmio.getDeclaringClassName().equals("org.apache.commons.javaflow.bytecode.StackRecorder") &&
-//                                !dmio.getDeclaringClassName().startsWith("java.")) { // no need to track non-user method calls
-//                            MethodParams methodParams = DecodedMethodInvocationOp.resolveParameters(frame);
-//                            
-//                            String[] paramsNames = new String[methodParams.params.length + (methodParams.varargs != null ? methodParams.varargs.length : 0)];
-//                            for(int i = 0; i < methodParams.params.length; i++)
-//                                if(methodParams.params[i] != null && methodParams.params[i].name != null)
-//                                    paramsNames[i] = methodParams.params[i].name;
-//                            if(methodParams.varargs != null)
-//                                for(int i = 0, j = methodParams.params.length; i < methodParams.varargs.length; i++, j++)
-//                                    if(methodParams.varargs[i] != null && methodParams.varargs[i].name != null)
-//                                        paramsNames[j] = methodParams.varargs[i].name;
-//
-//                            Bytecode b = makeInitMethodCall(behavior, dmio.getName(), dmio.getNbParameters(), methodParams.subject != null ? methodParams.subject.name : null, paramsNames);
-//                            insert(b, ctClass, behavior, codeAttribute, iterator, frame, false);
-//                        }
-//                    }
-//                    if(frame.decodedOp.op instanceof ExitOpcode) {
-//                        Bytecode b = makeExitMethod(behavior, ctClass.getName(), behavior.getName(), behavior.getSignature());
-//                        insert(b, ctClass, behavior, codeAttribute, iterator, frame, false);
-//                    }
-//                    if(iterator.isFirst()) {
-//                        insert(makeEnterMethod(behavior, ctClass.getName(), behavior.getName(), behavior.getSignature()), ctClass, behavior, codeAttribute, iterator, frame, false);
-//                    }
-//                }
-//            } catch(Exception e) {
-//                throw new UnexpectedException("LVEnhancer: cannot enhance the behavior '" + behavior.getLongName() + "'", e);
-//            }
-//        }
-//        applicationClass.enhancedByteCode = ctClass.toBytecode();
-//        ctClass.defrost();
+        CtClass ctClass = makeClass(applicationClass);
+        if(ctClass.isAnnotation() || ctClass.isInterface())
+            return;
+        for(CtBehavior behavior : ctClass.getDeclaredMethods()) {
+            try {
+                if(behavior.isEmpty() || behavior.getMethodInfo().getCodeAttribute() == null || Utils.getLocalVariableAttribute(behavior) == null) {
+                    CtField signature = CtField.make("public static String[] $" + behavior.getName() + "0 = new String[0];", ctClass);
+                    ctClass.addField(signature);
+                    continue;
+                }
+
+                StackAnalyzer parser = new StackAnalyzer(behavior);
+
+                // first, compute hash for parameter names
+                CtClass[] signatureTypes = behavior.getParameterTypes();
+                int memberShift = Modifier.isStatic(behavior.getModifiers()) ? 0 : 1;
+
+                if(signatureTypes.length > parser.context.localVariables.size() - memberShift) {
+                    Logger.debug("ignoring method: %s %s (local vars numbers differs : %s != %s)", Modifier.toString(behavior.getModifiers()), behavior.getLongName(), signatureTypes.length, parser.context.localVariables.size() - memberShift);
+                    continue;
+                }
+
+                StringBuffer signatureNames;
+                if(signatureTypes.length == 0)
+                    signatureNames = new StringBuffer("new String[0];");
+                else {
+                    signatureNames = new StringBuffer("new String[] {");
+
+                    for(int i = memberShift; i < signatureTypes.length + memberShift; i++) {
+                        if(i > memberShift)
+                            signatureNames.append(",");
+
+                        signatureNames.append("\"").append(parser.context.localVariables.get(i).name).append("\"");
+                    }
+                    signatureNames.append("};");
+                }
+
+                CtField signature = CtField.make("public static String[] $" + behavior.getName() + computeMethodHash(signatureTypes) + " = " + signatureNames.toString(), ctClass);
+                ctClass.addField(signature);
+                // end
+
+                Frames frames = parser.analyze();
+                CodeAttribute codeAttribute = behavior.getMethodInfo().getCodeAttribute();
+                FrameIterator iterator = frames.iterator();
+                while(iterator.hasNext()) {
+                    Frame frame = iterator.next();
+                    if(!frame.isAccessible) {
+                        Logger.debug("WARNING : frame " + frame.index + " is NOT accessible");
+                        continue;
+                    }
+                    if(frame.decodedOp instanceof DecodedMethodInvocationOp) {
+                        DecodedMethodInvocationOp dmio = (DecodedMethodInvocationOp) frame.decodedOp;
+                        if(!dmio.getDeclaringClassName().equals("org.apache.commons.javaflow.bytecode.StackRecorder") &&
+                                !dmio.getDeclaringClassName().startsWith("java.")) { // no need to track non-user method calls
+                            MethodParams methodParams = DecodedMethodInvocationOp.resolveParameters(frame);
+                            
+                            String[] paramsNames = new String[methodParams.params.length + (methodParams.varargs != null ? methodParams.varargs.length : 0)];
+                            for(int i = 0; i < methodParams.params.length; i++)
+                                if(methodParams.params[i] != null && methodParams.params[i].name != null)
+                                    paramsNames[i] = methodParams.params[i].name;
+                            if(methodParams.varargs != null)
+                                for(int i = 0, j = methodParams.params.length; i < methodParams.varargs.length; i++, j++)
+                                    if(methodParams.varargs[i] != null && methodParams.varargs[i].name != null)
+                                        paramsNames[j] = methodParams.varargs[i].name;
+
+                            Bytecode b = makeInitMethodCall(behavior, dmio.getName(), dmio.getNbParameters(), methodParams.subject != null ? methodParams.subject.name : null, paramsNames);
+                            insert(b, ctClass, behavior, codeAttribute, iterator, frame, false);
+                        }
+                    }
+                    if(frame.decodedOp.op instanceof ExitOpcode) {
+                        Bytecode b = makeExitMethod(behavior, ctClass.getName(), behavior.getName(), behavior.getSignature());
+                        insert(b, ctClass, behavior, codeAttribute, iterator, frame, false);
+                    }
+                    if(iterator.isFirst()) {
+                        insert(makeEnterMethod(behavior, ctClass.getName(), behavior.getName(), behavior.getSignature()), ctClass, behavior, codeAttribute, iterator, frame, false);
+                    }
+                }
+            } catch(Exception e) {
+                throw new UnexpectedException("LVEnhancer: cannot enhance the behavior '" + behavior.getLongName() + "'", e);
+            }
+        }
+        applicationClass.enhancedByteCode = ctClass.toBytecode();
+        ctClass.defrost();
     }
     
     private static final long startedAt = System.currentTimeMillis();
     
-//    private static Bytecode makeInitMethodCall(CtBehavior behavior, String method, int nbParameters, String subject, String... names) {
-//        Bytecode b = new Bytecode(behavior.getMethodInfo().getConstPool());
-//        b.addLdc(method);
-//        b.addIconst(nbParameters);
-//        if(subject == null)
-//            b.add(Opcode.ACONST_NULL);
-//        else b.addLdc(subject);
-//        b.addIconst(names.length);
-//        b.addAnewarray("java.lang.String");
-//        for(int i = 0; i < names.length; i++) {
-//            if(names[i] != null)
-//                b.add(Opcode.DUP);
-//        }
-//        for(int i = 0; i < names.length; i++) {
-//            if(names[i] != null) {
-//                b.addIconst(i);
-//                b.addLdc(names[i]);
-//                b.add(Opcode.AASTORE);
-//            }
-//        }
-//        b.addInvokestatic("play.classloading.enhancers.LVEnhancer$LVEnhancerRuntime", "initMethodCall", "(Ljava/lang/String;ILjava/lang/String;[Ljava/lang/String;)V");
-//        return b;
-//    }
+    private static Bytecode makeInitMethodCall(CtBehavior behavior, String method, int nbParameters, String subject, String... names) {
+        Bytecode b = new Bytecode(behavior.getMethodInfo().getConstPool());
+        b.addLdc(method);
+        b.addIconst(nbParameters);
+        if(subject == null)
+            b.add(Opcode.ACONST_NULL);
+        else b.addLdc(subject);
+        b.addIconst(names.length);
+        b.addAnewarray("java.lang.String");
+        for(int i = 0; i < names.length; i++) {
+            if(names[i] != null)
+                b.add(Opcode.DUP);
+        }
+        for(int i = 0; i < names.length; i++) {
+            if(names[i] != null) {
+                b.addIconst(i);
+                b.addLdc(names[i]);
+                b.add(Opcode.AASTORE);
+            }
+        }
+        b.addInvokestatic("play.classloading.enhancers.LVEnhancer$LVEnhancerRuntime", "initMethodCall", "(Ljava/lang/String;ILjava/lang/String;[Ljava/lang/String;)V");
+        return b;
+    }
     
     private static Bytecode makeExitMethod(CtBehavior behavior, String className, String methodName, String signature) {
         Bytecode b = new Bytecode(behavior.getMethodInfo().getConstPool());

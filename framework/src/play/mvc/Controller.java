@@ -3,6 +3,7 @@ package play.mvc;
 import java.io.File;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
@@ -25,7 +26,9 @@ import play.Play;
 import play.classloading.ApplicationClasses.ApplicationClass;
 import play.classloading.enhancers.ContinuationEnhancer;
 import play.classloading.enhancers.ControllersEnhancer.ControllerInstrumentation;
+import play.classloading.enhancers.ControllersEnhancer.ControllerSupport;
 import play.classloading.enhancers.LVEnhancer;
+import play.classloading.enhancers.LVEnhancer.LVEnhancerRuntime;
 import play.classloading.enhancers.LVEnhancer.MethodExecution;
 import play.data.binding.Unbinder;
 import play.data.validation.Validation;
@@ -53,10 +56,12 @@ import play.mvc.results.RenderJson;
 import play.mvc.results.RenderTemplate;
 import play.mvc.results.RenderText;
 import play.mvc.results.RenderXml;
+import play.mvc.results.Result;
 import play.mvc.results.Unauthorized;
 import play.templates.Template;
 import play.templates.TemplateLoader;
 import play.utils.Default;
+import play.utils.Java;
 import play.vfs.VirtualFile;
 
 /**
@@ -64,7 +69,8 @@ import play.vfs.VirtualFile;
  * response by making calls on model objects.
  *
  * This is the class that your controllers should extend.
- * bran: this Groovy based old system is deprecated in favor of JapidController 
+ * bran: this Groovy based old system is deprecated in favor of JapidController, Groovy rendering is restored 
+ * for convenience. 
  * 
  */
 public class Controller implements ControllerSupport {
@@ -464,7 +470,6 @@ public class Controller implements ControllerSupport {
 
     /**
      * Send a 304 Not Modified response
-     * @
      */
     protected static void notModified() {
         throw new NotModified();
@@ -472,7 +477,6 @@ public class Controller implements ControllerSupport {
 
     /**
      * Send a 400 Bad request
-     * @
      */
     protected static void badRequest(String msg) {
         throw new BadRequest(msg);
@@ -584,7 +588,6 @@ public class Controller implements ControllerSupport {
 
     /**
      * Send a 403 Forbidden response
-     * @
      */
     protected static void forbidden() {
         throw new Forbidden("Access denied");
@@ -791,10 +794,32 @@ public class Controller implements ControllerSupport {
     }
 
     /**
+     * Render a specific template
+     *
+     * @param templateName
+     *            The template name
+     * @param args
+     *            The template data
+     */
+    protected static void renderTemplate(String templateName, Object... args) {
+        // Template datas
+        Map<String, Object> templateBinding = new HashMap<String, Object>(16);
+        String[] names = LVEnhancerRuntime.getParamNames().varargs;
+        if (args != null && args.length > 0 && names == null)
+            throw new UnexpectedException("no varargs names while args.length > 0 !");
+        for (int i = 0; i < args.length; i++) {
+            templateBinding.put(names[i], args[i]);
+        }
+        renderTemplate(templateName, templateBinding);
+    }
+
+    /**
      * Render a specific template.
      *
-     * @param templateName The template name.
-     * @param args The template data.
+     * @param templateName
+     *            The template name.
+     * @param args
+     *            The template data.
      */
     protected static void renderTemplate(String templateName, Map<String, Object> args) {
         // Template data
@@ -834,6 +859,21 @@ public class Controller implements ControllerSupport {
         renderTemplate(template(), args);
     }
 
+    /**
+     * Render the corresponding template (@see <code>template()</code>).
+     *
+     * @param args
+     *            The template data
+     */
+    protected static void render(Object... args) {
+        String templateName = null;
+        if (args.length > 0 && args[0] instanceof String && LVEnhancerRuntime.getParamNames().mergeParamsAndVarargs()[0] == null) {
+            templateName = args[0].toString();
+        } else {
+            templateName = template();
+        }
+        renderTemplate(templateName, args);
+    }
 
     /**
      * Work out the default template to load for the invoked action. E.g.
@@ -926,6 +966,72 @@ public class Controller implements ControllerSupport {
         return Http.Request.current().controllerClass;
     }
 
+    /**
+     * Call the parent action adding this objects to the params scope
+     */
+    @Deprecated
+    protected static void parent(Object... args) {
+        Map<String, Object> map = new HashMap<String, Object>(16);
+        String[] names = LVEnhancerRuntime.getParamNames().mergeParamsAndVarargs();
+        for (int i = 0; i < names.length; i++)
+            map.put(names[i], args[i]);
+        parent(map);
+    }
+
+    /**
+     * Call the parent method
+     */
+    @Deprecated
+    protected static void parent() {
+        parent(new HashMap<String, Object>(0));
+    }
+
+    /**
+     * Call the parent action adding this objects to the params scope
+     */
+    @Deprecated
+    protected static void parent(Map<String, Object> map) {
+        try {
+            Method method = Http.Request.current().invokedMethod;
+            String name = method.getName();
+            Class<?> clazz = method.getDeclaringClass().getSuperclass();
+            Method superMethod = null;
+            while (!clazz.getName().equals("play.mvc.Controller") && !clazz.getName().equals("java.lang.Object")) {
+                for (Method m : clazz.getDeclaredMethods()) {
+                    if (m.getName().equalsIgnoreCase(name) && Modifier.isPublic(m.getModifiers()) && Modifier.isStatic(m.getModifiers())) {
+                        superMethod = m;
+                        break;
+                    }
+                }
+                if (superMethod != null) {
+                    break;
+                }
+                clazz = clazz.getSuperclass();
+            }
+            if (superMethod == null) {
+                throw new RuntimeException("PAF");
+            }
+            Map<String, String> mapss = new HashMap<String, String>(map.size());
+            for (Map.Entry<String, Object> entry : map.entrySet()) {
+                Object value = entry.getValue();
+                mapss.put(entry.getKey(), value == null ? null : value.toString());
+            }
+            Scope.Params.current().__mergeWith(mapss);
+            ControllerInstrumentation.initActionCall();
+            Java.invokeStatic(superMethod, ActionInvoker.getActionMethodArgs(superMethod, null));
+        } catch (InvocationTargetException ex) {
+            // It's a Result ? (expected)
+            if (ex.getTargetException() instanceof Result) {
+                throw (Result) ex.getTargetException();
+            } else {
+                throw new RuntimeException(ex.getTargetException());
+            }
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     /**
      * Suspend the current request for a specified amount of time.

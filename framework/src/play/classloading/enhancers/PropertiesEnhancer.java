@@ -25,6 +25,9 @@ import play.exceptions.UnexpectedException;
 
 /**
  * Generate valid JavaBeans. 
+ * 
+ * bran: for creating getters and setters for entity properties, for using beans in Groovy templates.
+ *  
  */
 public class PropertiesEnhancer extends Enhancer {
 

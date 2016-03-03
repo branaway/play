@@ -7,8 +7,8 @@ import java.util.List;
 import javax.inject.Inject;
 
 import play.Play;
+import play.classloading.enhancers.ControllersEnhancer;
 import play.jobs.Job;
-import play.mvc.ControllerSupport;
 import play.mvc.Mailer;
 
 public class Injector {
@@ -17,7 +17,7 @@ public class Injector {
      * For now, inject beans in controllers
      */
     public static void inject(BeanSource source) {
-        List<Class> classes = Play.classloader.getAssignableClasses(ControllerSupport.class);
+        List<Class> classes = Play.classloader.getAssignableClasses(ControllersEnhancer.ControllerSupport.class);
         classes.addAll(Play.classloader.getAssignableClasses(Mailer.class));
         classes.addAll(Play.classloader.getAssignableClasses(Job.class));
         for(Class<?> clazz : classes) {
