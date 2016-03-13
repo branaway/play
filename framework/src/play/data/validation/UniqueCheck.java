@@ -1,8 +1,5 @@
 package play.data.validation;
 
-import java.lang.reflect.Field;
-import java.util.Map;
-import java.util.TreeMap;
 import net.sf.oval.Validator;
 import net.sf.oval.configuration.annotation.AbstractAnnotationCheck;
 import net.sf.oval.context.FieldContext;
@@ -12,6 +9,10 @@ import play.db.jpa.GenericModel;
 import play.db.jpa.JPQL;
 import play.db.jpa.Model;
 import play.exceptions.UnexpectedException;
+
+import java.lang.reflect.Field;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Check which proof if one or a set of properties is unique.
@@ -64,7 +65,7 @@ public class UniqueCheck extends AbstractAnnotationCheck<Unique> {
         //In case of an update make sure that we won't read the current record from database.
         final boolean isUpdate = (keyValue != null);
         final String entityName = model.getClass().getName();
-        final StringBuffer jpql = new StringBuffer("SELECT COUNT(o) FROM ");
+        final StringBuilder jpql = new StringBuilder("SELECT COUNT(o) FROM ");
         jpql.append(entityName).append(" AS o where ");
         final Object[] values = new Object[isUpdate ? propertyNames.length + 1 :
                 propertyNames.length];
@@ -81,16 +82,11 @@ public class UniqueCheck extends AbstractAnnotationCheck<Unique> {
             if (i > 0) {
                 jpql.append(" And ");
             }
-            jpql.append("o.").append(propertyNames[i]).append(" = ?" + String.valueOf(index++) + " ");
+            jpql.append("o.").append(propertyNames[i]).append(" = ?").append(String.valueOf(index++)).append(" ");
         }
         if (isUpdate) {
             values[propertyNames.length] = keyValue;
-
-            // bran: was " and "
-            //jpql.append(" and o.").append(keyProperty).append(" <>  ?");
-	    // the index after ??
-            jpql.append(" and o.").append(keyProperty).append(" <>  ?" + String.valueOf(index++) + " ");
-
+            jpql.append(" and o.").append(keyProperty).append(" <>  ?").append(String.valueOf(index++)).append(" ");
         }
         return JPQL.instance.count(entityName, jpql.toString(), values) == 0L;
     }

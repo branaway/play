@@ -41,7 +41,6 @@ public class Evolutions extends PlayPlugin {
     private static Map<String, VirtualFile> modulesWithEvolutions = new LinkedHashMap<String, VirtualFile>();
 
 
-
     public static void main(String[] args) throws SQLException {
 
 
@@ -56,7 +55,7 @@ public class Evolutions extends PlayPlugin {
 
         Play.templatesPath = new ArrayList<VirtualFile>();
         Play.modulesRoutes = new HashMap<String, VirtualFile>();
-        Play.loadModules();
+        Play.loadModules(VirtualFile.open(Play.applicationPath));
 
 
         if (System.getProperty("modules") != null) {
@@ -468,9 +467,9 @@ public class Evolutions extends PlayPlugin {
 
                     int version = Integer.parseInt(evolution.getName().substring(0, evolution.getName().indexOf(".")));
                     String sql = IO.readContentAsString(evolution);
-                    StringBuffer sql_up = new StringBuffer();
-                    StringBuffer sql_down = new StringBuffer();
-                    StringBuffer current = new StringBuffer();
+                    StringBuilder sql_up = new StringBuilder();
+                    StringBuilder sql_down = new StringBuilder();
+                    StringBuilder current = new StringBuilder();
                     for (String line : sql.split("\r?\n")) {
                         if (line.trim().matches("^#.*[!]Ups")) {
                             current = sql_up;
@@ -521,7 +520,6 @@ public class Evolutions extends PlayPlugin {
                 checkAndUpdateEvolutionsForMultiModuleSupport(connection);                    
 
                 ResultSet databaseEvolutions = EvolutionQuery.getEvolutions(connection, moduleKey);
-                                
                 while (databaseEvolutions.next()) {
                     Evolution evolution = new Evolution(moduleKey, databaseEvolutions.getInt(1), databaseEvolutions.getString(3), databaseEvolutions.getString(4), false);
                     evolutions.add(evolution);

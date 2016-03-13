@@ -1,10 +1,24 @@
 package play.db.jpa;
 
+import java.io.IOException;
+
+import org.objectweb.asm.ClassVisitor;
+
+import bran.ControllerClassVisitor;
+import bran.ModelClassVisitor;
+import javassist.CannotCompileException;
 import javassist.CtClass;
 import javassist.CtMethod;
+import javassist.NotFoundException;
 import play.Logger;
 import play.classloading.ApplicationClasses.ApplicationClass;
 import play.classloading.enhancers.Enhancer;
+
+//import javassist.CtClass;
+//import javassist.CtMethod;
+//import play.Logger;
+//import play.classloading.ApplicationClasses.ApplicationClass;
+//import play.classloading.enhancers.Enhancer;
 
 /**
  * Enhance JPABase entities classes
@@ -17,15 +31,37 @@ public class JPAEnhancer extends Enhancer {
 
     @Override
 	public void enhanceThisClass(ApplicationClass applicationClass) throws Exception {
-        CtClass ctClass = makeClass(applicationClass);
+    	if (!applicationClass.name.startsWith("models.")) 
+    		return;
+    	
+//        byte[] bytecode = enhancedWithJavassist(applicationClass);
+        byte[] bytecode = enhancedWithASM(applicationClass);
+
+        applicationClass.enhancedByteCode = bytecode;
+    }
+
+    /**
+     * XXX
+	 * @author Bing Ran (bing.ran@gmail.com)
+	 * @param applicationClass
+	 * @return
+	 */
+	private byte[] enhancedWithASM(ApplicationClass applicationClass) {
+	       return ModelClassVisitor.visitModel(applicationClass.enhancedByteCode);
+	}
+
+	// not compatible with JDK8 with old javassist. might be OK with newer version of Javassist 16-3-1
+	private byte[] enhancedWithJavassist(ApplicationClass applicationClass) throws IOException, NotFoundException,
+			ClassNotFoundException, CannotCompileException {
+		CtClass ctClass = makeClass(applicationClass);
 
         if (!ctClass.subtypeOf(classPool.get("play.db.jpa.JPABase"))) {
-            return;
+            return null;
         }
 
         // Enhance only JPA entities
         if (!hasAnnotation(ctClass, "javax.persistence.Entity")) {
-            return;
+            return null;
         }
 
         String entityName = ctClass.getName();
@@ -77,9 +113,11 @@ public class JPAEnhancer extends Enhancer {
         CtMethod create = CtMethod.make("public static play.db.jpa.JPABase create(String name, play.mvc.Scope.Params params) { return  getJPAConfig("+entityName+".class).jpql.create(\"" + entityName + "\", name, params); }", ctClass);
         ctClass.addMethod(create);
 
+        
         // Done.
-        applicationClass.enhancedByteCode = ctClass.toBytecode();
+        byte[] bytecode = ctClass.toBytecode();
         ctClass.defrost();
-    }
+		return bytecode;
+	}
 
 }

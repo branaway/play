@@ -37,6 +37,7 @@ import play.vfs.VirtualFile;
 public class TestEngine {
 
     private final static class ClassNameComparator implements Comparator<Class> {
+        @Override
         public int compare(Class aClass, Class bClass) {
             return aClass.getName().compareTo(bClass.getName());
         }
@@ -136,7 +137,7 @@ public class TestEngine {
                 Integer port = 80;
                 boolean isSecure = false;
                 if (host == null || host.equals("application.baseUrl")) {
-                    host = "localhost" + port;
+                    host = "localhost:" + port;
                     domain = "localhost";
                 } else if (host.contains("http://")) {
                     host = host.replaceAll("http://", "");

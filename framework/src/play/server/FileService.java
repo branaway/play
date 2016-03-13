@@ -1,5 +1,19 @@
 package play.server;
 
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.handler.codec.http.*;
+import org.jboss.netty.handler.stream.ChunkedFile;
+import org.jboss.netty.handler.stream.ChunkedInput;
+
+import play.Logger;
+import play.exceptions.UnexpectedException;
+import play.libs.MimeTypes;
+import play.mvc.Http.Request;
+import play.mvc.Http.Response;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -8,26 +22,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.stream.ChunkedFile;
-import org.jboss.netty.handler.stream.ChunkedInput;
-import static org.jboss.netty.buffer.ChannelBuffers.*;
-import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.*;
-
-import play.Logger;
-import play.exceptions.UnexpectedException;
-import play.libs.MimeTypes;
-import play.mvc.Http.Request;
-import play.mvc.Http.Response;
+import static org.apache.commons.io.IOUtils.closeQuietly;
+import static org.jboss.netty.buffer.ChannelBuffers.wrappedBuffer;
+import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
 
 public class FileService  {
 
@@ -39,43 +36,57 @@ public class FileService  {
             boolean isKeepAlive = HttpHeaders.isKeepAlive(nettyRequest) && nettyRequest.getProtocolVersion().equals(HttpVersion.HTTP_1_1);
             
             if(Logger.isTraceEnabled()) {
-                Logger.trace("keep alive " + isKeepAlive);
-                Logger.trace("content type " + (MimeTypes.getContentType(localFile.getName(), "text/plain")));
+                Logger.trace("keep alive %s", String.valueOf(isKeepAlive));
+                Logger.trace("content type %s", (response.contentType != null ? response.contentType : MimeTypes.getContentType(localFile.getName(), "text/plain")));
             }
             
             if (!nettyResponse.getStatus().equals(HttpResponseStatus.NOT_MODIFIED)) {
                 // Add 'Content-Length' header only for a keep-alive connection.
-                if(Logger.isTraceEnabled())
+                if(Logger.isTraceEnabled()){
                     Logger.trace("file length " + fileLength);
-                nettyResponse.setHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(fileLength));
+                }
+                nettyResponse.headers().set(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(fileLength));
             }
 
-            nettyResponse.setHeader(CONTENT_TYPE, (MimeTypes.getContentType(localFile.getName(), "text/plain")));
-            nettyResponse.addHeader(HttpHeaders.Names.ACCEPT_RANGES, HttpHeaders.Values.BYTES);
+            if (response.contentType != null) {
+                nettyResponse.headers().set(CONTENT_TYPE, response.contentType);
+            } else {
+                nettyResponse.headers().set(CONTENT_TYPE, (MimeTypes.getContentType(localFile.getName(), "text/plain")));
+            }
+
+            nettyResponse.headers().set(HttpHeaders.Names.ACCEPT_RANGES, HttpHeaders.Values.BYTES);
 
             // Write the initial line and the header.
-            ChannelFuture writeFuture;
+            ChannelFuture writeFuture = null;
 
             // Write the content.
             if (!nettyRequest.getMethod().equals(HttpMethod.HEAD)) {
                 ChunkedInput chunkedInput = getChunckedInput(raf, MimeTypes.getContentType(localFile.getName(), "text/plain"), channel, nettyRequest, nettyResponse);
-                channel.write(nettyResponse);
-                writeFuture = channel.write(chunkedInput);
+                if (channel.isOpen()) {
+                    channel.write(nettyResponse);
+                    writeFuture = channel.write(chunkedInput);
+                }else{
+                    Logger.debug("Try to write on a closed channel[keepAlive:%s]: Remote host may have closed the connection", String.valueOf(isKeepAlive)); 
+                }
             } else {
-                writeFuture = channel.write(nettyResponse);
+                if (channel.isOpen()) {
+                    writeFuture = channel.write(nettyResponse);
+                }else{
+                    Logger.debug("Try to write on a closed channel[keepAlive:%s]: Remote host may have closed the connection", String.valueOf(isKeepAlive)); 
+                }
                 raf.close();
             }
 
-            if (!isKeepAlive) {
+            if (writeFuture != null && !isKeepAlive) {
                 writeFuture.addListener(ChannelFutureListener.CLOSE);
             }
         } catch (Throwable exx) {
             exx.printStackTrace();
+            closeQuietly(raf);
             try {
-                raf.close();
-            } catch (Throwable ex) { /* Left empty */ }
-            try {
-                ctx.getChannel().close();
+                if (ctx.getChannel().isOpen()) {
+                    ctx.getChannel().close();
+                }
             } catch (Throwable ex) { /* Left empty */ }
         }
     }
@@ -112,29 +123,31 @@ public class FileService  {
             fileLength = raf.length();
             this.contentType = contentType;
             initRanges();
-            if(Logger.isDebugEnabled())
-                Logger.debug("Invoked ByteRangeServer, found byteRanges: %s (with header Range: %s)", Arrays.toString(byteRanges), request.getHeader("range"));
+            if (Logger.isDebugEnabled()) {
+                Logger.debug("Invoked ByteRangeServer, found byteRanges: %s (with header Range: %s)",
+                        Arrays.toString(byteRanges), request.headers().get("range"));
+            }
         }
         
         public void prepareNettyResponse(HttpResponse nettyResponse) {
-            nettyResponse.addHeader("Accept-Ranges", "bytes");
+            nettyResponse.headers().add("Accept-Ranges", "bytes");
             if(unsatisfiable) {
                 nettyResponse.setStatus(HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
-                nettyResponse.setHeader("Content-Range", "bytes " + 0 + "-" + (fileLength-1) + "/" + fileLength);
-                nettyResponse.setHeader("Content-length", 0);
+                nettyResponse.headers().set("Content-Range", "bytes " + 0 + "-" + (fileLength-1) + "/" + fileLength);
+                nettyResponse.headers().set("Content-length", 0);
             } else {
                 nettyResponse.setStatus(HttpResponseStatus.PARTIAL_CONTENT);
                 if(byteRanges.length == 1) {
                     ByteRange range = byteRanges[0];
-                    nettyResponse.setHeader("Content-Range", "bytes " + range.start + "-" + range.end + "/" + fileLength);
+                    nettyResponse.headers().set("Content-Range", "bytes " + range.start + "-" + range.end + "/" + fileLength);
                 } else {
-                    nettyResponse.setHeader("Content-type", "multipart/byteranges; boundary="+DEFAULT_SEPARATOR);
+                    nettyResponse.headers().set("Content-type", "multipart/byteranges; boundary="+DEFAULT_SEPARATOR);
                 }
                 long length = 0;
                 for(ByteRange range: byteRanges) {
                     length += range.computeTotalLengh();
                 }
-                nettyResponse.setHeader("Content-length", length);
+                nettyResponse.headers().set("Content-length", length);
             }
         }
         
@@ -152,8 +165,9 @@ public class FileService  {
                         currentByteRange++;
                     }
                 }
-                if(count == 0)
+                if(count == 0){
                     return null;
+                }
                 
                 return wrappedBuffer(buffer);
             } catch (Exception e) {
@@ -180,12 +194,12 @@ public class FileService  {
         }
         
         public static boolean accepts(HttpRequest request) {
-            return request.containsHeader("range");
+            return request.headers().contains("range");
         }
         
         private void initRanges() {
             try {
-                String headerValue = request.getHeader("range").trim().substring("bytes=".length());
+                String headerValue = request.headers().get("range").trim().substring("bytes=".length());
                 String[] rangesValues = headerValue.split(",");
                 ArrayList<long[]> ranges = new ArrayList<long[]>(rangesValues.length);
                 for(int i = 0; i < rangesValues.length; i++) {
@@ -199,10 +213,12 @@ public class FileService  {
                         start = Long.parseLong(range[0]);
                         end = range.length > 1 ? Long.parseLong(range[1]) : fileLength - 1;
                     }
-                    if(end > fileLength - 1)
+                    if (end > fileLength - 1) {
                         end = fileLength - 1;
-                    if(start <= end)
+                    }
+                    if(start <= end){
                         ranges.add(new long[] { start, end });
+                    }
                 }
                 long[][] reducedRanges = reduceRanges(ranges.toArray(new long[0][]));
                 ByteRange[] byteRanges = new ByteRange[reducedRanges.length];
@@ -211,8 +227,9 @@ public class FileService  {
                     byteRanges[i] = new ByteRange(range[0], range[1], fileLength, contentType, reducedRanges.length > 1);
                 }
                 this.byteRanges = byteRanges;
-                if(this.byteRanges.length == 0)
+                if(this.byteRanges.length == 0){
                     unsatisfiable = true;
+                }
             } catch (Exception e) {
                 if(Logger.isDebugEnabled())
                     Logger.debug(e, "byterange error");
@@ -235,6 +252,7 @@ public class FileService  {
                 return new long[0][];
             long[][] sortedChunks = Arrays.copyOf(chunks, chunks.length);
             Arrays.sort(sortedChunks, new Comparator<long[]>() {
+                @Override
                 public int compare(long[] t1, long[] t2) {
                     return new Long(t1[0]).compareTo(t2[0]);
                 }

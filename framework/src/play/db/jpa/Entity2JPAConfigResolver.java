@@ -36,7 +36,7 @@ public class Entity2JPAConfigResolver {
 
     private static String resolveJPAConfigNameForEntityClass(Class clazz) {
         @SuppressWarnings("unchecked")
-        PersistenceUnit persistenceUnitAnnotation = (PersistenceUnit)clazz.getAnnotation(PersistenceUnit.class);
+        PersistenceUnit persistenceUnitAnnotation = (PersistenceUnit) clazz.getAnnotation(PersistenceUnit.class);
         if (persistenceUnitAnnotation!=null) {
             return persistenceUnitAnnotation.name();
         } else {

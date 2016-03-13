@@ -12,6 +12,8 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -282,7 +284,7 @@ public class Play {
         javaPath.add(appRoot.child("conf"));
 
         // Build basic templates path
-        if (appRoot.child("app/views").exists()) {
+        if (appRoot.child("app/views").exists() || (usePrecompiled && appRoot.child("precompiled/templates/app/views").exists())) {
             templatesPath = new ArrayList<VirtualFile>(2);
             templatesPath.add(appRoot.child("app/views"));
         } else {
@@ -296,7 +298,7 @@ public class Play {
         modulesRoutes = new HashMap<String, VirtualFile>(16);
 
         // Load modules
-        loadModules();
+        loadModules(appRoot);
 
         // Load the templates from the framework after the one from the modules
         templatesPath.add(VirtualFile.open(new File(frameworkPath, "framework/templates")));
@@ -480,6 +482,7 @@ public class Play {
                     //our plugins that we're going down when some calls ctrl+c or just kills our process..
                     shutdownHookEnabled = true;
                     Runtime.getRuntime().addShutdownHook(new Thread() {
+                        @Override
                         public void run() {
                             Play.stop();
                         }
@@ -708,6 +711,11 @@ public class Play {
      */
 	public static CompilationException mapJapidJavCodeError(
 			CompilationException e) {
+		// testing the error%00ForPlay
+		boolean test = false;
+		if (test)
+			return e;
+		
 		if (!e.isSourceAvailable())
 			return e;
 
@@ -735,7 +743,7 @@ public class Play {
 //		int end = start -1 + problemLineInView.length();
 
 //		e = new CompilationException(vf, "Java code error --> \"" + e.getMessage() + "\"", oriLineNumber, start, end);
-		e = new CompilationException(vf, "Java  error --> \"" + e.getMessage() + "\"", oriLineNumber, 0, 0);
+		e = new CompilationException(vf, "\"" + e.getMessage() + "\"", oriLineNumber, 0, 0);
 		return e;
 	}
 
@@ -747,8 +755,16 @@ public class Play {
 		if (lineMarker < 1) {
 			return 0;
 		}
-		int oriLineNumber = Integer.parseInt(line.substring(lineMarker + 8)
-				.trim());
+		line = line.substring(lineMarker + 8).trim();
+		String num = "";
+		for (int i = 0; i < line.length(); i++) {
+			char c = line.charAt(i);
+			if (Character.isDigit(c))
+				num += c;
+			else
+				break;
+		}
+		int oriLineNumber = Integer.parseInt(num);
 		return oriLineNumber;
 	}
     /**
@@ -816,10 +832,19 @@ public class Play {
     }
 
     /**
-     * Load all modules.
-     * You can even specify the list using the MODULES environement variable.
+     * Load all modules. You can even specify the list using the MODULES
+     * environment variable.
      */
     public static void loadModules() {
+        loadModules(VirtualFile.open(applicationPath));
+    }
+
+    /**
+     * Load all modules.
+     * You can even specify the list using the MODULES environment variable.
+     * @param appRoot : the application path virtual file
+     */
+    public static void loadModules(VirtualFile appRoot) {
         if (System.getenv("MODULES") != null) {
             // Modules path is prepended with a env property
             if (System.getenv("MODULES") != null && System.getenv("MODULES").trim().length() > 0) {
@@ -832,7 +857,7 @@ public class Play {
                         final String moduleName = modulePathName.contains("-") ?
                                 modulePathName.substring(0, modulePathName.lastIndexOf("-")) :
                                 modulePathName;
-                        addModule(moduleName, modulePath);
+                        addModule(appRoot, moduleName, modulePath);
                     }
                 }
             }
@@ -846,18 +871,19 @@ public class Play {
 		System.setProperty("application.path", applicationPath.getAbsolutePath());
 
 		File localModules = Play.getFile("modules");
-		List<String> modules = new ArrayList<String>();
+		Set<String> modules = new LinkedHashSet<String>();
 		if (localModules != null && localModules.exists() && localModules.isDirectory()) {
 			try {
-			        File userHome  = new File(System.getProperty("user.home"));
-			        DependenciesManager dm = new DependenciesManager(applicationPath, frameworkPath, userHome);
+			    File userHome  = new File(System.getProperty("user.home"));
+			    DependenciesManager dm = new DependenciesManager(applicationPath, frameworkPath, userHome);
 				modules = dm.retrieveModules();
 			} catch (Exception e) {
 				Logger.error("There was a problem parsing depencies.yml (module will not be loaded in order of the dependencies.yml)", e);
 				// Load module without considering the dependencies.yml order
-				modules = Arrays.asList(localModules.list());		
+				modules.addAll(Arrays.asList(localModules.list()));		
 			}
-			for (java.util.Iterator iter = modules.iterator(); iter.hasNext();) {
+
+			for (Iterator<String> iter = modules.iterator(); iter.hasNext();) {
 				String moduleName = (String) iter.next();
 
 				File module = new File(localModules, moduleName);
@@ -869,13 +895,13 @@ public class Play {
 				if(module == null || !module.exists()){
 				        Logger.error("Module %s will not be loaded because %s does not exist", moduleName, module.getAbsolutePath());
 				} else if (module.isDirectory()) {
-					addModule(moduleName, module);
+                                        addModule(appRoot, moduleName, module);
 				} else {
 					File modulePath = new File(IO.readContentAsString(module).trim());
 					if (!modulePath.exists() || !modulePath.isDirectory()) {
 						Logger.error("Module %s will not be loaded because %s does not exist", moduleName, modulePath.getAbsolutePath());
 					} else {
-						addModule(moduleName, modulePath);
+						addModule(appRoot, moduleName, modulePath);
 					}
 				}
 			}
@@ -883,29 +909,45 @@ public class Play {
 
         // Auto add special modules
         if (Play.runningInTestMode()) {
-            addModule("_testrunner", new File(Play.frameworkPath, "modules/testrunner"));
+            addModule(appRoot, "_testrunner", new File(Play.frameworkPath, "modules/testrunner"));
         }
-
-        if (Play.mode == Mode.DEV) {
-            addModule("_docviewer", new File(Play.frameworkPath, "modules/docviewer"));
-        }
+//        if (Play.mode == Mode.DEV) {
+//            addModule("_docviewer", new File(Play.frameworkPath, "modules/docviewer"));
+//        }
     }
 
     /**
      * Add a play application (as plugin)
      *
-     * @param path The application path
+     * @param name
+     *            : the module name
+     * @param path
+     *            The application path
      */
     public static void addModule(String name, File path) {
+        addModule(VirtualFile.open(applicationPath), name, path);
+    }
+    
+    /**
+     * Add a play application (as plugin)
+     *
+     * @param appRoot
+     *            : the application path virtual file
+     * @param name
+     *            : the module name
+     * @param path
+     *            The application path
+     */
+    public static void addModule(VirtualFile appRoot, String name, File path) {
         VirtualFile root = VirtualFile.open(path);
         modules.put(name, root);
         if (root.child("app").exists()) {
             javaPath.add(root.child("app"));
         }
-        if (root.child("app/views").exists()) {
+        if (root.child("app/views").exists() || (usePrecompiled && appRoot.child("precompiled/templates/from_module_" + name + "/app/views").exists())) {
             templatesPath.add(root.child("app/views"));
         }
-        if (root.child("conf/routes").exists()) {
+        if (root.child("conf/routes").exists() || (usePrecompiled && appRoot.child("precompiled/templates/from_module_" + name + "/conf/routes").exists())) {
             modulesRoutes.put(name, root.child("conf/routes"));
         }
         roots.add(root);
@@ -966,7 +1008,7 @@ public class Play {
 	}
 
 
-	public enum PageFormat {
+	public static enum PageFormat {
 		HTML,
 		XML,
 		JSON,
@@ -995,7 +1037,7 @@ public class Play {
 	 * @author Bing Ran<bing_ran@hotmail.com>
 	 * 
 	 */
-	public interface ErrorPager {
+	public static interface ErrorPager {
 
 		/**
 		 * 
@@ -1042,4 +1084,9 @@ public class Play {
             throw new Error(msg);
         }
     }
+
+    public static boolean useDefaultMockMailSystem() {
+        return configuration.getProperty("mail.smtp", "").equals("mock") && mode == Mode.DEV;
+    }
+
 }

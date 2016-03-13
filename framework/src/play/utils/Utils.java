@@ -4,6 +4,8 @@ import play.Play;
 import play.mvc.Scope;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
@@ -13,6 +15,7 @@ import java.nio.charset.CharsetDecoder;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Generic utils
@@ -27,9 +30,9 @@ public class Utils {
         if (!iter.hasNext()) {
             return "";
         }
-        StringBuffer toReturn = new StringBuffer(String.valueOf(iter.next()));
+        StringBuilder toReturn = new StringBuilder(String.valueOf(iter.next()));
         while (iter.hasNext()) {
-            toReturn.append(separator + String.valueOf(iter.next()));
+            toReturn.append(separator).append(iter.next());
         }
         return toReturn.toString();
     }
@@ -51,9 +54,9 @@ public class Utils {
         if (!iter.hasNext()) {
             return "";
         }
-        StringBuffer toReturn = new StringBuffer("@" + iter.next().annotationType().getSimpleName());
+        StringBuilder toReturn = new StringBuilder("@" + iter.next().annotationType().getSimpleName());
         while (iter.hasNext()) {
-            toReturn.append(", @" + iter.next().annotationType().getSimpleName());
+            toReturn.append(", @").append(iter.next().annotationType().getSimpleName());
         }
         return toReturn.toString();
     }
@@ -230,4 +233,14 @@ public class Utils {
             return plain;
         }
     }
+
+	/**
+	 * get the params of the current method
+	 * @author Bing Ran (bing.ran@gmail.com)
+	 * @return
+	 */
+	public static String[] getParamNames(Method method) {
+		return Arrays.stream(method.getParameters()).map(Parameter::getName).toArray(String[]::new);
+//		return Arrays.stream(method.getParameters()).map(Parameter::getName).collect(Collectors.toList()).toArray(new String[] {});
+	}
 }

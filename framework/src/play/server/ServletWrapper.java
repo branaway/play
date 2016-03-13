@@ -1,5 +1,6 @@
 package play.server;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import play.Invoker;
 import play.Invoker.InvocationContext;
@@ -37,6 +38,8 @@ import java.net.URISyntaxException;
 import java.text.ParseException;
 import java.util.*;
 
+import static org.apache.commons.io.IOUtils.closeQuietly;
+
 /**
  * Servlet implementation.
  * Thanks to Lee Breisacher.
@@ -63,6 +66,7 @@ public class ServletWrapper extends HttpServlet implements ServletContextListene
 
     private static boolean routerInitializedWithContext = false;
 
+    @Override
     public void contextInitialized(ServletContextEvent e) {
         Play.standalonePlayServer = false;
         ClassLoader oldClassLoader = Thread.currentThread().getContextClassLoader();
@@ -90,6 +94,7 @@ public class ServletWrapper extends HttpServlet implements ServletContextListene
         Thread.currentThread().setContextClassLoader(oldClassLoader);
     }
 
+    @Override
     public void contextDestroyed(ServletContextEvent e) {
         Play.stop();
     }
@@ -512,20 +517,10 @@ public class ServletWrapper extends HttpServlet implements ServletContextListene
         if (servletResponse != null && is != null) {
             try {
                 OutputStream os = servletResponse.getOutputStream();
-                byte[] buffer = new byte[8096];
-                int read = 0;
-                while ((read = is.read(buffer)) > 0) {
-                    os.write(buffer, 0, read);
-                }
+                IOUtils.copyLarge(is, os);
                 os.flush();
-            } catch (IOException ex) {
-                throw ex;
-            }finally {
-                try {
-                    is.close();
-                } catch (IOException e) {
-                    Logger.error("Cannot close input stream.", e);
-                }
+            } finally {
+                closeQuietly(is);
             }
         }
     }
@@ -580,7 +575,7 @@ public class ServletWrapper extends HttpServlet implements ServletContextListene
         }
 
         @Override
-        public InvocationContext getInvocationContext() {
+        public InvocationContext getInvocationContext() throws NotFound, RenderStatic {
             ActionInvoker.resolve(request, response);
             return new InvocationContext(Http.invocationType,
                     request.invokedMethod.getAnnotations(),

@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,8 +14,9 @@ import java.util.regex.Pattern;
 
 import net.sf.oval.configuration.annotation.AbstractAnnotationCheck;
 import play.Play;
-import play.classloading.enhancers.LVEnhancer.LVEnhancerRuntime;
 import play.exceptions.UnexpectedException;
+import play.mvc.Http.Request;
+import play.utils.Utils;
 
 /**
  * 
@@ -77,10 +79,59 @@ public class Validation {
      * @param variables Message variables
      */
     public static void addError(String field, String message, String... variables) {
-        if (error(field) == null || !error(field).message.equals(message)) {
-            Validation.current().errors.add(new Error(field, message, variables));
+        insertError(Validation.current().errors.size(), field, message,  variables);
+    }
+    
+    /**
+     * Insert an error at the specified position in this list.
+     * @param index index at which the specified element is to be inserted
+     * @param field Field name
+     * @param message Message key
+     * @param variables Message variables
+     */
+    public static void insertError(int index, String field, String message, String... variables) {
+        Error error = error(field);
+        if (error == null || !error.message.equals(message)) {
+            Validation.current().errors.add(index, new Error(field, message, variables));
         }
     }
+    
+    /**
+     * Remove all errors on a field with the given message
+     * @param field Field name
+     * @param message Message key
+     */
+     public static void removeErrors(String field, String message) {
+         Validation validation = current.get();
+         if (validation != null) {
+             Iterator<Error> it = validation.errors.iterator();
+             while (it.hasNext()) {
+                 Error error = it.next();
+                 if (error.key != null && error.key.equals(field) && error.message.equals(message)) {
+                     it.remove();
+                 }
+             }
+         }
+     }
+     
+    /**
+    * Remove all errors on a field
+    * @param field Field name
+    */
+    public static void removeErrors(String field) {
+        Validation validation = current.get();
+        if (validation != null) {
+            Iterator<Error> it = validation.errors.iterator();
+            while (it.hasNext()) {
+                Error error = it.next();
+                if (error.key != null && error.key.equals(field)) {
+                    it.remove();
+                }
+            }
+        }
+    }
+    
+    
 
     /**
      * @return True if the current request has errors
@@ -90,6 +141,14 @@ public class Validation {
         return validation != null && validation.errors.size() > 0;
     }
 
+    /**
+     * @param field The field name
+     * @return true if field has some errors
+     */
+    public static boolean hasErrors(String field){
+        return error(field) != null;
+    }
+    
     /**
      * @param field The field name
      * @return First error related to this field
@@ -142,7 +201,9 @@ public class Validation {
 
     public static void clear() {
         current.get().errors.clear();
-        ValidationPlugin.keys.get().clear();
+        if(ValidationPlugin.keys.get() != null){
+            ValidationPlugin.keys.get().clear();
+        }
     }
 
     // ~~~~ Integration helper
@@ -437,11 +498,11 @@ public class Validation {
         check.maxSize = maxSize;
         return applyCheck(check, key, o);
     }
-//
-//    public ValidationResult maxSize(Object o, int maxSize) {
-//        String key = getLocalName(o);
-//        return Validation.maxSize(key, o, maxSize);
-//    }
+
+    public ValidationResult maxSize(Object o, int maxSize) {
+        String key = getLocalName(o);
+        return Validation.maxSize(key, o, maxSize);
+    }
 
     public static ValidationResult valid(String key, Object o) {
         ValidCheck check = new ValidCheck();
@@ -458,7 +519,13 @@ public class Validation {
         try {
             ValidationResult result = new ValidationResult();
             if (!check.isSatisfied(o, o, null, null)) {
-                Error error = new Error(key, check.getClass().getDeclaredField("mes").get(null) + "", check.getMessageVariables() == null ? new String[0] : check.getMessageVariables().values().toArray(new String[0]));
+                Error error = new Error(key, check.getClass()
+                        .getDeclaredField("mes").get(null)
+                        + "",
+                        check.getMessageVariables() == null ? new String[0]
+                                : check.getMessageVariables().values()
+                                        .toArray(new String[0]),
+                        check.getSeverity());
                 Validation.current().errors.add(error);
                 result.error = error;
                 result.ok = false;
@@ -472,8 +539,7 @@ public class Validation {
     }
 
     /**
-     * bran: XXX should have another way around using the local name tracer. 
-     * @deprecated
+     * bran: XXX should have another way around using the local name tracer. not sure the new logic is sound enough.
      * @param o
      * @return
      */
@@ -481,7 +547,9 @@ public class Validation {
     // And this not backward compatible as previously it was returning an empty
     // string instead of the object name.
     static String getLocalName(Object o) {
-        String[] names = LVEnhancerRuntime.getParamNames().params;
+    	// bran don't know how yet
+    	String[] names = Utils.getParamNames(Request.current().invokedMethod);
+//        String[] names = LVEnhancerRuntime.getParamNames().params;
         if(names.length > 0 && names[0] != null)
             return names[0];
         return "";

@@ -27,26 +27,23 @@ import play.classloading.ApplicationClasses.ApplicationClass;
 import play.exceptions.UnexpectedException;
 import play.libs.Codec;
 
+/**
+ * 
+ * bran: the original concept of this class was to create a markers to remember 
+ * local variables in action methods for use in Groovy templates. 
+ *
+ */
 public class LVEnhancer extends Enhancer {
     @Override
     public void enhanceThisClass(ApplicationClass applicationClass)
             throws Exception {    	
         CtClass ctClass = makeClass(applicationClass);
-        // bran: added exclusion of Enum
-        if(ctClass.isAnnotation() || ctClass.isInterface() || ctClass.isEnum())
+        if(ctClass.isAnnotation() || ctClass.isInterface())
             return;
-        
-        if (ctClass.getName().startsWith("japidviews."))
-        	return;
-        	
         for(CtBehavior behavior : ctClass.getDeclaredMethods()) {
             try {
                 if(behavior.isEmpty() || behavior.getMethodInfo().getCodeAttribute() == null || Utils.getLocalVariableAttribute(behavior) == null) {
-                	// bran: XXX there might be a bug? what if two methods of the same name having different signature? 
-                	// The field name would be the same and would cause duplicated field error!
-                	// Could this enhancer is intended for controllers, which are not supposed to have action methods of the same name?
-                    String fname = "public static String[] $" + behavior.getName() + "0 = new String[0];";
-					CtField signature = CtField.make(fname, ctClass);
+                    CtField signature = CtField.make("public static String[] $" + behavior.getName() + "0 = new String[0];", ctClass);
                     ctClass.addField(signature);
                     continue;
                 }

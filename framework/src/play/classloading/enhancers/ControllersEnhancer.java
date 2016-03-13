@@ -1,10 +1,13 @@
 package play.classloading.enhancers;
 
+import java.io.IOException;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.Stack;
+
+import bran.ControllerClassVisitor;
 import javassist.CannotCompileException;
 import javassist.CtClass;
 import javassist.CtField;
@@ -32,15 +35,40 @@ public class ControllersEnhancer extends Enhancer {
             return;
         }
 
-        CtClass ctClass = makeClass(applicationClass);
+        if (!applicationClass.name.startsWith("controllers.")) {
+        	return; 
+        }
+        
+        //  work? possibly due to conflict between javassist and djk8
+		CtClass ctClass = makeClass(applicationClass);
 
-        if (!ctClass.subtypeOf(classPool.get(ControllerSupport.class.getName()))) {
+        CtClass cc = classPool.get(ControllerSupport.class.getName());
+		if (!ctClass.subtypeOf(cc)) {
             return;
         }
+		
+		byte[] bytecode = enhanceByJavassist(ctClass, applicationClass);
+        
+// bran: my asm version of enhancer		
+//        byte[] bytecode = ControllerClassVisitor.visitController(applicationClass.enhancedByteCode);
+//        
+        if (bytecode != null)
+        	applicationClass.enhancedByteCode = bytecode;
+
+    }
+    
+    
+
+    /**
+     * the code here from the original play is not compatible with Java 8
+     * 
+     */
+	private byte[] enhanceByJavassist(CtClass ctClass, final ApplicationClass applicationClass) throws IOException, NotFoundException,
+			CannotCompileException, Exception {
 
         for (final CtMethod ctMethod : ctClass.getDeclaredMethods()) {
 
-            // Threaded access		bran: req -> Request.current(); 
+            // Threaded access		
             ctMethod.instrument(new ExprEditor() {
 
                 @Override
@@ -146,11 +174,10 @@ public class ControllersEnhancer extends Enhancer {
         }
 
         // Done.
-        applicationClass.enhancedByteCode = ctClass.toBytecode();
-
+        byte[] bytecode = ctClass.toBytecode();
         ctClass.defrost();
-
-    }
+		return bytecode;
+	}
 
     /**
      * Mark class that need controller enhancement

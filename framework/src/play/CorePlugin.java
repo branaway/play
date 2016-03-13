@@ -1,19 +1,25 @@
 package play;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
+import com.jamonapi.Monitor;
+import com.jamonapi.MonitorFactory;
+import com.jamonapi.utils.Misc;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.*;
 
 import org.apache.commons.lang.StringUtils;
+
 import play.Play.Mode;
 import play.classloading.ApplicationClasses.ApplicationClass;
 import play.classloading.enhancers.ContinuationEnhancer;
 import play.classloading.enhancers.ControllersEnhancer;
 import play.classloading.enhancers.Enhancer;
 import play.classloading.enhancers.LVEnhancer;
-import play.classloading.enhancers.MailerEnhancer;
-import play.classloading.enhancers.PropertiesEnhancer;
 import play.classloading.enhancers.SigEnhancer;
 import play.exceptions.UnexpectedException;
 import play.libs.Crypto;
@@ -26,6 +32,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.jamonapi.MonitorFactory;
 import com.jamonapi.utils.Misc;
+//import play.classloading.enhancers.LVEnhancer;
 
 /**
  * Plugin used for core tasks
@@ -171,20 +178,26 @@ public class CorePlugin extends PlayPlugin {
         try {
             out.println("Monitors:");
             out.println("~~~~~~~~");
-            Object[][] data = Misc.sort(MonitorFactory.getRootMonitor().getBasicData(), 3, "desc");
+            List<Monitor> monitors = new ArrayList<Monitor>(Arrays.asList(MonitorFactory.getRootMonitor().getMonitors()));
+            Collections.sort(monitors, new Comparator<Monitor>() {
+                @Override public int compare(Monitor m1, Monitor m2) {
+                    return Double.compare(m2.getTotal(), m1.getTotal());
+                }
+            });
             int lm = 10;
-            for (Object[] row : data) {
-                if (row[0].toString().length() > lm) {
-                    lm = row[0].toString().length();
+            for (Monitor monitor : monitors) {
+                if (monitor.getLabel().length() > lm) {
+                    lm = monitor.getLabel().length();
                 }
             }
-            for (Object[] row : data) {
-                if (((Double) row[1]) > 0) {
-                    out.println(String.format("%-" + (lm) + "s -> %8.0f hits; %8.1f avg; %8.1f min; %8.1f max;", row[0], row[1], row[2], row[6], row[7]));
+            for (Monitor monitor : monitors) {
+                if (monitor.getHits() > 0) {
+                    out.println(String.format("%-" + lm + "s -> %8.0f hits; %8.1f avg; %8.1f min; %8.1f max;",
+                        monitor.getLabel(), monitor.getHits(), monitor.getAvg(), monitor.getMin(), monitor.getMax()));
                 }
             }
         } catch (Exception e) {
-            out.println("No monitors found");
+            out.println("No monitors found: " + e);
         }
         return sw.toString();
     }
@@ -287,30 +300,26 @@ public class CorePlugin extends PlayPlugin {
 
     @Override
     public void enhance(ApplicationClass applicationClass) throws Exception {
-        Class<?>[] enhancers = new Class[]{
-            SigEnhancer.class,
-            ControllersEnhancer.class,
-            
-            ContinuationEnhancer.class,
-            LVEnhancer.class,
-            MailerEnhancer.class,
-
-//            PropertiesEnhancer.class // see what would happen bran:
-
-        };
-        
-        Logger.info("to enhance " + applicationClass.name);
-        
-        for (Class<?> enhancer : enhancers) {
-            try {
-                long start = System.currentTimeMillis();
-                ((Enhancer) enhancer.newInstance()).enhanceThisClass(applicationClass);
-                if (Logger.isTraceEnabled()) {
-                    Logger.trace("%sms to apply %s to %s", System.currentTimeMillis() - start, enhancer.getSimpleName(), applicationClass.name);
+        @SuppressWarnings("unchecked")
+		Class<? extends Enhancer>[] enhancers = new Class[]{
+                ContinuationEnhancer.class,  // is it working?
+                SigEnhancer.class,
+                ControllersEnhancer.class,
+//                MailerEnhancer.class,
+//                PropertiesEnhancer.class,
+                LVEnhancer.class
+            };
+            for (Class<? extends Enhancer> enhancer : enhancers) {
+                try {
+                    long start = System.currentTimeMillis();
+                    enhancer.newInstance().enhanceThisClass(applicationClass);
+                    if (Logger.isTraceEnabled()) {
+                        Logger.trace("%sms to apply %s to %s", System.currentTimeMillis() - start, enhancer.getSimpleName(), applicationClass.name);
+                    }
+                } catch (Exception e) {
+                    throw new UnexpectedException("While applying " + enhancer + " on " + applicationClass.name, e);
                 }
-            } catch (Exception e) {
-                throw new UnexpectedException("While applying " + enhancer + " on " + applicationClass.name, e);
             }
-        }
+
     }
 }

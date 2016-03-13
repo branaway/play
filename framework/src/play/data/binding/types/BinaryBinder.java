@@ -14,6 +14,7 @@ import play.mvc.Scope.Params;
 public class BinaryBinder implements TypeBinder<Model.BinaryField> {
 
     @SuppressWarnings("unchecked")
+    @Override
     public Object bind(String name, Annotation[] annotations, String value, Class actualClass, Type genericType) {
         if (value == null || value.trim().length() == 0) {
             return null;
@@ -25,7 +26,7 @@ public class BinaryBinder implements TypeBinder<Model.BinaryField> {
                 List<Upload> uploads = (List<Upload>) req.args.get("__UPLOADS");
                 if(uploads != null){
                     for (Upload upload : uploads) {
-                        if (upload.getFieldName().equals(value) && upload.getSize() > 0) {
+                        if (upload.getFieldName().equals(value) && upload.getSize() > 0 && upload.getFileName().trim().length() > 0) {
                             b.set(upload.asStream(), upload.getContentType());
                             return b;
                         }

@@ -4,6 +4,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -30,9 +31,9 @@ import javax.persistence.Query;
 import org.apache.commons.lang.StringUtils;
 
 import play.Play;
-import play.classloading.enhancers.LVEnhancer;
 import play.data.binding.BeanWrapper;
 import play.data.binding.Binder;
+import play.data.binding.BindingAnnotations;
 import play.data.binding.ParamNode;
 import play.data.validation.Validation;
 import play.exceptions.UnexpectedException;
@@ -53,19 +54,19 @@ public class GenericModel extends JPABase {
     /**
      * This method is deprecated. Use this instead:
      *
-     *  public static <T extends JPABase> T create(ParamNode rootParamNode, String name, Class<?> type, Annotation[] annotations)
+     *  public static &lt;T extends JPABase&gt; T create(ParamNode rootParamNode, String name, Class&lt;?&gt; type, Annotation[] annotations)
      */
-    @Deprecated
-    public static Object create(Class<?> type, String name, Map<String, String[]> params, Annotation[] annotations) {
-        ParamNode rootParamNode = ParamNode.convert(params);
-        return create(rootParamNode, name, type, annotations);
-    }
+//    @Deprecated
+//    public static Object create(Class<?> type, String name, Map<String, String[]> params, Annotation[] annotations) {
+//        ParamNode rootParamNode = ParamNode.convert(params);
+//        return create(rootParamNode, name, type, annotations);
+//    }
 
-    public static Object create(ParamNode rootParamNode, String name, Class<?> type, Annotation[] annotations) {
+    public static <T extends JPABase> T  create(ParamNode rootParamNode, String name, Class<T> type, Annotation[] annotations) {
         try {
-            Constructor<?> c = type.getDeclaredConstructor();
+            Constructor<T> c = type.getDeclaredConstructor();
             c.setAccessible(true);
-            Object model = c.newInstance();
+            T model = c.newInstance();
             return edit(rootParamNode, name, model, annotations);
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -75,22 +76,23 @@ public class GenericModel extends JPABase {
     /**
      * This method is deprecated. Use this instead:
      *
-     *  public static <T extends JPABase> T edit(ParamNode rootParamNode, String name, Object o, Annotation[] annotations)
+     *  public static &lt;T extends JPABase&gt; T edit(ParamNode rootParamNode, String name, Object o, Annotation[] annotations)
      *
-     * @return
+     * @see GenericModel#edit(ParamNode, String, Object, Annotation[])
+     * 
+     * @return the entity
      */
-    @Deprecated
-    public static Object edit(Object o, String name, Map<String, String[]> params, Annotation[] annotations) {
-        ParamNode rootParamNode = ParamNode.convert(params);
-        return edit( rootParamNode, name, o, annotations);
-    }
+//    @Deprecated
+//    public static Object edit(Object o, String name, Map<String, String[]> params, Annotation[] annotations) {
+//        ParamNode rootParamNode = ParamNode.convert(params);
+//        return edit( rootParamNode, name, o, annotations);
+//    }
 
-    @SuppressWarnings("deprecation")
-    public static Object edit(ParamNode rootParamNode, String name, Object o, Annotation[] annotations) {
+    public static <T extends JPABase> T edit(ParamNode rootParamNode, String name, T o, Annotation[] annotations) {
         // #1601 - If name is empty, we're dealing with "root" request parameters (without prefixes).
         // Must not call rootParamNode.getChild in that case, as it returns null. Use rootParamNode itself instead.
         ParamNode paramNode = StringUtils.isEmpty(name) ? rootParamNode : rootParamNode.getChild(name, true);
-        // #1195 - Needs to keep track of whick keys we remove so that we can restore it before
+        // #1195 - Needs to keep track of which keys we remove so that we can restore it before
         // returning from this method.
         List<ParamNode.RemovedNode> removedNodesList = new ArrayList<ParamNode.RemovedNode>();
         try {
@@ -106,7 +108,15 @@ public class GenericModel extends JPABase {
                 boolean isEntity = false;
                 String relation = null;
                 boolean multiple = false;
-                //
+                
+                // First try the field 
+                Annotation[] fieldAnnotations = field.getAnnotations();
+                // and check with the profiles annotations
+                final BindingAnnotations bindingAnnotations = new BindingAnnotations(fieldAnnotations, new BindingAnnotations(annotations).getProfiles());
+                if (bindingAnnotations.checkNoBinding()) {
+                    continue;
+                }
+                
                 if (field.isAnnotationPresent(OneToOne.class) || field.isAnnotationPresent(ManyToOne.class)) {
                     isEntity = true;
                     relation = field.getType().getName();
@@ -138,7 +148,7 @@ public class GenericModel extends JPABase {
                                 // Remove it to prevent us from finding it again later
                                 fieldParamNode.removeChild(keyName, removedNodesList);
                                 for (String _id : ids) {
-                                    if (_id.equals("")) {
+                                    if (_id == null || _id.equals("")) {
                                         continue;
                                     }
                                     Query q = em.createQuery("from " + relation + " where " + keyName + " = ?1");
@@ -160,7 +170,7 @@ public class GenericModel extends JPABase {
                                 q.setParameter(1, Binder.directBind(rootParamNode.getOriginalKey(), annotations, ids[0], Model.Manager.factoryFor((Class<Model>) Play.classloader.loadClass(relation)).keyType(), null));
                                 try {
                                     Object to = q.getSingleResult();
-                                    edit(paramNode, field.getName(), to, field.getAnnotations());
+                                    edit(paramNode, field.getName(), (T) to, field.getAnnotations());
                                     // Remove it to prevent us from finding it again later
                                     paramNode.removeChild( field.getName(), removedNodesList);
                                     bw.set(field.getName(), o, to);
@@ -201,7 +211,7 @@ public class GenericModel extends JPABase {
     /**
      * This method is deprecated. Use this instead:
      *
-     *  public <T extends GenericModel> T edit(ParamNode rootParamNode, String name)
+     *  public &lt;T extends GenericModel&gt; T edit(ParamNode rootParamNode, String name)
      */
     @Deprecated
     public <T extends GenericModel> T edit(String name, Map<String, String[]> params) {
@@ -215,12 +225,18 @@ public class GenericModel extends JPABase {
     }
 
     public boolean validateAndSave() {
-        if (Validation.valid(LVEnhancer.LVEnhancerRuntime.getParamNames().subject, this).ok) {
+        if (Validation.valid(getKey(), this).ok) {
             save();
             return true;
         }
         return false;
     }
+
+	private String getKey(){
+		// bran method name?
+		//return LVEnhancer.LVEnhancerRuntime.getParamNames().subject;
+		return null;
+	}
 
     public boolean validateAndCreate() {
 		if (Validation.valid(this.getClass().getName(), this).ok) {
@@ -273,8 +289,9 @@ public class GenericModel extends JPABase {
         return (T) this;
     }
 
+
     public static <T extends GenericModel> T create(String name, Params params) {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation. JPA enhancer process must be functional.");
     }
 
     /**
@@ -282,7 +299,7 @@ public class GenericModel extends JPABase {
      * @return number of entities of this class
      */
     public static long count() {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation and make sure it gets enhanced.");
     }
 
     /**
@@ -293,14 +310,14 @@ public class GenericModel extends JPABase {
      * @return A long
      */
     public static long count(String query, Object... params) {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation. JPA enhancer process must be functional.");
     }
 
     /**
      * Find all entities of this type
      */
     public static <T extends GenericModel> List<T> findAll() {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation. JPA enhancer process must be functional.");
     }
 
     /**
@@ -309,7 +326,7 @@ public class GenericModel extends JPABase {
      * @return The entity
      */
     public static <T extends GenericModel> T findById(Object id) {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation. JPA enhancer process must be functional.");
     }
 
     /**
@@ -322,7 +339,7 @@ public class GenericModel extends JPABase {
      * @return
      */
     public static <T extends GenericModel> T findOneBy(String query, Object[] params) {
-    	throw new UnsupportedOperationException("Model not enhanced. Please annotate your JPA model with @javax.persistence.Entity annotation.");
+    	throw new UnsupportedOperationException("Model not enhanced. Please annotate your JPA model with @javax.persistence.Entity annotation. JPA enhancer process must be functional.");
     }
 
     /**
@@ -332,7 +349,7 @@ public class GenericModel extends JPABase {
      * @return A JPAQuery
      */
     public static JPAQuery find(String query, Object... params) {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation. JPA enhancer process must be functional.");
     }
 
     /**
@@ -340,7 +357,7 @@ public class GenericModel extends JPABase {
      * @return A JPAQuery
      */
     public static JPAQuery all() {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation. JPA enhancer process must be functional.");
     }
 
     /**
@@ -350,7 +367,7 @@ public class GenericModel extends JPABase {
      * @return Number of entities deleted
      */
     public static int delete(String query, Object... params) {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation. JPA enhancer process must be functional.");
     }
 
     /**
@@ -358,7 +375,7 @@ public class GenericModel extends JPABase {
      * @return Number of entities deleted
      */
     public static int deleteAll() {
-        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation.");
+        throw new UnsupportedOperationException("Please annotate your JPA model with @javax.persistence.Entity annotation. JPA enhancer process must be functional.");
     }
 
     /**

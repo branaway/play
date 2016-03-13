@@ -13,29 +13,35 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.mail.*;
-
-import play.Logger;
-import play.Play;
-import play.classloading.enhancers.LVEnhancer.LVEnhancerRuntime;
-import play.exceptions.MailException;
-import play.exceptions.TemplateNotFoundException;
-import play.exceptions.UnexpectedException;
-import play.libs.Mail;
-import play.libs.MimeTypes;
-import play.templates.Template;
-import play.templates.TemplateLoader;
-import play.vfs.VirtualFile;
-
 import javax.activation.DataSource;
 import javax.activation.URLDataSource;
 import javax.mail.internet.InternetAddress;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang.StringUtils;
+
+import org.apache.commons.mail.Email;
+import org.apache.commons.mail.EmailAttachment;
+import org.apache.commons.mail.EmailException;
+import org.apache.commons.mail.HtmlEmail;
+import org.apache.commons.mail.MultiPartEmail;
+import org.apache.commons.mail.SimpleEmail;
+
+import play.Logger;
+import play.Play;
+import play.exceptions.MailException;
+import play.exceptions.TemplateNotFoundException;
+import play.exceptions.UnexpectedException;
 import play.libs.F;
 import play.libs.F.T4;
-
+import play.libs.Mail;
+import play.libs.MimeTypes;
+import play.mvc.Http.Request;
+import play.templates.Template;
+import play.templates.TemplateLoader;
+import play.utils.Utils;
+import play.vfs.VirtualFile;
 /**
  * Application mailer support
  */
@@ -140,6 +146,25 @@ public class Mailer {
        attachDataSource(dataSource, name, description, EmailAttachment.ATTACHMENT);
     }
     
+	public static String attachInlineEmbed(DataSource dataSource, String name) {
+		HashMap<String, Object> map = infos.get();
+		if (map == null) {
+			throw new UnexpectedException("Mailer not instrumented ?");
+		}
+		
+		InlineImage inlineImage = new InlineImage(dataSource);
+		
+		Map<String, InlineImage> inlineEmbeds = (Map<String, InlineImage>) map.get("inlineEmbeds");
+		if (inlineEmbeds == null) {
+			inlineEmbeds = new HashMap<String, InlineImage>();
+			map.put("inlineEmbeds", inlineEmbeds);
+		}
+		
+		inlineEmbeds.put(name, inlineImage);
+		infos.set(map);
+		
+		return "cid:" + inlineImage.cid;
+	}
 
     public static void setContentType(String contentType) {
         HashMap<String, Object> map = infos.get();
@@ -151,7 +176,7 @@ public class Mailer {
     }
 
     /**
-     * Can be of the form xxx <m@m.com>
+     * Can be of the form xxx &lt;m@m.com&gt;
      *
      * @param from
      */
@@ -170,9 +195,13 @@ public class Mailer {
         /** <code>DataSource</code> for the content */
         private final DataSource dataSource;
 
+        public InlineImage(DataSource dataSource) {
+        	this(null, dataSource);
+        }
+
         public InlineImage(String cid, DataSource dataSource) {
             super();
-            this.cid = cid;
+            this.cid = cid != null ? cid : RandomStringUtils.randomAlphabetic(HtmlEmail.CID_LENGTH).toLowerCase();
             this.dataSource = dataSource;
         }
 
@@ -309,22 +338,11 @@ public class Mailer {
             IOUtils.closeQuietly(is);
         }
 
-        String cid = RandomStringUtils.randomAlphabetic(HtmlEmail.CID_LENGTH)
-                .toLowerCase();
-        InlineImage ii = new InlineImage(cid, dataSource);
-
-        if (inlineEmbeds == null) {
-            inlineEmbeds = new HashMap<String, InlineImage>();
-            map.put("inlineEmbeds", inlineEmbeds);
-        }
-        inlineEmbeds.put(name, ii);
-        infos.set(map);
-
-        return "cid:" + cid;
+        return attachInlineEmbed(dataSource, name);
     }
 
     /**
-     * Can be of the form xxx <m@m.com>
+     * Can be of the form xxx &lt;m@m.com&gt;
      *
      * @param replyTo
      */
@@ -389,7 +407,7 @@ public class Mailer {
             templateName = templateName.substring(0, templateName.indexOf("("));
             templateName = templateName.replace(".", "/");
 
-            String[] names = LVEnhancerRuntime.getParamNames().mergeParamsAndVarargs();
+            String[] names = Utils.getParamNames(Request.current().invokedMethod)/*.mergeParamsAndVarargs()*/;
             
             // overrides Template name
             if (args.length > 0 && args[0] instanceof String && names[0] == null) {

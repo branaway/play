@@ -25,11 +25,16 @@ import play.exceptions.UnexpectedException;
 
 /**
  * Generate valid JavaBeans. 
+ * 
+ * bran: for creating getters and setters for entity properties, for using beans in Groovy templates.
+ *  
  */
 public class PropertiesEnhancer extends Enhancer {
 
     @Override
     public void enhanceThisClass(ApplicationClass applicationClass) throws Exception {
+
+        if(!Boolean.parseBoolean(Play.configuration.getProperty("play.propertiesEnhancer.enabled", "true"))) return;
 
         final CtClass ctClass = makeClass(applicationClass);
         if (ctClass.isInterface()) {
@@ -39,10 +44,6 @@ public class PropertiesEnhancer extends Enhancer {
             return;
         }
 
-        // bran
-        if (ctClass.getName().startsWith("japidviews."))
-        	return;
-        
         // Add a default constructor if needed
         try {
             boolean hasDefaultConstructor = false;
@@ -148,6 +149,7 @@ public class PropertiesEnhancer extends Enhancer {
 
                             // Getter or setter ?
                             String propertyName = null;
+                                                        
                             if (fieldAccess.getField().getDeclaringClass().equals(ctMethod.getDeclaringClass())
                                 || ctMethod.getDeclaringClass().subclassOf(fieldAccess.getField().getDeclaringClass())) {
                                 if ((ctMethod.getName().startsWith("get") || (!isFinal(fieldAccess.getField()) && ctMethod.getName().startsWith("set"))) && ctMethod.getName().length() > 3) {
@@ -159,7 +161,7 @@ public class PropertiesEnhancer extends Enhancer {
                             // To intercept getter of its own property
                             if (propertyName == null || !propertyName.equals(fieldAccess.getFieldName())) {
 
-                                String invocationPoint = ctClass.getName() + "." + ctMethod.getName() + "(), line " + fieldAccess.getLineNumber();
+                                String invocationPoint = ctClass.getName() + "." + ctMethod.getName() + ", line " + fieldAccess.getLineNumber();
 
                                 if (fieldAccess.isReader()) {
 

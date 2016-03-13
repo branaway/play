@@ -1,6 +1,7 @@
 package play.mvc;
 
 import java.util.concurrent.Future;
+
 import play.classloading.enhancers.ControllersEnhancer.ControllerSupport;
 import play.data.validation.Validation;
 import play.libs.F;
@@ -39,7 +40,7 @@ public class WebSocketController implements ControllerSupport {
         Controller.await(future, callback);
     }
 
-    protected static void disconnect() {
+    protected static void disconnect() throws WebSocketDisconnect {
         throw new WebSocketDisconnect();
     }
 

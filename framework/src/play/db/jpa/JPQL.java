@@ -9,6 +9,7 @@ import javax.persistence.Query;
 import play.Play;
 import play.data.binding.ParamNode;
 import play.data.binding.RootParamNode;
+import play.db.DB;
 import play.db.DBConfig;
 import play.db.jpa.GenericModel.JPAQuery;
 import play.mvc.Scope.Params;
@@ -21,7 +22,7 @@ import play.mvc.Scope.Params;
 public class JPQL {
 
     /**
-     * Use JPAConfig.jpql instead
+     * Use JPAConfig.jpql instead for multi-DB support
      */
     @Deprecated
     public static JPQL instance = null;
@@ -55,27 +56,29 @@ public class JPQL {
                 createCountQuery(entity, entity, query, params)), params).getSingleResult().toString());
     }
 
-    public List findAll(String entity) {
+    @SuppressWarnings("unchecked")
+	public List<? extends GenericModel>  findAll(String entity) {
         return em().createQuery("select e from " + entity + " e").getResultList();
     }
-
-    public GenericModel findById(String entity, Object id) throws Exception {
-        return (GenericModel) em().find(Play.classloader.loadClass(entity), id);
+    
+    public <T extends GenericModel> T findById(Class<T> entity, Object id){
+        return em().find(entity, id);
     }
 
-    public List findBy(String entity, String query, Object[] params) {
+    @SuppressWarnings("unchecked")
+	public List <? extends GenericModel> findBy(String entity, String query, Object[] params) {
         Query q = em().createQuery(
                 createFindByQuery(entity, entity, query, params));
         return bindParameters(q, params).getResultList();
     }
-
+    
     public JPAQuery find(String entity, String query, Object[] params) {
         Query q = em().createQuery(
                 createFindByQuery(entity, entity, query, params));
         return new JPAQuery(
                 createFindByQuery(entity, entity, query, params), bindParameters(q, params));
     }
-
+    
     public JPAQuery find(String entity) {
         Query q = em().createQuery(
                 createFindByQuery(entity, entity, null));
@@ -101,7 +104,7 @@ public class JPQL {
                 createDeleteQuery(entity, entity, null));
         return bindParameters(q).executeUpdate();
     }
-
+    
     public GenericModel findOneBy(String entity, String query, Object[] params) {
         Query q = em().createQuery(
                 createFindByQuery(entity, entity, query, params));
@@ -112,15 +115,20 @@ public class JPQL {
         return (GenericModel) results.get(0);
     }
 
-    public GenericModel create(String entity, String name, Params params) throws Exception {
-        Object o = Play.classloader.loadClass(entity).newInstance();
+    public <T extends GenericModel> T create(Class<T> entity, String name, Params params) {
+        Object o;
+		try {
+			o = entity.newInstance();
+		} catch (InstantiationException | IllegalAccessException e) {
+			throw new RuntimeException(e);
+		}
 
         RootParamNode rootParamNode = ParamNode.convert(params.all());
 
         return ((GenericModel) o).edit(rootParamNode, name);
     }
 
-    public String createFindByQuery(String entityName, String entityClass, String query, Object... params) {
+    private String createFindByQuery(String entityName, String entityClass, String query, Object... params) {
         if (query == null || query.trim().length() == 0) {
             return "from " + entityName;
         }
@@ -144,8 +152,8 @@ public class JPQL {
         }
         return "from " + entityName + " where " + query;
     }
-
-    public String createDeleteQuery(String entityName, String entityClass, String query, Object... params) {
+    
+    private String createDeleteQuery(String entityName, String entityClass, String query, Object... params) {
         if (query == null) {
             return "delete from " + entityName;
         }
@@ -164,7 +172,7 @@ public class JPQL {
         return "delete from " + entityName + " where " + query;
     }
 
-    public String createCountQuery(String entityName, String entityClass, String query, Object... params) {
+    private String createCountQuery(String entityName, String entityClass, String query, Object... params) {
         if (query.trim().toLowerCase().startsWith("select ")) {
             return query;
         }
@@ -190,7 +198,7 @@ public class JPQL {
     }
 
     @SuppressWarnings("unchecked")
-    public Query bindParameters(Query q, Object... params) {
+    private Query bindParameters(Query q, Object... params) {
         if (params == null) {
             return q;
         }
@@ -203,7 +211,7 @@ public class JPQL {
         return q;
     }
 
-    public Query bindParameters(Query q, Map<String,Object> params) {
+    private Query bindParameters(Query q, Map<String,Object> params) {
         if (params == null) {
             return q;
         }
@@ -213,7 +221,7 @@ public class JPQL {
         return q;
     }
 
-    public String findByToJPQL(String findBy) {
+    private String findByToJPQL(String findBy) {
         findBy = findBy.substring(2);
         StringBuilder jpql = new StringBuilder();
         String subRequest;

@@ -2,6 +2,8 @@ package play.utils;
 
 /**
  * Fast Exception - skips creating stackTrace.
+ * 
+ * bran: changed from RuntimeException to Exception 
  *
  * More info here: http://www.javaspecialists.eu/archive/Issue129.html
  */
@@ -29,7 +31,7 @@ public class FastRuntimeException extends RuntimeException {
      * @return always null
      */
     @Override
-	public Throwable fillInStackTrace() {
+    public Throwable fillInStackTrace() {
         return null;
     }
 }

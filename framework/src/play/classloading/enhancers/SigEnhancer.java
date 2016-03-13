@@ -1,5 +1,7 @@
 package play.classloading.enhancers;
 
+import java.util.Set;
+
 import javassist.CtClass;
 import javassist.CtField;
 import javassist.CtMethod;
@@ -12,11 +14,13 @@ import play.classloading.ApplicationClasses.ApplicationClass;
 
 /**
  * Compute a unique hash for the class signature.
+ * bran: added annotation member values as part signature. fixed field part of signature
  */
 public class SigEnhancer extends Enhancer {
 
-    @Override
+	@Override
     public void enhanceThisClass(ApplicationClass applicationClass) throws Exception {
+		
         if (isScala(applicationClass)) {
             return;
         }
@@ -28,46 +32,45 @@ public class SigEnhancer extends Enhancer {
 
         StringBuilder sigChecksum = new StringBuilder();
 
-        sigChecksum.append("Class->" + ctClass.getName() + ":");
+        sigChecksum.append("Class->").append(ctClass.getName()).append(":");
         for (Annotation annotation : getAnnotations(ctClass).getAnnotations()) {
             sigChecksum.append(annotation + ",");
+            addAnnoMembers(sigChecksum, annotation);
         }
 
         for (CtField field : ctClass.getDeclaredFields()) {
-            sigChecksum.append(" Field->" + ctClass.getName() + " " + field.getSignature() + ":");
-            sigChecksum.append(field.getSignature());
+            sigChecksum.append(" Field->" + field.toString() + ":" + field.getModifiers());
+// old code bran
+//            sigChecksum.append(" Field->").append(ctClass.getName()).append(" ").append(field.getSignature()).append(":");
+//            sigChecksum.append(field.getSignature());
             for (Annotation annotation : getAnnotations(field).getAnnotations()) {
                 sigChecksum.append(annotation + ",");
+                addAnnoMembers(sigChecksum, annotation);
             }
         }
 
         for (CtMethod method : ctClass.getDeclaredMethods()) {
-            sigChecksum.append(" Method->" + method.getName() + method.getSignature() + ":");
+            sigChecksum.append(" Method->" + method.getModifiers() + method.getName() + method.getSignature() + ":");
             for (Annotation annotation : getAnnotations(method).getAnnotations()) {
                 sigChecksum.append(annotation + " ");
+                addAnnoMembers(sigChecksum, annotation);
             }
+            if(javassist.Modifier.isAbstract(method.getModifiers()))
+            		continue;
             // Signatures names
-            // bran
-            if (applicationClass.name.startsWith("japidviews.")) {
-            	// bran: ignore localvar change for japidviews.
-            	continue;
-            }
-    
-            // bran: how about no check on local vars at all?
-            // this for controllers so that the old rendering engine will match locals to the references in the Groovy views. 
-            // leave them here for now for compatibility. 
-            CodeAttribute codeAttribute = (CodeAttribute) method.getMethodInfo().getAttribute("Code");
-            if (codeAttribute == null || javassist.Modifier.isAbstract(method.getModifiers())) {
-                continue;
-            }
-            LocalVariableAttribute localVariableAttribute = (LocalVariableAttribute) codeAttribute.getAttribute("LocalVariableTable");
-            if (localVariableAttribute != null) {
-                for (int i = 0; i < localVariableAttribute.tableLength(); i++) {
-                    sigChecksum.append(localVariableAttribute.variableName(i) + ",");
-                }
+            if (isController(applicationClass)) {
+	            CodeAttribute codeAttribute = (CodeAttribute) method.getMethodInfo().getAttribute("Code");
+	            if (codeAttribute == null || javassist.Modifier.isAbstract(method.getModifiers())) {
+	                continue;
+	            }
+	            LocalVariableAttribute localVariableAttribute = (LocalVariableAttribute) codeAttribute.getAttribute("LocalVariableTable");
+	            if (localVariableAttribute != null) {
+	                for (int i = 0; i < localVariableAttribute.tableLength(); i++) {
+	                    sigChecksum.append(localVariableAttribute.variableName(i)).append(",");
+	                }
+	            }
             }
         }
-
         if (ctClass.getClassInitializer() != null) {
             sigChecksum.append("Static Code->");
             for (CodeIterator i = ctClass.getClassInitializer().getMethodInfo().getCodeAttribute().iterator(); i.hasNext();) {
@@ -75,8 +78,7 @@ public class SigEnhancer extends Enhancer {
                 int op = i.byteAt(index);
                 sigChecksum.append(op);
                 if (op == Opcode.LDC) {
-                    sigChecksum.append("[" + i.get().getConstPool().getLdcValue(i.byteAt(index + 1)) + "]");
-                    ;
+                    sigChecksum.append("[").append(i.get().getConstPool().getLdcValue(i.byteAt(index + 1))).append("]");
                 }
                 sigChecksum.append(".");
             }
@@ -89,14 +91,23 @@ public class SigEnhancer extends Enhancer {
                 int op = i.byteAt(index);
                 sigChecksum.append(op);
                 if (op == Opcode.LDC) {
-                    sigChecksum.append("[" + i.get().getConstPool().getLdcValue(i.byteAt(index + 1)) + "]");
-                    ;
+                    sigChecksum.append("[").append(i.get().getConstPool().getLdcValue(i.byteAt(index + 1))).append("]");
                 }
                 sigChecksum.append(".");
             }
         }
 
         // Done.
+        applicationClass.sigChecksumString = sigChecksum.toString();
         applicationClass.sigChecksum = sigChecksum.toString().hashCode();
     }
+
+	@SuppressWarnings("unchecked")
+	private void addAnnoMembers(StringBuilder sigChecksum, Annotation annotation) {
+		Set<String> set = (Set<String>) annotation.getMemberNames();
+		if (set != null)
+			set.forEach(mem -> {
+				sigChecksum.append(mem + ":" + annotation.getMemberValue(mem));
+			});
+	}
 }

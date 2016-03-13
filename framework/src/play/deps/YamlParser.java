@@ -5,13 +5,14 @@ import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.FileInputStream;
 import java.net.URL;
 import java.text.ParseException;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -37,6 +38,7 @@ import org.yaml.snakeyaml.Yaml;
 
 import play.Logger;
 import play.Play;
+import play.libs.IO;
 
 public class YamlParser extends AbstractModuleDescriptorParser {
 
@@ -47,10 +49,11 @@ public class YamlParser extends AbstractModuleDescriptorParser {
         }
     }
 
+    @Override
     public boolean accept(Resource rsrc) {
         return rsrc.exists() && rsrc.getName().endsWith(".yml");
     } 
-    
+    @Override
     public ModuleDescriptor parseDescriptor(ParserSettings ps, URL url, Resource rsrc, boolean bln) throws ParseException, IOException {
         try {
             InputStream srcStream =  rsrc.openStream();
@@ -108,6 +111,39 @@ public class YamlParser extends AbstractModuleDescriptorParser {
 
             boolean transitiveDependencies = get(data, "transitiveDependencies", boolean.class, true);
             
+            List<String> confs = new ArrayList<String>();
+            if (data.containsKey("configurations")) {
+                if (data.get("configurations") instanceof List) {
+                    boolean allExcludes = true;
+                    List configurations = (List) data.get("configurations");
+                    for (Object conf : configurations) {
+                        String confName;
+                        Map options;
+                        
+                        if (conf instanceof String) {
+                            confName = ((String) conf).trim();
+                            options = new HashMap();
+                        } else if (conf instanceof Map) {
+                            confName = ((Map) conf).keySet().iterator().next().toString().trim();
+                            options = (Map) ((Map) conf).values().iterator().next();
+                        } else {
+                            throw new Oops("Unknown configuration format -> " + conf);
+                        }
+                        boolean exclude = options.containsKey("exclude") && options.get("exclude") instanceof Boolean ? (Boolean) options.get("exclude") : false;
+                        allExcludes &=  exclude;
+                        confs.add((exclude ? "!" : "") + confName);
+                    }
+                    
+                    if (allExcludes) {
+                        confs.add(0, "*");
+                    }
+                } else {
+                    throw new Oops("Unknown \"configurations\" format -> " + data.get("self"));
+                }
+            } else {
+                confs.add("*");
+            }
+            
             if (data.containsKey("require")) {
                 if (data.get("require") instanceof List) {
 
@@ -139,11 +175,15 @@ public class YamlParser extends AbstractModuleDescriptorParser {
                             depName = "play -> secure " + System.getProperty("play.version");
                         }
 
+                        // Pattern compile to match [organisation name] - > [artifact] [revision] [classifier]
                         Matcher m = Pattern.compile("([^\\s]+)\\s*[-][>]\\s*([^\\s]+)\\s+([^\\s]+)(\\s+[^\\s]+)?.*").matcher(depName);
                         if (!m.matches()) {
+                         // Pattern compile to match [artifact] [revision] [classifier]
                             m = Pattern.compile("(([^\\s]+))\\s+([^\\s]+)(\\s+[^\\s]+)?.*").matcher(depName);
                             if (!m.matches()) {
                                 throw new Oops("Unknown dependency format -> " + depName);
+                            } else if( m.groupCount() >= 3 && m.group(3).trim().equals("->")){
+                                throw new Oops("Missing revision in dependency format (use \"latest.integration\" to  matches all versions) -> " + depName);
                             }
                         }
                         HashMap extraAttributesMap = null;
@@ -160,7 +200,9 @@ public class YamlParser extends AbstractModuleDescriptorParser {
                         boolean changing = options.containsKey("changing") && options.get("changing") instanceof Boolean ? (Boolean) options.get("changing") : false;
 
                         DefaultDependencyDescriptor depDescriptor = new DefaultDependencyDescriptor(descriptor, depId, force, changing, transitive);
-                        depDescriptor.addDependencyConfiguration("default", "*");
+                        for (String conf : confs) {
+                            depDescriptor.addDependencyConfiguration("default", conf);
+                        }
 
                         // Exclude transitive dependencies
                         if (options.containsKey("exclude") && options.get("exclude") instanceof List) {
@@ -224,8 +266,9 @@ public class YamlParser extends AbstractModuleDescriptorParser {
         }
     }
 
+    @Override
     public void toIvyFile(InputStream in, Resource rsrc, File file, ModuleDescriptor md) throws ParseException, IOException {
-        ((DefaultModuleDescriptor)md).toIvyFile(file);
+        md.toIvyFile(file);
     }
 
     @SuppressWarnings("unchecked")
@@ -251,23 +294,50 @@ public class YamlParser extends AbstractModuleDescriptorParser {
         return o;
     }
 
-    public static List<String> getOrderedModuleList(File file) throws FileNotFoundException, ParseException, IOException {
-        List<String> modules = new ArrayList<String>();
+    public static Set<String> getOrderedModuleList(File file) throws ParseException, IOException {
+        Set<String> modules = new LinkedHashSet<String>();
+        System.setProperty("application.path", Play.applicationPath.getAbsolutePath());
+        return getOrderedModuleList(modules, file);
+    }
+        
+   private static Set<String> getOrderedModuleList(Set<String> modules, File file) throws ParseException, IOException {
         if (file == null || !file.exists()) {
             throw new FileNotFoundException("There was a problem to find the file");
         }
-        System.setProperty("application.path", Play.applicationPath.getAbsolutePath());
 
         YamlParser parser = new YamlParser();
 
         ModuleDescriptor md = parser.parseDescriptor(null, null, new URLResource(file.toURI().toURL()), true);
 
         DependencyDescriptor[] rules = md.getDependencies();
+        File localModules = Play.getFile("modules");
         for (DependencyDescriptor dep : rules) {
-            ModuleRevisionId rev = dep.getDependencyRevisionId();
+            ModuleRevisionId rev = dep.getDependencyRevisionId();       
             String moduleName = filterModuleName(rev);
-            if (moduleName != null) {
+            
+            // Check if the module was already load to avoid circular parsing
+            if (moduleName != null && !modules.contains(moduleName)) {
+                // Add the given module
                 modules.add(moduleName);
+                
+                // Need to load module dependencies of this given module 
+                File module = new File(localModules, moduleName);
+                if(module != null && module.isDirectory()) {  
+                    File ivyModule = new File(module, "conf/dependencies.yml");
+                    if(ivyModule != null && ivyModule.exists()) {
+                        getOrderedModuleList(modules, ivyModule);
+                    }    
+                } else {
+                    File modulePath = new File(IO.readContentAsString(module).trim());
+                    if (modulePath.exists() && modulePath.isDirectory()) {
+                        File ivyModule = new File(modulePath, "conf/dependencies.yml");
+                        if(ivyModule != null && ivyModule.exists()) {
+                            getOrderedModuleList(modules, ivyModule);
+                        } 
+                    }
+                }
+            } else if(moduleName == null && rev.getRevision().equals("->")){
+                Logger.error("Revision is required, module [%s -> %s] will not be loaded.", rev.getName(), rev.getExtraAttribute("classifier"));
             }
         }
         return modules;

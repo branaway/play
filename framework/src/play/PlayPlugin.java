@@ -1,15 +1,6 @@
 package play;
 
-import java.lang.annotation.Annotation;
 import com.google.gson.JsonObject;
-import java.lang.reflect.Method;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
 import play.classloading.ApplicationClasses.ApplicationClass;
 import play.data.binding.RootParamNode;
 import play.db.Model;
@@ -22,6 +13,14 @@ import play.templates.Template;
 import play.test.BaseTest;
 import play.test.TestEngine.TestResults;
 import play.vfs.VirtualFile;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.lang.reflect.Type;
+import java.util.*;
+
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 
 /**
  * A framework plugin
@@ -254,6 +253,12 @@ public abstract class PlayPlugin implements Comparable<PlayPlugin> {
     }
 
     /**
+     * Called at the end of the action invocation (either in case of success or any failure).
+     */
+    public void onActionInvocationFinally() {
+    }
+
+    /**
      * Called when the application.conf has been read.
      */
     public void onConfigurationRead() {
@@ -274,11 +279,11 @@ public abstract class PlayPlugin implements Comparable<PlayPlugin> {
     }
 
     public List<ApplicationClass> onClassesChange(List<ApplicationClass> modified) {
-        return new ArrayList<ApplicationClass>();
+        return emptyList();
     }
 
     public List<String> addTemplateExtensions() {
-        return new ArrayList<String>();
+        return emptyList();
     }
 
     /**
@@ -287,7 +292,7 @@ public abstract class PlayPlugin implements Comparable<PlayPlugin> {
      * @return a Map from extensions (without dot) to mimetypes
      */
     public Map<String, String> addMimeTypes() {
-        return new HashMap<String, String>();
+        return emptyMap();
     }
 
     /**
@@ -322,23 +327,23 @@ public abstract class PlayPlugin implements Comparable<PlayPlugin> {
     public void onApplicationReady() {
     }
 
-    // ~~~~~
+    @Override
     public int compareTo(PlayPlugin o) {
         int res = index < o.index ? -1 : (index == o.index ? 0 : 1);
-        if (res!=0) {
+        if (res != 0) {
             return res;
         }
 
         // index is equal in both plugins.
-        // sort on classtype to get consistent order
+        // Sort on class type to get consistent order
         res = this.getClass().getName().compareTo(o.getClass().getName());
-        if (res != 0 ) {
+        if (res != 0) {
             // classnames where different
             return res;
         }
 
-        // identical classnames.
-        // sort on instance to get consistent order.
+        // Identical classnames.
+        // Sort on instance to get consistent order.
         // We only return 0 (equal) if both identityHashCode are identical
         // which is only the case if both this and other are the same object instance.
         // This is consistent with equals() when no special equals-method is implemented.
@@ -358,32 +363,32 @@ public abstract class PlayPlugin implements Comparable<PlayPlugin> {
     /**
      * Implement to add some classes that should be considered unit tests but do not extend
      * {@link org.junit.Assert} to tests that can be executed by test runner (will be visible in test UI).
-     * <p/>
+     * <p>
      * <strong>Note:</strong>You probably will also need to override {@link PlayPlugin#runTest(java.lang.Class)} method
      * to handle unsupported tests execution properly.
-     * <p/>
+     * <p>
      * Keep in mind that this method can only add tests to currently loaded ones.
      * You cannot disable tests this way. You should also make sure you do not duplicate already loaded tests.
      * 
      * @return list of plugin supported unit test classes (empty list in default implementation)
      */
     public Collection<Class> getUnitTests() {
-        return Collections.emptyList();
+        return emptyList();
     }
 
     /**
      * Implement to add some classes that should be considered functional tests but do not extend
      * {@link play.test.FunctionalTest} to tests that can be executed by test runner (will be visible in test UI).
-     * <p/>
+     * <p>
      * <strong>Note:</strong>You probably will also need to override {@link PlayPlugin#runTest(java.lang.Class)} method
      * to handle unsupported tests execution properly.
-     * <p/>
+     * <p>
      * Keep in mind that this method can only add tests to currently loaded ones.
      * You cannot disable tests this way. You should also make sure you do not duplicate already loaded tests.
      *
      * @return list of plugin supported functional test classes (empty list in default implementation)
      */
     public Collection<Class> getFunctionalTests() {
-        return Collections.emptyList();
+        return emptyList();
     }
 }

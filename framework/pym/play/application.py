@@ -67,7 +67,10 @@ class PlayApplication(object):
 
     def modules(self):
         modules = []
-        if self.readConf('application.mode').lower() == 'dev':
+        application_mode = self.readConf('application.mode').lower()
+        if not application_mode:
+            application_mode = "dev"
+        if application_mode == 'dev':
             #Load docviewer module
 			modules.append(os.path.normpath(os.path.join(self.play_env["basedir"], 'modules/docviewer')))
 			
@@ -197,13 +200,6 @@ class PlayApplication(object):
             cp_args = ';'.join(classpath)
         return cp_args
 
-
-    def java_path(self):
-        if not os.environ.has_key('JAVA_HOME'):
-            return "java"
-        else:
-            return os.path.normpath("%s/bin/java" % os.environ['JAVA_HOME'])
-
     def pid_path(self):
         if self.play_env.has_key('pid_file'):
             return os.path.join(self.path, self.play_env['pid_file'])
@@ -222,7 +218,6 @@ class PlayApplication(object):
         return log_path
 
     def check_jpda(self):
-        self.jpda_port = self.readConf('jpda.port')
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind(('', int(self.jpda_port)))
@@ -270,15 +265,23 @@ class PlayApplication(object):
             self.jpda_port = self.play_env['jpda.port']
 
         application_mode = self.readConf('application.mode').lower()
+        if not application_mode:
+            print "~ Warning: no application.mode defined in you conf/application.conf. Using DEV mode."
+            application_mode = "dev"
+
 
         if application_mode == 'prod':
             java_args.append('-server')
 
-        javaVersion = getJavaVersion()
-        if javaVersion == "1.7":
+        if self.play_env.has_key('jvm_version'):
+            javaVersion = self.play_env['jvm_version']
+        else:
+            javaVersion = getJavaVersion() 
+        print "~ using java version \"%s\"" % javaVersion
+        if javaVersion.startswith("1.7"):
             # JDK 7 compat
             java_args.append('-XX:-UseSplitVerifier')
-        elif javaVersion == "1.8":
+        elif javaVersion.startswith("1.8"):
             java_args.append('-noverify')
 
         java_policy = self.readConf('java.policy')
@@ -296,13 +299,13 @@ class PlayApplication(object):
             
         java_args.append('-Dfile.encoding=utf-8')
 
-        if self.readConf('application.mode').lower() == 'dev':
+        if application_mode == 'dev':
             self.check_jpda()
             java_args.append('-Xdebug')
             java_args.append('-Xrunjdwp:transport=dt_socket,address=%s,server=y,suspend=n' % self.jpda_port)
             java_args.append('-Dplay.debug=yes')
         
-        java_cmd = [self.java_path(), '-javaagent:%s' % self.agent_path()] + java_args + ['-classpath', cp_args, '-Dapplication.path=%s' % self.path, '-Dplay.id=%s' % self.play_env["id"], className] + args
+        java_cmd = [java_path(), '-javaagent:%s' % self.agent_path()] + java_args + ['-classpath', cp_args, '-Dapplication.path=%s' % self.path, '-Dplay.id=%s' % self.play_env["id"], className] + args
         return java_cmd
 
     # ~~~~~~~~~~~~~~~~~~~~~~ MISC
@@ -338,6 +341,8 @@ class PlayConfParser:
             self.entries['jpda.port'] = env['jpda.port']
         if env.has_key('http.port'):
             self.entries['http.port'] = env['http.port']
+        if env.has_key('jvm_version'):
+            self.entries['jvm_version'] = env['jvm_version']
 
     def readFile(self, confFolder, filename):
         f = file(confFolder + filename)

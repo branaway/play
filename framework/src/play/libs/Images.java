@@ -13,11 +13,13 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
 import javax.imageio.stream.FileImageOutputStream;
+
 import jj.play.ns.nl.captcha.backgrounds.BackgroundProducer;
 import jj.play.ns.nl.captcha.backgrounds.FlatColorBackgroundProducer;
 import jj.play.ns.nl.captcha.backgrounds.GradiatedBackgroundProducer;
@@ -37,22 +39,36 @@ public class Images {
 
     /**
      * Resize an image
-     * @param originalImage The image file
-     * @param to The destination file
-     * @param w The new width (or -1 to proportionally resize)
-     * @param h The new height (or -1 to proportionally resize)
+     * 
+     * @param originalImage
+     *            The image file
+     * @param to
+     *            The destination file
+     * @param w
+     *            The new width (or -1 to proportionally resize)
+     * @param h
+     *            The new height (or -1 to proportionally resize)
      */
     public static void resize(File originalImage, File to, int w, int h) {
-      resize(originalImage, to, w, h, false);
+        resize(originalImage, to, w, h, false);
     }
-    
+
     /**
      * Resize an image
-     * @param originalImage The image file
-     * @param to The destination file
-     * @param w The new width (or -1 to proportionally resize) or the maxWidth if keepRatio is true
-     * @param h The new height (or -1 to proportionally resize) or the maxHeight if keepRatio is true
-     * @param keepRatio : if true, resize will keep the original image ratio and use w and h as max dimensions
+     * 
+     * @param originalImage
+     *            The image file
+     * @param to
+     *            The destination file
+     * @param w
+     *            The new width (or -1 to proportionally resize) or the maxWidth
+     *            if keepRatio is true
+     * @param h
+     *            The new height (or -1 to proportionally resize) or the
+     *            maxHeight if keepRatio is true
+     * @param keepRatio
+     *            : if true, resize will keep the original image ratio and use w
+     *            and h as max dimensions
      */
     public static void resize(File originalImage, File to, int w, int h, boolean keepRatio) {
         try {
@@ -60,10 +76,10 @@ public class Images {
             int owidth = source.getWidth();
             int oheight = source.getHeight();
             double ratio = (double) owidth / oheight;
-            
+
             int maxWidth = w;
             int maxHeight = h;
-            
+
             if (w < 0 && h < 0) {
                 w = owidth;
                 h = oheight;
@@ -74,14 +90,14 @@ public class Images {
             if (w > 0 && h < 0) {
                 h = (int) (w / ratio);
             }
-            
-            if(keepRatio) {
+
+            if (keepRatio) {
                 h = (int) (w / ratio);
-                if(h > maxHeight) {
+                if (h > maxHeight) {
                     h = maxHeight;
                     w = (int) (h * ratio);
                 }
-                if(w > maxWidth) {
+                if (w > maxWidth) {
                     w = maxWidth;
                     h = (int) (w / ratio);
                 }
@@ -96,20 +112,34 @@ public class Images {
             }
 
             // out
-            BufferedImage dest = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+            BufferedImage dest = null;
+            Graphics graphics = null;
+            if (source.getColorModel().hasAlpha()) {
+                dest = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+                graphics = dest.getGraphics();
+            } else {
+                dest = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+                // Create a white background if not transparency define
+                graphics = dest.getGraphics();
+                graphics.setColor(Color.BLUE);
+                graphics.fillRect(0, 0, w, h);
+            }
             Image srcSized = source.getScaledInstance(w, h, Image.SCALE_SMOOTH);
-            Graphics graphics = dest.getGraphics();
-            graphics.setColor(Color.WHITE);
-            graphics.fillRect(0, 0, w, h);
+
             graphics.drawImage(srcSized, 0, 0, null);
+
             ImageWriter writer = ImageIO.getImageWritersByMIMEType(mimeType).next();
             ImageWriteParam params = writer.getDefaultWriteParam();
+
             FileImageOutputStream toFs = new FileImageOutputStream(to);
-            writer.setOutput(toFs);
-            IIOImage image = new IIOImage(dest, null, null);
-            writer.write(null, image, params);
-            toFs.flush();
-            toFs.close();
+            try {
+                writer.setOutput(toFs);
+                IIOImage image = new IIOImage(dest, null, null);
+                writer.write(null, image, params);
+                toFs.flush();
+            } finally {
+                toFs.close();
+            }
             writer.dispose();
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -119,12 +149,19 @@ public class Images {
 
     /**
      * Crop an image
-     * @param originalImage The image file
-     * @param to The destination file
-     * @param x1 The new x origin
-     * @param y1 The new y origin
-     * @param x2 The new x end
-     * @param y2 The new y end
+     * 
+     * @param originalImage
+     *            The image file
+     * @param to
+     *            The destination file
+     * @param x1
+     *            The new x origin
+     * @param y1
+     *            The new y origin
+     * @param x2
+     *            The new x end
+     * @param y2
+     *            The new y end
      */
     public static void crop(File originalImage, File to, int x1, int y1, int x2, int y2) {
         try {
@@ -149,9 +186,16 @@ public class Images {
             graphics.drawImage(croppedImage, 0, 0, null);
             ImageWriter writer = ImageIO.getImageWritersByMIMEType(mimeType).next();
             ImageWriteParam params = writer.getDefaultWriteParam();
-            writer.setOutput(new FileImageOutputStream(to));
-            IIOImage image = new IIOImage(dest, null, null);
-            writer.write(null, image, params);
+
+            FileImageOutputStream toFs = new FileImageOutputStream(to);
+            try {
+                writer.setOutput(toFs);
+                IIOImage image = new IIOImage(dest, null, null);
+                writer.write(null, image, params);
+                toFs.flush();
+            } finally {
+                toFs.close();
+            }
             writer.dispose();
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -161,7 +205,9 @@ public class Images {
 
     /**
      * Encode an image to base64 using a data: URI
-     * @param image The image file
+     * 
+     * @param image
+     *            The image file
      * @return The base64 encoded value
      * @throws java.io.IOException
      */
@@ -211,7 +257,8 @@ public class Images {
         }
 
         /**
-         * Tell the captche to draw a text using the specified color (ex. #000000) and retrieve it
+         * Tell the captche to draw a text using the specified color (ex.
+         * #000000) and retrieve it
          */
         public String getText(String color) {
             this.textColor = Color.decode(color);
@@ -226,7 +273,8 @@ public class Images {
         }
 
         /**
-         * Tell the captche to draw a text of the specified size using the specified color (ex. #000000) and retrieve it
+         * Tell the captche to draw a text of the specified size using the
+         * specified color (ex. #000000) and retrieve it
          */
         public String getText(String color, int length) {
             this.textColor = Color.decode(color);
@@ -236,7 +284,7 @@ public class Images {
         public String getText(int length, String chars) {
             char[] charsArray = chars.toCharArray();
             Random random = new Random(System.currentTimeMillis());
-            StringBuffer sb = new StringBuffer(length);
+            StringBuilder sb = new StringBuilder(length);
             for (int i = 0; i < length; i++) {
                 sb.append(charsArray[random.nextInt(charsArray.length)]);
             }
@@ -290,7 +338,8 @@ public class Images {
         public Captcha setSquigglesBackground() {
             background = new SquigglesBackgroundProducer();
             return this;
-        }        // ~~ rendering
+        } // ~~ rendering
+
         ByteArrayInputStream bais = null;
 
         @Override

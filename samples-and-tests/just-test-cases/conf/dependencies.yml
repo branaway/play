@@ -3,3 +3,13 @@
 require:
     - play
     - crud
+    - secure
+    - play.test.modules  -> testModule latest.integration
+
+repositories:
+    - playLocalTestModulesRep:
+        type: local
+        descriptor: ${application.path}/../modules/[module]/conf/dependencies.yml
+        artifact: ${application.path}/../modules/[module]
+        contains:
+            - play.test.modules -> *

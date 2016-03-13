@@ -1,10 +1,12 @@
 package play;
 
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -13,7 +15,6 @@ import java.util.concurrent.TimeUnit;
 
 import com.jamonapi.Monitor;
 import com.jamonapi.MonitorFactory;
-import java.util.ArrayList;
 
 import play.Play.Mode;
 import play.exceptions.PlayException;
@@ -21,6 +22,8 @@ import play.exceptions.UnexpectedException;
 import play.i18n.Lang;
 import play.libs.F;
 import play.libs.F.Promise;
+import play.mvc.results.NotFound;
+import play.mvc.results.RenderStatic;
 import play.utils.PThreadFactory;
 
 /**
@@ -40,7 +43,9 @@ public class Invoker {
 
     /**
      * Run the code in a new thread took from a thread pool.
-     * @param invocation The code to run
+     * 
+     * @param invocation
+     *            The code to run
      * @return The future object, to know when the task is completed
      */
     public static Future<?> invoke(final Invocation invocation) {
@@ -52,8 +57,11 @@ public class Invoker {
 
     /**
      * Run the code in a new thread after a delay
-     * @param invocation The code to run
-     * @param millis The time to wait before, in milliseconds
+     * 
+     * @param invocation
+     *            The code to run
+     * @param millis
+     *            The time to wait before, in milliseconds
      * @return The future object, to know when the task is completed
      */
     public static Future<?> invoke(final Invocation invocation, long millis) {
@@ -64,7 +72,9 @@ public class Invoker {
 
     /**
      * Run the code in the same thread than caller.
-     * @param invocation The code to run
+     * 
+     * @param invocation
+     *            The code to run
      */
     public static void invokeInThread(DirectInvocation invocation) {
         boolean retry = true;
@@ -129,26 +139,18 @@ public class Invoker {
 
         @SuppressWarnings("unchecked")
         public <T extends Annotation> T getAnnotation(Class<T> clazz) {
-            for (Annotation annotation : annotations) {
-                if (annotation.annotationType().isAssignableFrom(clazz)) {
-                    return (T) annotation;
-                }
-            }
-            return null;
+        	return (T)annotations.stream().filter(a -> a.annotationType().isAssignableFrom(clazz)).findFirst().orElse(null);
         }
 
         public <T extends Annotation> boolean isAnnotationPresent(Class<T> clazz) {
-            for (Annotation annotation : annotations) {
-                if (annotation.annotationType().isAssignableFrom(clazz)) {
-                    return true;
-                }
-            }
-            return false;
+        	return annotations.stream().anyMatch(
+        			a -> a.annotationType().isAssignableFrom(clazz)
+        	);
         }
 
         /**
-         * Returns the InvocationType for this invocation - Ie: A plugin can use this to
-         * find out if it runs in the context of a background Job
+         * Returns the InvocationType for this invocation - Ie: A plugin can use
+         * this to find out if it runs in the context of a background Job
          */
         public String getInvocationType() {
             return invocationType;
@@ -179,25 +181,28 @@ public class Invoker {
 
         /**
          * Override this method
+         * 
          * @throws java.lang.Exception
          */
         public abstract void execute() throws Exception;
 
-
         /**
-         * Needs this method to do stuff *before* init() is executed.
-         * The different Invocation-implementations does a lot of stuff in init()
+         * Needs this method to do stuff *before* init() is executed. The
+         * different Invocation-implementations does a lot of stuff in init()
          * and they might do it before calling super.init()
          */
         protected void preInit() {
-            // clear language for this request - we're resolving it later when it is needed
+            // clear language for this request - we're resolving it later when
+            // it is needed
             Lang.clear();
         }
 
         /**
          * Init the call (especially usefull in DEV mode to detect changes)
+         * @throws RenderStatic 
+         * @throws NotFound 
          */
-        public boolean init() {
+        public boolean init() throws NotFound, RenderStatic {
             Thread.currentThread().setContextClassLoader(Play.classloader);
             Play.detectChanges();
             if (!Play.started) {
@@ -211,7 +216,7 @@ public class Invoker {
         }
 
 
-        public abstract InvocationContext getInvocationContext();
+        public abstract InvocationContext getInvocationContext() throws NotFound, RenderStatic;
 
         /**
          * Things to do before an Invocation
@@ -222,15 +227,16 @@ public class Invoker {
         }
 
         /**
-         * Things to do after an Invocation.
-         * (if the Invocation code has not thrown any exception)
+         * Things to do after an Invocation. (if the Invocation code has not
+         * thrown any exception)
          */
         public void after() {
             Play.pluginCollection.afterInvocation();
         }
 
         /**
-         * Things to do when the whole invocation has succeeded (before + execute + after)
+         * Things to do when the whole invocation has succeeded (before +
+         * execute + after)
          */
         public void onSuccess() throws Exception {
             Play.pluginCollection.onInvocationSuccess();
@@ -249,6 +255,7 @@ public class Invoker {
 
         /**
          * The request is suspended
+         * 
          * @param suspendRequest
          */
         public void suspend(Suspend suspendRequest) {
@@ -271,7 +278,7 @@ public class Invoker {
          * It's time to execute.
          */
         @Override
-		public void run() {
+        public void run() {
             if (waitInQueue != null) {
                 waitInQueue.stop();
             }
@@ -304,7 +311,7 @@ public class Invoker {
         Suspend retry = null;
 
         @Override
-        public boolean init() {
+        public boolean init() throws NotFound, RenderStatic {
             retry = null;
             return super.init();
         }
@@ -315,7 +322,7 @@ public class Invoker {
         }
 
         @Override
-        public InvocationContext getInvocationContext() {
+        public InvocationContext getInvocationContext() throws NotFound, RenderStatic {
             return new InvocationContext(invocationType);
         }
     }
@@ -331,7 +338,7 @@ public class Invoker {
          * Suspend for a timeout (in milliseconds).
          */
         long timeout;
-        
+
         /**
          * Wait for task execution.
          */
@@ -360,7 +367,8 @@ public class Invoker {
     }
 
     /**
-     * Utility that track tasks completion in order to resume suspended requests.
+     * Utility that track tasks completion in order to resume suspended
+     * requests.
      */
     static class WaitForTasksCompletion extends Thread {
 
@@ -378,6 +386,7 @@ public class Invoker {
             if (task instanceof Promise) {
                 Promise<V> smartFuture = (Promise<V>) task;
                 smartFuture.onRedeem(new F.Action<F.Promise<V>>() {
+                    @Override
                     public void invoke(Promise<V> result) {
                         executor.submit(invocation);
                     }

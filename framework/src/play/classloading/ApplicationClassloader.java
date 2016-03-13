@@ -1,6 +1,7 @@
 package play.classloading;
 
-import java.io.ByteArrayOutputStream;
+import static org.apache.commons.io.IOUtils.closeQuietly;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,21 +18,26 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
+
 import play.Logger;
 import play.Play;
-import play.classloading.hash.ClassStateHashCreator;
-import play.vfs.VirtualFile;
 import play.cache.Cache;
 import play.classloading.ApplicationClasses.ApplicationClass;
+import play.classloading.hash.ClassStateHashCreator;
 import play.exceptions.CompilationException;
 import play.exceptions.UnexpectedException;
 import play.libs.IO;
+import play.vfs.VirtualFile;
 
 /**
  * The application classLoader. 
@@ -205,8 +211,8 @@ public class ApplicationClassloader extends ClassLoader {
         } else {
             className = "package-info";
         }
-        if (findLoadedClass(className) == null) {
-            loadApplicationClass(className);
+        if (this.findLoadedClass(className) == null) {
+            this.loadApplicationClass(className);
         }
     }
 
@@ -215,26 +221,16 @@ public class ApplicationClassloader extends ClassLoader {
      */
     protected byte[] getClassDefinition(String name) {
         name = name.replace(".", "/") + ".class";
-        InputStream is = getResourceAsStream(name);
+        InputStream is = this.getResourceAsStream(name);
         if (is == null) {
             return null;
         }
         try {
-            ByteArrayOutputStream os = new ByteArrayOutputStream();
-            byte[] buffer = new byte[8192];
-            int count;
-            while ((count = is.read(buffer, 0, buffer.length)) > 0) {
-                os.write(buffer, 0, count);
-            }
-            return os.toByteArray();
+            return IOUtils.toByteArray(is);
         } catch (Exception e) {
             throw new UnexpectedException(e);
         } finally {
-            try {
-                is.close();
-            } catch (IOException e) {
-                throw new UnexpectedException(e);
-            }
+            closeQuietly(is);
         }
     }
 
@@ -249,6 +245,18 @@ public class ApplicationClassloader extends ClassLoader {
                 return res.inputstream();
             }
         }
+        URL url = this.getResource(name);
+        if (url != null) {
+            try {
+                File file = new File(url.toURI());
+                String fileName = file.getCanonicalFile().getName();
+                if (!name.endsWith(fileName)) {
+                    return null;
+                }
+            } catch (Exception e) {
+            }
+        }
+
         return super.getResourceAsStream(name);
     }
 
@@ -296,10 +304,12 @@ public class ApplicationClassloader extends ClassLoader {
         final Iterator<URL> it = urls.iterator();
         return new Enumeration<URL>() {
 
+            @Override
             public boolean hasMoreElements() {
                 return it.hasNext();
             }
 
+            @Override
             public URL nextElement() {
                 return it.next();
             }
@@ -318,7 +328,7 @@ public class ApplicationClassloader extends ClassLoader {
 			Long lastModified = javaFile.lastModified();
 			Long timestamp = applicationClass.timestamp;
 			if (timestamp < lastModified) {
-                applicationClass.refresh();
+                applicationClass.reset();
                 modifieds.add(applicationClass);
             }
         }
@@ -331,7 +341,7 @@ public class ApplicationClassloader extends ClassLoader {
         boolean dirtySig = false;
 
         if (modifiedWithDependencies.size() > 0) {
-			Logger.info("start compiling %s modified classes", modifiedWithDependencies.size());
+			Logger.info("start compiling %s modified class(es)", modifiedWithDependencies.size());
 			long compileTime = 0;
 			long enhanceTime = 0;
 			for (ApplicationClass applicationClass : modifiedWithDependencies) {
@@ -478,7 +488,6 @@ public class ApplicationClassloader extends ClassLoader {
                 long t= System.currentTimeMillis();
                 
                 if(!Play.pluginCollection.compileSources()) {
-
                     List<ApplicationClass> all = new ArrayList<ApplicationClass>();
 
                     for (VirtualFile virtualFile : Play.javaPath) {
@@ -486,7 +495,7 @@ public class ApplicationClassloader extends ClassLoader {
                     }
                     List<String> classNames = new ArrayList<String>();
                     for (int i = 0; i < all.size(); i++) {
-                            ApplicationClass applicationClass = all.get(i);
+                        ApplicationClass applicationClass = all.get(i);
                         if (applicationClass != null && !applicationClass.compiled && applicationClass.isClass()) {
                             classNames.add(all.get(i).name);
                         }
@@ -494,13 +503,14 @@ public class ApplicationClassloader extends ClassLoader {
 
                     // bran: display compilation time
                     if (classNames.size() > 0) {
-		                System.out.println("start compiling all " + classNames.size() + " classes. ");
+		                System.out.println("start compiling all " + classNames.size() + " class(es). ");
 		                
 		                t= System.currentTimeMillis();
 		                try {
 							Play.classes.compiler.compile(classNames.toArray(new String[classNames.size()]));
 						} catch (CompilationException e) {
-							throw Play.mapJapidJavCodeError(e);
+							throw e;
+//							throw Play.mapJapidJavCodeError(e);
 						}
 		                System.out.println("compiling took(ms): " + (System.currentTimeMillis() - t));
 	                }
@@ -520,18 +530,30 @@ public class ApplicationClassloader extends ClassLoader {
                 System.out.println("loading took(ms): " + (System.currentTimeMillis() - t));
 
                 Collections.sort(allClasses, new Comparator<Class>() {
+
                     @Override
-					public int compare(Class o1, Class o2) {
+                    public int compare(Class o1, Class o2) {
                         return o1.getName().compareTo(o2.getName());
                     }
                 });
+            }
+            allClassesByNormalizedName = new HashMap<String, ApplicationClass>(allClasses.size());
+            for (ApplicationClass clazz : Play.classes.all()) {
+                allClassesByNormalizedName.put(clazz.name.toLowerCase(), clazz);
+                if (clazz.name.contains("$")) {
+                    allClassesByNormalizedName.put(StringUtils.replace(clazz.name.toLowerCase(), "$", "."), clazz);
+                }
             }
         }
         return allClasses;
     }
     
     List<Class> allClasses = null;
+
 	private static Pattern classPattern = Pattern.compile("\\s+class\\s([a-zA-Z0-9_]+)\\s+");
+
+
+    Map<String, ApplicationClass> allClassesByNormalizedName = null;
 
 
     /**
@@ -540,13 +562,26 @@ public class ApplicationClassloader extends ClassLoader {
      * @return A list of class
      */
     public List<Class> getAssignableClasses(Class clazz) {
+        if (clazz == null) {
+            return Collections.emptyList();
+        }
         getAllClasses();
-        List<Class> results = new ArrayList<Class>();
-        for (ApplicationClass c : Play.classes.getAssignableClasses(clazz)) {
-            results.add(c.javaClass);
+        List<Class> results = assignableClassesByName.get(clazz.getName());
+        if (results != null) {
+            return results;
+        } else {
+            results = new ArrayList<Class>();
+            for (ApplicationClass c : Play.classes.getAssignableClasses(clazz)) {
+                results.add(c.javaClass);
+            }
+            // cache assignable classes
+            assignableClassesByName.put(clazz.getName(), results);
         }
         return results;
     }
+
+    // assignable classes cache
+    Map<String, List<Class>> assignableClassesByName = new HashMap<String, List<Class>>(100);
 
     /**
      * Find a class in a case insensitive way
@@ -556,13 +591,13 @@ public class ApplicationClassloader extends ClassLoader {
      */
     public Class getClassIgnoreCase(String name) {
         getAllClasses();
-        for (ApplicationClass c : Play.classes.all()) {
-            if (c.name.equalsIgnoreCase(name) || c.name.replace("$", ".").equalsIgnoreCase(name)) {
-                if (Play.usePrecompiled) {
-                    return c.javaClass;
-                }
-                return loadApplicationClass(c.name);
+        String nameLowerCased = name.toLowerCase();
+        ApplicationClass c = allClassesByNormalizedName.get(nameLowerCased);
+        if (c != null) {
+            if (Play.usePrecompiled) {
+                return c.javaClass;
             }
+            return loadApplicationClass(c.name);
         }
         return null;
     }

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Play command line script www.playframework.org/
+# Play command line script www.playframework.com/
 
 import sys
 import os
@@ -67,7 +67,7 @@ try:
     play_env["version"] = open(play_version_file).readline().strip()
 
     if showLogo:
-        print "~ play! %s, http://www.playframework.org" % (play_env["version"])
+        print "~ play! %s, https://www.playframework.com" % (play_env["version"])
 
     # ~~~~~~~~~~~~~~~~~~~~~~ Where is the application?
     application_path = None
@@ -98,6 +98,9 @@ try:
 
     # ~~~~~~~~~~~~~~~~~ Override pid_file
     get_opt(remaining_args, "pid_file", play_env)
+
+    # ~~~~~~~~~~~~~~~~~ Override jvm_version
+    get_opt(remaining_args, "jvm_version", play_env)
 
     # ~~~~~~~~~~~~~~~~~ Override port
     get_opt(remaining_args, "http.port", play_env)

@@ -59,6 +59,7 @@ public abstract class Enhancer {
      */
     public static class ApplicationClassesClasspath implements ClassPath {
 
+        @Override
         public InputStream openClassfile(String className) throws NotFoundException {
 
             if(Play.usePrecompiled) {
@@ -78,6 +79,7 @@ public abstract class Enhancer {
             return new ByteArrayInputStream(appClass.enhancedByteCode);
         }
 
+        @Override
         public URL find(String className) {
             if (Play.classes.getApplicationClass(className) != null) {
                 String cname = className.replace('.', '/') + ".class";
@@ -90,6 +92,7 @@ public abstract class Enhancer {
             return null;
         }
 
+        @Override
         public void close() {
         }
     }
@@ -213,7 +216,16 @@ public abstract class Enhancer {
     }
 
     boolean isAnon(ApplicationClass app) {
-        return app.name.contains("$anonfun$") || app.name.contains("$anon$");
+//        return app.name.contains("$anonfun$") || app.name.contains("$anon$");
+        return app.name.contains("$"); // bran: widen the coverage
     }
-    
+
+    // bran: these implementation need to improve the accuracy
+    protected boolean isController(ApplicationClass app) {
+    	return app.name.startsWith("controllers.");
+    }
+
+    protected boolean isModel(ApplicationClass app) {
+    	return app.name.startsWith("models.");
+    }
 }

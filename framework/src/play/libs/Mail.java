@@ -1,5 +1,18 @@
 package play.libs;
 
+import java.util.Date;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
+import javax.mail.Authenticator;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.mail.Email;
 import org.apache.commons.mail.EmailException;
@@ -7,26 +20,34 @@ import org.apache.commons.mail.EmailException;
 import play.Logger;
 import play.Play;
 import play.exceptions.MailException;
-import play.utils.Utils;
-
-import javax.mail.*;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeMessage;
-import java.io.IOException;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.*;
+import play.libs.mail.AbstractMailSystemFactory;
+import play.libs.mail.MailSystem;
+import play.libs.mail.test.LegacyMockMailSystem;
+import play.utils.Utils.Maps;
 
 /**
  * Mail utils
  */
 public class Mail {
 
+    private static class StaticMailSystemFactory extends AbstractMailSystemFactory {
+
+        private final MailSystem mailSystem;
+
+        private StaticMailSystemFactory(MailSystem mailSystem) {
+            this.mailSystem = mailSystem;
+        }
+
+        @Override
+        public MailSystem currentMailSystem() {
+            return mailSystem;
+        }
+
+    }
+
     public static Session session;
     public static boolean asynchronousSend = true;
-
+    protected static AbstractMailSystemFactory mailSystemFactory = AbstractMailSystemFactory.DEFAULT;
 
     /**
      * Send an email
@@ -34,43 +55,32 @@ public class Mail {
     public static Future<Boolean> send(Email email) {
         try {
             email = buildMessage(email);
-
-            if (Play.configuration.getProperty("mail.smtp", "").equals("mock") && Play.mode == Play.Mode.DEV) {
-                Mock.send(email);
-                return new Future<Boolean>() {
-
-                    public boolean cancel(boolean mayInterruptIfRunning) {
-                        return false;
-                    }
-
-                    public boolean isCancelled() {
-                        return false;
-                    }
-
-                    public boolean isDone() {
-                        return true;
-                    }
-
-                    public Boolean get() throws InterruptedException, ExecutionException {
-                        return true;
-                    }
-
-                    public Boolean get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-                        return true;
-                    }
-                };
-            }
-
-            email.setMailSession(getSession());
-            return sendMessage(email);
+            return currentMailSystem().sendMessage(email);
         } catch (EmailException ex) {
             throw new MailException("Cannot send email", ex);
         }
     }
 
+    // Helper method for better readability
+    protected static MailSystem currentMailSystem() {
+        return mailSystemFactory.currentMailSystem();
+    }
+
     /**
+     * Through this method you can substitute the current MailSystem. This is
+     * especially helpful for testing purposes like using mock libraries.
      *
+     * @author Andreas Simon &lt;a.simon@quagilis.de&gt;
+     * @see MailSystem
      */
+    public static void useMailSystem(MailSystem mailSystem) {
+        mailSystemFactory = new StaticMailSystemFactory(mailSystem);
+    }
+
+    public static void resetMailSystem() {
+        mailSystemFactory = AbstractMailSystemFactory.DEFAULT;
+    }
+
     public static Email buildMessage(Email email) throws EmailException {
 
         String from = Play.configuration.getProperty("mail.smtp.from");
@@ -79,16 +89,15 @@ public class Mail {
         } else if (email.getFromAddress() == null) {
             throw new MailException("Please define a 'from' email address", new NullPointerException());
         }
-        if ((email.getToAddresses() == null || email.getToAddresses().size() == 0) &&
-            (email.getCcAddresses() == null || email.getCcAddresses().size() == 0)  &&
-            (email.getBccAddresses() == null || email.getBccAddresses().size() == 0)) 
-        {
+        if ((email.getToAddresses() == null || email.getToAddresses().isEmpty())
+                && (email.getCcAddresses() == null || email.getCcAddresses().isEmpty())
+                && (email.getBccAddresses() == null || email.getBccAddresses().isEmpty())) {
             throw new MailException("Please define a recipient email address", new NullPointerException());
         }
         if (email.getSubject() == null) {
             throw new MailException("Please define a subject", new NullPointerException());
         }
-        if (email.getReplyToAddresses() == null || email.getReplyToAddresses().size() == 0) {
+        if (email.getReplyToAddresses() == null || email.getReplyToAddresses().isEmpty()) {
             email.addReplyTo(email.getFromAddress().getAddress());
         }
 
@@ -98,43 +107,47 @@ public class Mail {
     public static Session getSession() {
         if (session == null) {
             Properties props = new Properties();
-            // Put a bogus value even if we are on dev mode, otherwise JavaMail will complain
+            // Put a bogus value even if we are on dev mode, otherwise JavaMail
+            // will complain
             props.put("mail.smtp.host", Play.configuration.getProperty("mail.smtp.host", "localhost"));
 
             String channelEncryption;
-            if (Play.configuration.containsKey("mail.smtp.protocol") && Play.configuration.getProperty("mail.smtp.protocol", "smtp").equals("smtps")) {
+            if (Play.configuration.containsKey("mail.smtp.protocol")
+                    && "smtps".equals(Play.configuration.getProperty("mail.smtp.protocol", "smtp"))) {
                 // Backward compatibility before stable5
                 channelEncryption = "starttls";
             } else {
                 channelEncryption = Play.configuration.getProperty("mail.smtp.channel", "clear");
             }
 
-            if (channelEncryption.equals("clear")) {
+            if ("clear".equals(channelEncryption)) {
                 props.put("mail.smtp.port", "25");
-            } else if (channelEncryption.equals("ssl")) {
-                // port 465 + setup yes ssl socket factory (won't verify that the server certificate is signed with a root ca.)
+            } else if ("ssl".equals(channelEncryption)) {
+                // port 465 + setup yes ssl socket factory (won't verify that
+                // the server certificate is signed with a root ca.)
                 props.put("mail.smtp.port", "465");
                 props.put("mail.smtp.socketFactory.port", "465");
                 props.put("mail.smtp.socketFactory.class", "play.utils.YesSSLSocketFactory");
                 props.put("mail.smtp.socketFactory.fallback", "false");
-            } else if (channelEncryption.equals("starttls")) {
+            } else if ("starttls".equals(channelEncryption)) {
                 // port 25 + enable starttls + ssl socket factory
                 props.put("mail.smtp.port", "25");
                 props.put("mail.smtp.starttls.enable", "true");
-                // can't install our socket factory. will work only with server that has a signed certificate
-                // story to be continued in javamail 1.4.2 : https://glassfish.dev.java.net/issues/show_bug.cgi?id=5189
+                // can't install our socket factory. will work only with server
+                // that has a signed certificate
+                // story to be continued in javamail 1.4.2 :
+                // https://glassfish.dev.java.net/issues/show_bug.cgi?id=5189
             }
 
-            // Inject additional  mail.* settings declared in Play! configuration
-            Map<Object, Object> additionalSettings = new HashMap<Object, Object>();
-            additionalSettings = Utils.Maps.filterMap(Play.configuration, "^mail\\..*");
-            if(additionalSettings.size() > 0){
+            // Inject additional mail.* settings declared in Play! configuration
+            Map<Object, Object> additionalSettings = Maps.filterMap(Play.configuration, "^mail\\..*");
+            if (!additionalSettings.isEmpty()) {
                 // Remove "password" fields
                 additionalSettings.remove("mail.smtp.pass");
-                additionalSettings.remove("mail.smtp.password"); 
+                additionalSettings.remove("mail.smtp.password");
                 props.putAll(additionalSettings);
             }
-                 
+
             String user = Play.configuration.getProperty("mail.smtp.user");
             String password = Play.configuration.getProperty("mail.smtp.pass");
             if (password == null) {
@@ -173,12 +186,14 @@ public class Mail {
     /**
      * Send a JavaMail message
      *
-     * @param msg An Email message
+     * @param msg
+     *            An Email message
      */
     public static Future<Boolean> sendMessage(final Email msg) {
         if (asynchronousSend) {
             return executor.submit(new Callable<Boolean>() {
 
+                @Override
                 public Boolean call() {
                     try {
                         msg.setSentDate(new Date());
@@ -192,7 +207,7 @@ public class Mail {
                 }
             });
         } else {
-            final StringBuffer result = new StringBuffer();
+            final StringBuilder result = new StringBuilder();
             try {
                 msg.setSentDate(new Date());
                 msg.send();
@@ -203,23 +218,28 @@ public class Mail {
             }
             return new Future<Boolean>() {
 
+                @Override
                 public boolean cancel(boolean mayInterruptIfRunning) {
                     return false;
                 }
 
+                @Override
                 public boolean isCancelled() {
                     return false;
                 }
 
+                @Override
                 public boolean isDone() {
                     return true;
                 }
 
-                public Boolean get() throws InterruptedException, ExecutionException {
+                @Override
+                public Boolean get() {
                     return result.length() == 0;
                 }
 
-                public Boolean get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+                @Override
+                public Boolean get(long timeout, TimeUnit unit) {
                     return result.length() == 0;
                 }
             };
@@ -244,115 +264,12 @@ public class Mail {
         }
     }
 
-    public static class Mock {
-
-        static Map<String, String> emails = new HashMap<String, String>();
-
-
-        public static String getContent(Part message) throws MessagingException,
-                IOException {
-
-            if (message.getContent() instanceof String) {
-                return message.getContentType() + ": " + message.getContent() + " \n\t";
-            } else if (message.getContent() != null && message.getContent() instanceof Multipart) {
-                Multipart part = (Multipart) message.getContent();
-                String text = "";
-                for (int i = 0; i < part.getCount(); i++) {
-                    BodyPart bodyPart = part.getBodyPart(i);
-                    if (!Message.ATTACHMENT.equals(bodyPart.getDisposition())) {
-                        text += getContent(bodyPart);
-                    } else {
-                        text += "attachment: \n" +
-                       "\t\t name: " + (StringUtils.isEmpty(bodyPart.getFileName()) ? "none" : bodyPart.getFileName()) + "\n" +
-                       "\t\t disposition: " + bodyPart.getDisposition() + "\n" +
-                       "\t\t description: " +  (StringUtils.isEmpty(bodyPart.getDescription()) ? "none" : bodyPart.getDescription())  + "\n\t";
-                    }
-                }
-                return text;
-            }
-            if (message.getContent() != null && message.getContent() instanceof Part) {
-                if (!Message.ATTACHMENT.equals(message.getDisposition())) {
-                    return getContent((Part) message.getContent());
-                } else {
-                    return "attachment: \n" +
-                           "\t\t name: " + (StringUtils.isEmpty(message.getFileName()) ? "none" : message.getFileName()) + "\n" +
-                           "\t\t disposition: " + message.getDisposition() + "\n" +
-                           "\t\t description: " + (StringUtils.isEmpty(message.getDescription()) ? "none" : message.getDescription()) + "\n\t";
-                }
-            }
-
-            return "";
-        }
-
-
-        static void send(Email email) {
-
-            try {
-                final StringBuffer content = new StringBuffer();
-                Properties props = new Properties();
-                props.put("mail.smtp.host", "myfakesmtpserver.com");
-
-                Session session = Session.getInstance(props);
-                email.setMailSession(session);
-
-                email.buildMimeMessage();
-
-                MimeMessage msg = email.getMimeMessage();
-                msg.saveChanges();
-
-                String body = getContent(msg);
-
-                content.append("From Mock Mailer\n\tNew email received by");
-
-
-                content.append("\n\tFrom: " + email.getFromAddress().getAddress());
-                content.append("\n\tReplyTo: " + ((InternetAddress) email.getReplyToAddresses().get(0)).getAddress());
-                content.append("\n\tTo: ");
-                for (Object add : email.getToAddresses()) {
-                    content.append(add.toString() + ", ");
-                }
-                // remove the last ,
-                content.delete(content.length() - 2, content.length());
-                if (email.getCcAddresses() != null && !email.getCcAddresses().isEmpty()) {
-                    content.append("\n\tCc: ");
-                    for (Object add : email.getCcAddresses()) {
-                        content.append(add.toString() + ", ");
-                    }
-                    // remove the last ,
-                    content.delete(content.length() - 2, content.length());
-                }
-                 if (email.getBccAddresses() != null && !email.getBccAddresses().isEmpty()) {
-                    content.append("\n\tBcc: ");
-                    for (Object add : email.getBccAddresses()) {
-                        content.append(add.toString() + ", ");
-                    }
-                    // remove the last ,
-                    content.delete(content.length() - 2, content.length());
-                }
-                content.append("\n\tSubject: " + email.getSubject());
-                content.append("\n\t" + body);
-
-                content.append("\n");
-                Logger.info(content.toString());
-
-                for (Object add : email.getToAddresses()) {
-                    content.append(", " + add.toString());
-                    emails.put(((InternetAddress) add).getAddress(), content.toString());
-                }
-
-            } catch (Exception e) {
-                Logger.error(e, "error sending mock email");
-            }
-
-        }
-
-        public static String getLastMessageReceivedBy(String email) {
-            return emails.get(email);
-        }
-        
-        public static void reset(){
-        	emails.clear();
-        }
-    }
+    /**
+     * Just kept for compatibility reasons, use test double substitution
+     * mechanism instead.
+     *
+     * @see Mail#useMailSystem(MailSystem)
+     * @author Andreas Simon &lt;a.simon@quagilis.de&gt;
+     */
+    public static LegacyMockMailSystem Mock = new LegacyMockMailSystem();
 }
-

@@ -1,7 +1,6 @@
 package play.mvc.results;
 
 import java.util.Map;
-import play.Logger;
 
 import play.Play;
 import play.exceptions.UnexpectedException;
@@ -10,14 +9,13 @@ import play.mvc.Http;
 import play.mvc.Http.Request;
 import play.mvc.Http.Response;
 import play.mvc.Scope;
-import play.templates.TemplateLoader;
 
 /**
- * 500 Error
+ * 500 Error. Can also be used for other errors when using the constructor with error code
  */
 public class Error extends Result {
-
-    private int status;
+	private static final long serialVersionUID = 1L;
+	protected int status;
 
     public Error(String reason) {
         super(reason);
@@ -50,7 +48,7 @@ public class Error extends Result {
 //            errorHtml = TemplateLoader.load("errors/" + this.status + "." + (format == null ? "html" : format)).render(binding);
             errorHtml = Play.getErrorPage(this.status, Play.PageFormat.from(format), binding);
         } catch (Exception e) {
-            Logger.warn(e, "Error page caused an error");
+            // no template in desired format, just display the default response
         }
         try {
             response.out.write(errorHtml.getBytes(getEncoding()));

@@ -8,18 +8,20 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.FutureTask;
+
+import java.util.Comparator;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.bytecode.SourceFileAttribute;
 import play.Play;
 import play.classloading.ApplicationClassloaderState;
-import play.classloading.enhancers.LVEnhancer;
 import play.data.binding.Binder;
 import play.data.binding.ParamNode;
 import play.data.binding.RootParamNode;
@@ -29,6 +31,18 @@ import play.mvc.Before;
 import play.mvc.Finally;
 import play.mvc.With;
 
+import java.io.*;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.*;
+import java.util.concurrent.FutureTask;
+
+import static java.util.Collections.addAll;
+import static org.apache.commons.io.IOUtils.closeQuietly;
+import static java.util.Collections.sort;
+
 /**
  * Java utils
  */
@@ -36,17 +50,17 @@ public class Java {
 
     protected static JavaWithCaching _javaWithCaching = new JavaWithCaching();
     protected static ApplicationClassloaderState _lastKnownApplicationClassloaderState = Play.classloader.currentState;
-    protected static Object _javaWithCachingLock = new Object();
+    private static final Object _javaWithCachingLock = new Object();
 
     protected static JavaWithCaching getJavaWithCaching() {
         synchronized( _javaWithCachingLock ) {
             // has the state of the ApplicationClassloader changed?
-            ApplicationClassloaderState currentApplicationClasloaderState = Play.classloader.currentState;
-            if( !currentApplicationClasloaderState.equals( _lastKnownApplicationClassloaderState )) {
+            ApplicationClassloaderState currentApplicationClassloaderState = Play.classloader.currentState;
+            if( !currentApplicationClassloaderState.equals( _lastKnownApplicationClassloaderState )) {
                 // it has changed.
                 // we must drop our current _javaWithCaching and create a new one...
                 // and start the caching over again.
-                _lastKnownApplicationClassloaderState = currentApplicationClasloaderState;
+                _lastKnownApplicationClassloaderState = currentApplicationClassloaderState;
                 _javaWithCaching = new JavaWithCaching();
 
             }
@@ -54,16 +68,16 @@ public class Java {
         }
     }
 
-
-    public static String[] extractInfosFromByteCode(byte[] code) {
-        try {
-            CtClass ctClass = ClassPool.getDefault().makeClass(new ByteArrayInputStream(code));
-            String sourceName = ((SourceFileAttribute) ctClass.getClassFile().getAttribute("SourceFile")).getFileName();
-            return new String[]{ctClass.getName(), sourceName};
-        } catch (Exception e) {
-            throw new UnexpectedException("Cannot read a scala generated class using javassist", e);
-        }
-    }
+//
+//    public static String[] extractInfosFromByteCode(byte[] code) {
+//        try {
+//            CtClass ctClass = ClassPool.getDefault().makeClass(new ByteArrayInputStream(code));
+//            String sourceName = ((SourceFileAttribute) ctClass.getClassFile().getAttribute("SourceFile")).getFileName();
+//            return new String[]{ctClass.getName(), sourceName};
+//        } catch (Exception e) {
+//            throw new UnexpectedException("Cannot read a scala generated class using javassist", e);
+//        }
+//    }
 
     /**
      * Try to discover what is hidden under a FutureTask (hack)
@@ -107,7 +121,7 @@ public class Java {
         while (!clazz.getName().equals("java.lang.Object")) {
             for (Method m : clazz.getDeclaredMethods()) {
                 if (m.getName().equalsIgnoreCase(name) && Modifier.isPublic(m.getModifiers())) {
-                    // Check that it is not an intercepter
+                    // Check that it is not an interceptor
                     if (!m.isAnnotationPresent(Before.class) && !m.isAnnotationPresent(After.class) && !m.isAnnotationPresent(Finally.class)) {
                         return m;
                     }
@@ -220,18 +234,13 @@ public class Java {
      * Retrieve parameter names of a method
      */
     public static String[] parameterNames(Method method) throws Exception {
-        try {
-            /*System.out.println("searching for " + "$" + method.getName() + LVEnhancer.computeMethodHash(method.getParameterTypes()));
-            for(Field f : method.getDeclaringClass().getDeclaredFields()) {
-                System.out.println(f.getName() + " : " + Modifier.toString(f.getModifiers()));
-            }
-            for(Field f : method.getDeclaringClass().getFields()) {
-                System.out.println(f.getName() + " : " + Modifier.toString(f.getModifiers()));
-            }*/
-            return (String[]) method.getDeclaringClass().getDeclaredField("$" + method.getName() + LVEnhancer.computeMethodHash(method.getParameterTypes())).get(null);
-        } catch (Exception e) {
-            throw new UnexpectedException("Cannot read parameter names for " + method, e);
-        }
+        	Parameter[] parameters = method.getParameters();
+        	String[] pnames = new String[parameters.length];
+        	for (int i = 0; i < parameters.length; i++) {
+        		Parameter p = parameters[i];
+        		pnames[i] = p.getName();
+        	}
+        	return pnames;
     }
 
     public static String rawMethodSignature(Method method) {
@@ -289,7 +298,6 @@ public class Java {
      * @return A list of method object
      */
     public static List<Method> findAllAnnotatedMethods(Class<?> clazz, Class<? extends Annotation> annotationType) {
-
         return getJavaWithCaching().findAllAnnotatedMethods(clazz, annotationType);
     }
 
@@ -309,14 +317,14 @@ public class Java {
 
     public static void findAllFields(Class clazz, Set<Field> found) {
         Field[] fields = clazz.getDeclaredFields();
-        for (int i = 0; i < fields.length; i++) {
-            found.add(fields[i]);
-        }
+        addAll(found, fields);
+
         Class sClazz = clazz.getSuperclass();
         if (sClazz != null && sClazz != Object.class) {
             findAllFields(sClazz, found);
         }
     }
+
     /** cache */
     private static Map<Field, FieldWrapper> wrappers = new HashMap<Field, FieldWrapper>();
 
@@ -331,19 +339,33 @@ public class Java {
         return wrappers.get(field);
     }
 
-    public static byte[] serialize(Object o) throws Exception {
+    public static byte[] serialize(Object o) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ObjectOutputStream oo = new ObjectOutputStream(baos);
-        oo.writeObject(o);
-        oo.flush();
-        oo.close();
+        try {
+            oo.writeObject(o);
+            oo.flush();
+        } finally {
+            if (oo != null) {
+                oo.close();
+            }
+        }
         return baos.toByteArray();
     }
 
     public static Object deserialize(byte[] b) throws Exception {
         ByteArrayInputStream bais = new ByteArrayInputStream(b);
-        ObjectInputStream oi = new ObjectInputStream(bais);
-        return oi.readObject();
+        try {
+            ObjectInputStream oi = new ObjectInputStream(bais);
+            try {
+                return oi.readObject();
+            }
+            finally {
+                closeQuietly(oi);
+            }
+        } finally {
+            closeQuietly(bais);
+        }
     }
 
     /**
@@ -353,7 +375,7 @@ public class Java {
      */
     public static class FieldWrapper {
 
-        final static int unwritableModifiers = Modifier.FINAL | Modifier.NATIVE | Modifier.STATIC;
+        static final int unwritableModifiers = Modifier.FINAL | Modifier.NATIVE | Modifier.STATIC;
         private Method setter;
         private Method getter;
         private Field field;
@@ -491,7 +513,7 @@ class JavaWithCaching {
      * @param annotationType The annotation class
      * @return A list of method object
      */
-    public List<Method> findAllAnnotatedMethods(Class<?> clazz, Class<? extends Annotation> annotationType) {
+    public List<Method> findAllAnnotatedMethods(Class<?> clazz, final Class<? extends Annotation> annotationType) {
 
         if( clazz == null ) {
             return new ArrayList<Method>(0);
@@ -510,6 +532,7 @@ class JavaWithCaching {
             }
             // have to resolve it.
             methods = new ArrayList<Method>();
+
             // get list of all annotated methods on this class..
             for( Method method : findAllAnnotatedMethods( clazz)) {
                 if (method.isAnnotationPresent(annotationType)) {
@@ -517,10 +540,34 @@ class JavaWithCaching {
                 }
             }
 
+            sortByPriority(methods, annotationType);
+
             // store it in cache
             classAndAnnotation2Methods.put( key, methods);
 
             return methods;
+        }
+    }
+
+    private void sortByPriority(List<Method> methods, final Class<? extends Annotation> annotationType) {
+        try {
+            final Method priority = annotationType.getMethod("priority");
+            sort(methods, new Comparator<Method>() {
+                @Override public int compare(Method m1, Method m2) {
+                    try {
+                        Integer priority1 = (Integer) priority.invoke(m1.getAnnotation(annotationType));
+                        Integer priority2 = (Integer) priority.invoke(m2.getAnnotation(annotationType));
+                        return priority1.compareTo(priority2);
+                    }
+                    catch (Exception e) {
+                        // should not happen
+                        throw new RuntimeException(e);
+                    }
+                }
+            });
+        }
+        catch (NoSuchMethodException e) {
+            // no need to sort - this annotation doesn't have priority() method
         }
     }
 

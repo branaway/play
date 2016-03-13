@@ -177,7 +177,7 @@ public abstract class Cache {
     /**
      * Bulk retrieve.
      * @param key List of keys
-     * @return Map of keys & values
+     * @return Map of keys &amp; values
      */
     public static Map<String, Object> get(String... key) {
         return cacheImpl.get(key);
@@ -205,7 +205,9 @@ public abstract class Cache {
      * Clear all data from cache.
      */
     public static void clear() {
-        cacheImpl.clear();
+        if (cacheImpl != null) {
+            cacheImpl.clear();
+        }
     }
 
     /**

@@ -5,6 +5,9 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.jamonapi.Monitor;
+import com.jamonapi.MonitorFactory;
+
 import play.Invoker;
 import play.Invoker.InvocationContext;
 import play.Logger;
@@ -16,12 +19,11 @@ import play.libs.F.Promise;
 import play.libs.Time;
 import play.mvc.Http;
 
-import com.jamonapi.Monitor;
-import com.jamonapi.MonitorFactory;
-
 /**
  * A job is an asynchronously executed unit of work
- * @param <V> The job result type (if any)
+ * 
+ * @param <V>
+ *            The job result type (if any)
  */
 public class Job<V> extends Invoker.Invocation implements Callable<V> {
 
@@ -59,6 +61,7 @@ public class Job<V> extends Invoker.Invocation implements Callable<V> {
 
     /**
      * Start this job now (well ASAP)
+     * 
      * @return the job completion
      */
     public Promise<V> now() {
@@ -67,31 +70,33 @@ public class Job<V> extends Invoker.Invocation implements Callable<V> {
         return smartFuture;
     }
 
-  /**
-   * If is called in a 'HttpRequest' invocation context, waits until request
-   * is served and schedules job then.
-   *
-   * Otherwise is the same as now();
-   *
-   * If you want to schedule a job to run after some other job completes, wait till a promise redeems
-   * of just override first Job's call() to schedule the second one.
-   *
-   * @return the job completion
-   */
-  public Promise<V> afterRequest() {
-    InvocationContext current = Invoker.InvocationContext.current();
-    if(current == null || !Http.invocationType.equals(current.getInvocationType())) {
-      return now();
-    }
+    /**
+     * If is called in a 'HttpRequest' invocation context, waits until request
+     * is served and schedules job then.
+     *
+     * Otherwise is the same as now();
+     *
+     * If you want to schedule a job to run after some other job completes, wait
+     * till a promise redeems of just override first Job's call() to schedule
+     * the second one.
+     *
+     * @return the job completion
+     */
+    public Promise<V> afterRequest() {
+        InvocationContext current = Invoker.InvocationContext.current();
+        if (current == null || !Http.invocationType.equals(current.getInvocationType())) {
+            return now();
+        }
 
-    final Promise<V> smartFuture = new Promise<V>();
-    Callable<V> callable = getJobCallingCallable(smartFuture);
-    JobsPlugin.addAfterRequestAction(callable);
-    return smartFuture;
-  }
+        final Promise<V> smartFuture = new Promise<V>();
+        Callable<V> callable = getJobCallingCallable(smartFuture);
+        JobsPlugin.addAfterRequestAction(callable);
+        return smartFuture;
+    }
 
     /**
      * Start this job in several seconds
+     * 
      * @return the job completion
      */
     public Promise<V> in(String delay) {
@@ -100,6 +105,7 @@ public class Job<V> extends Invoker.Invocation implements Callable<V> {
 
     /**
      * Start this job in several seconds
+     * 
      * @return the job completion
      */
     public Promise<V> in(int seconds) {
@@ -109,23 +115,23 @@ public class Job<V> extends Invoker.Invocation implements Callable<V> {
     }
 
     private Callable<V> getJobCallingCallable(final Promise<V> smartFuture) {
-      return new Callable<V>() {
-        public V call() throws Exception {
-          try {
-            V result = Job.this.call();
-            if (smartFuture != null) {
-              smartFuture.invoke(result);
+        return new Callable<V>() {
+            @Override
+            public V call() throws Exception {
+                try {
+                    V result = Job.this.call();
+                    if (smartFuture != null) {
+                        smartFuture.invoke(result);
+                    }
+                    return result;
+                } catch (Exception e) {
+                    if (smartFuture != null) {
+                        smartFuture.invokeWithException(e);
+                    }
+                    return null;
+                }
             }
-            return result;
-          }
-          catch (Exception e) {
-            if (smartFuture != null) {
-              smartFuture.invokeWithException(e);
-              }
-            return null;
-          }
-        }
-      };
+        };
     }
 
     /**
@@ -140,6 +146,7 @@ public class Job<V> extends Invoker.Invocation implements Callable<V> {
      */
     public void every(int seconds) {
         JobsPlugin.executor.scheduleWithFixedDelay(this, seconds, seconds, TimeUnit.SECONDS);
+        JobsPlugin.scheduledJobs.add(this);
     }
 
     // Customize Invocation
@@ -149,17 +156,17 @@ public class Job<V> extends Invoker.Invocation implements Callable<V> {
         lastException = e;
         try {
             super.onException(e);
-        } catch(Throwable ex) {
+        } catch (Throwable ex) {
             Logger.error(ex, "Error during job execution (%s)", this);
             throw new UnexpectedException(unwrap(e));
         }
     }
 
     private Throwable unwrap(Throwable e) {
-      while((e instanceof UnexpectedException || e instanceof PlayException) && e.getCause() != null) {
-        e = e.getCause();
-      }
-      return e;
+        while ((e instanceof UnexpectedException || e instanceof PlayException) && e.getCause() != null) {
+            e = e.getCause();
+        }
+        return e;
     }
 
     @Override
@@ -168,7 +175,7 @@ public class Job<V> extends Invoker.Invocation implements Callable<V> {
     }
 
     @Override
-	public V call() {
+    public V call() {
         Monitor monitor = null;
         try {
             if (init()) {
@@ -178,7 +185,7 @@ public class Job<V> extends Invoker.Invocation implements Callable<V> {
                 try {
                     lastException = null;
                     lastRun = System.currentTimeMillis();
-                    monitor = MonitorFactory.start(getClass().getName()+".doJob()");
+                    monitor = MonitorFactory.start(this + ".doJob()");
                     result = doJobWithResult();
                     monitor.stop();
                     monitor = null;
@@ -186,9 +193,10 @@ public class Job<V> extends Invoker.Invocation implements Callable<V> {
                 } catch (PlayException e) {
                     throw e;
                 } catch (Exception e) {
-                    StackTraceElement element = PlayException.getInterestingStrackTraceElement(e);
+                    StackTraceElement element = PlayException.getInterestingStackTraceElement(e);
                     if (element != null) {
-                        throw new JavaExecutionException(Play.classes.getApplicationClass(element.getClassName()), element.getLineNumber(), e);
+                        throw new JavaExecutionException(Play.classes.getApplicationClass(element.getClassName()), element.getLineNumber(),
+                                e);
                     }
                     throw e;
                 }
@@ -198,7 +206,7 @@ public class Job<V> extends Invoker.Invocation implements Callable<V> {
         } catch (Throwable e) {
             onException(e);
         } finally {
-            if(monitor != null) {
+            if (monitor != null) {
                 monitor.stop();
             }
             _finally();
@@ -218,6 +226,5 @@ public class Job<V> extends Invoker.Invocation implements Callable<V> {
     public String toString() {
         return this.getClass().getName();
     }
-
 
 }
