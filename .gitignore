@@ -44,3 +44,4 @@ modules/*
 !modules/secure
 !modules/testrunner
 
+/apt_generated/
