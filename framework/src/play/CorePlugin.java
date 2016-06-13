@@ -20,6 +20,8 @@ import play.classloading.enhancers.ContinuationEnhancer;
 import play.classloading.enhancers.ControllersEnhancer;
 import play.classloading.enhancers.Enhancer;
 import play.classloading.enhancers.LVEnhancer;
+import play.classloading.enhancers.MailerEnhancer;
+import play.classloading.enhancers.PropertiesEnhancer;
 import play.classloading.enhancers.SigEnhancer;
 import play.exceptions.UnexpectedException;
 import play.libs.Crypto;
@@ -305,8 +307,8 @@ public class CorePlugin extends PlayPlugin {
                 ContinuationEnhancer.class,  // is it working?
                 SigEnhancer.class,
                 ControllersEnhancer.class,
-//                MailerEnhancer.class,
-//                PropertiesEnhancer.class,
+                MailerEnhancer.class,
+                PropertiesEnhancer.class,
                 LVEnhancer.class
             };
             for (Class<? extends Enhancer> enhancer : enhancers) {

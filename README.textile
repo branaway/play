@@ -9,8 +9,24 @@ It contains
 1. basic JDK8 support.a few patches that make using Play in dev mode faster.
 2. special code to work with Japid for better japid views' error reporting in DEV mode. Most of japid grammar errors will be pointed back to the original view files. 
 
-History:
+h3.Local changes vs. the original distribution 
 
+I have made a few patched that fix a few bugs and inconvenience
+
+# simplified the error message in case of ActionNotFoundException.
+# MemecachedImpl: clean keys with space and delegate to super class loader for primitive array types
+# UrlEncodeParser: changed to use "_body" from "body" to avoid conflicts with user's body parameter
+# NoRouteFoundException: added the action name in the error message.
+# Invoker: synch the creation of the suspended invocations.
+# Play: added a delay in detecting changes to avoid run the detection for very requests in a burst.
+# PlayHandler: added keep-alive header to the HTTP 1.0 request. 
+# Wrapped the HotswapAgent in PlayAgent.jar to be used as the JVM agent instead of the whole play.jar. This way start script for applications can be simplified to the point that I can use regular Eclipse run/debug instead of using the remote debugging mode.
+# added option to invoke ActionInvocation without going through the intermediate executor. The option to add to application.conf: "action.invocation.direct" with value of "true"/"false";
+
+
+h3. History:
+
+2016.6.13, reinstate PropertiesEnhancer and MailerEnhancer in CorePlugins. So the behavior of this version should match that of the original 1.4.x.
 2016.3.13, merged jdk8 branch to the master
 2016.3.3, update bytecode parser with invokedynamic support in controllers, which would blow out with LVEnhancer.
 2016.3.2, merged with the original git://github.com/playframework/play1 master branch, which was about post 1.4. added latest javassist.jar for better compatible with hibernate and JDK8.
@@ -45,7 +61,7 @@ h2. Getting started
 
 1. Install the latest version of Play framework and unzip it anywhere you want:
 
-bc. unzip play-1.x.zip -d /opt/play-1.2
+bc. unzip play-1.x.zip -d /opt/myplay
 
 2. Add the **play** script to your PATH:
 
@@ -84,15 +100,7 @@ cd to framework and "ant". To create a new release, create a new version tag and
 
 "ant package" will create a distribution in the dist. 
 
-h2. JDK 8 compatibility
-
-The jdk8 branch is a rework some of the internal enhancers which used to use Javassist, which is not JDK8 compatible. The new work uses ASM. 
-
-To build a jdk8 compatible play, issue a command:
-
-git switch jdk8
-
-before you create a distribution. 
+ 
 
 h2. Reporting bugs
 
@@ -103,19 +111,7 @@ h2. License
 Play framework is distributed under "Apache 2 license":http://www.apache.org/licenses/LICENSE-2.0.html.
 
 
-h2. Bing Ran local patches:
-
-I have made a few patched that fix a few bugs and inconvenience
-
-# simplified the error message in case of ActionNotFoundException.
-# MemecachedImpl: clean keys with space and delegate to super class loader for primitive array types
-# UrlEncodeParser: changed to use "_body" from "body" to avoid conflicts with user's body parameter
-# NoRouteFoundException: added the action name in the error message.
-# Invoker: synch the creation of the suspended invocations.
-# Play: added a delay in detecting changes to avoid run the detection for very requests in a burst.
-# PlayHandler: added keep-alive header to the HTTP 1.0 request. 
-# Wrapped the HotswapAgent in PlayAgent.jar to be used as the JVM agent instead of the whole play.jar. This way start script for applications can be simplified to the point that I can use regular Eclipse run/debug instead of using the remote debugging mode.
-# added option to invoke ActionInvocation without going through the intermediate executor. The option to add to application.conf: "action.invocation.direct" with value of "true"/"false";
+h2. Synch with the original repo:
 
 
 To synch with the original play repo, I have added a remote called "upstream" that is mapped to git://github.com/playframework/play1, which is the play 1.x repo. 

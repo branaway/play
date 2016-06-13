@@ -45,3 +45,4 @@ modules/*
 !modules/testrunner
 
 /apt_generated/
+/.apt_generated/
