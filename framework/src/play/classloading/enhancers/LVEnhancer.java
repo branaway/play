@@ -29,7 +29,7 @@ import play.libs.Codec;
 
 /**
  * 
- * bran: the original concept of this class was to create a markers to remember 
+ * bran: the original concept of this class was to create markers to remember 
  * local variables in action methods for use in Groovy templates. 
  *
  */
@@ -40,13 +40,20 @@ public class LVEnhancer extends Enhancer {
         CtClass ctClass = makeClass(applicationClass);
         if(ctClass.isAnnotation() || ctClass.isInterface())
             return;
+        
+        // bran: added. can I assume this enhancer is supposed to work with controller only?
+        if (!applicationClass.name.startsWith("controllers.")) {
+        	return;
+        }
+        
         for(CtBehavior behavior : ctClass.getDeclaredMethods()) {
             try {
-                if(behavior.isEmpty() || behavior.getMethodInfo().getCodeAttribute() == null || Utils.getLocalVariableAttribute(behavior) == null) {
-                    CtField signature = CtField.make("public static String[] $" + behavior.getName() + "0 = new String[0];", ctClass);
-                    ctClass.addField(signature);
-                    continue;
-                }
+            	// bran: the below code would generated duplicated field if empty overloaded methods exist in the class. 
+//                if(behavior.isEmpty() || behavior.getMethodInfo().getCodeAttribute() == null || Utils.getLocalVariableAttribute(behavior) == null) {
+//                    CtField signature = CtField.make("public static String[] $" + behavior.getName() + "0 = new String[0];", ctClass);
+//                    ctClass.addField(signature);
+//                    continue;
+//                }
 
                 StackAnalyzer parser = new StackAnalyzer(behavior);
 
@@ -76,6 +83,7 @@ public class LVEnhancer extends Enhancer {
 
                 CtField signature = CtField.make("public static String[] $" + behavior.getName() + computeMethodHash(signatureTypes) + " = " + signatureNames.toString(), ctClass);
                 ctClass.addField(signature);
+                System.out.println("LVEnhancer added field: " + signature + "=" + signatureNames);
                 // end
 
                 Frames frames = parser.analyze();

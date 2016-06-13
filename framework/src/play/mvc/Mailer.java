@@ -30,6 +30,7 @@ import org.apache.commons.mail.SimpleEmail;
 
 import play.Logger;
 import play.Play;
+import play.classloading.enhancers.LVEnhancer;
 import play.exceptions.MailException;
 import play.exceptions.TemplateNotFoundException;
 import play.exceptions.UnexpectedException;
@@ -295,7 +296,8 @@ public class Mailer {
             dataSource = new VirtualFileDataSource(img);
         }
 
-        Map<String, InlineImage> inlineEmbeds = (Map<String, InlineImage>) map
+        @SuppressWarnings("unchecked")
+		Map<String, InlineImage> inlineEmbeds = (Map<String, InlineImage>) map
                 .get("inlineEmbeds");
 
         // Check if a URLDataSource for this name has already been attached;
@@ -407,8 +409,8 @@ public class Mailer {
             templateName = templateName.substring(0, templateName.indexOf("("));
             templateName = templateName.replace(".", "/");
 
-            String[] names = Utils.getParamNames(Request.current().invokedMethod)/*.mergeParamsAndVarargs()*/;
-            
+            String[] names = LVEnhancer.LVEnhancerRuntime.getParamNames().mergeParamsAndVarargs();
+
             // overrides Template name
             if (args.length > 0 && args[0] instanceof String && names[0] == null) {
                 templateName = args[0].toString();
