@@ -26,6 +26,7 @@ I have made a few patched that fix a few bugs and inconvenience
 
 h3. History:
 
+2016.6.14, replacing systemout uses in the ApplicationClassLoader. Let the PropertiesEnhancer and LVEnhancer to enhance only the applicable classes for better performance. Users can use "play.LVEnhancer.enabled=false" and "play.PropertiesEnhancer.enabled=false" in the application.conf to disable these two enhancers all together if no Groovy templates are used in the app. 
 2016.6.13, reinstate PropertiesEnhancer and MailerEnhancer in CorePlugins. So the behavior of this version should match that of the original 1.4.x.
 2016.3.13, merged jdk8 branch to the master
 2016.3.3, update bytecode parser with invokedynamic support in controllers, which would blow out with LVEnhancer.

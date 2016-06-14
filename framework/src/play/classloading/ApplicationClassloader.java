@@ -503,7 +503,7 @@ public class ApplicationClassloader extends ClassLoader {
 
                     // bran: display compilation time
                     if (classNames.size() > 0) {
-		                System.out.println("start compiling all " + classNames.size() + " class(es). ");
+		                Logger.debug("start compiling all " + classNames.size() + " class(es). ");
 		                
 		                t= System.currentTimeMillis();
 		                try {
@@ -512,10 +512,10 @@ public class ApplicationClassloader extends ClassLoader {
 							throw e;
 //							throw Play.mapJapidJavCodeError(e);
 						}
-		                System.out.println("compiling took(ms): " + (System.currentTimeMillis() - t));
+		                Logger.debug("compiling took(ms): " + (System.currentTimeMillis() - t));
 	                }
 	                
-	                System.out.println("start loading all " + classNames.size() + " classes. ");
+                    Logger.debug("start loading all " + classNames.size() + " classes. ");
 	                t= System.currentTimeMillis();
 
 
@@ -527,7 +527,7 @@ public class ApplicationClassloader extends ClassLoader {
                         allClasses.add(clazz);
                     }
                 }
-                System.out.println("loading took(ms): " + (System.currentTimeMillis() - t));
+                Logger.debug("loading took(ms): " + (System.currentTimeMillis() - t));
 
                 Collections.sort(allClasses, new Comparator<Class>() {
 

@@ -36,16 +36,29 @@ import play.libs.Codec;
 public class LVEnhancer extends Enhancer {
     @Override
     public void enhanceThisClass(ApplicationClass applicationClass)
-            throws Exception {    	
+            throws Exception {
+    	
+
+        if(!Boolean.parseBoolean(Play.configuration.getProperty("play.LVEnhancer.enabled", "true"))){
+        	Logger.debug("play.LVEnhancer.enabled=false detected. ignore LVEnhancer.");
+        	return;
+        }
+
         CtClass ctClass = makeClass(applicationClass);
         if(ctClass.isAnnotation() || ctClass.isInterface())
             return;
         
         // bran: added. can I assume this enhancer is supposed to work with controller only?
-        if (!applicationClass.name.startsWith("controllers.")) {
+        if (!isController(applicationClass)) {
         	return;
         }
         
+    	if(isJapidController(ctClass)){
+    		// do nothing
+    		Logger.info(applicationClass.name + " is using japid thus not applicable to LVEnhancer");
+    		return;
+    	}
+    
         for(CtBehavior behavior : ctClass.getDeclaredMethods()) {
             try {
             	// bran: the below code would generated duplicated field if empty overloaded methods exist in the class. 
@@ -83,7 +96,7 @@ public class LVEnhancer extends Enhancer {
 
                 CtField signature = CtField.make("public static String[] $" + behavior.getName() + computeMethodHash(signatureTypes) + " = " + signatureNames.toString(), ctClass);
                 ctClass.addField(signature);
-                System.out.println("LVEnhancer added field: " + signature + "=" + signatureNames);
+                Logger.debug("LVEnhancer added field: " + signature + "=" + signatureNames);
                 // end
 
                 Frames frames = parser.analyze();
@@ -130,7 +143,8 @@ public class LVEnhancer extends Enhancer {
         ctClass.defrost();
     }
     
-    private static final long startedAt = System.currentTimeMillis();
+ 
+	private static final long startedAt = System.currentTimeMillis();
     
     private static Bytecode makeInitMethodCall(CtBehavior behavior, String method, int nbParameters, String subject, String... names) {
         Bytecode b = new Bytecode(behavior.getMethodInfo().getConstPool());

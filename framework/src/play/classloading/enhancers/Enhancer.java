@@ -228,4 +228,22 @@ public abstract class Enhancer {
     protected boolean isModel(ApplicationClass app) {
     	return app.name.startsWith("models.");
     }
+    
+    protected boolean isJapidController(CtClass ctClass) {
+    	boolean ok = true;
+    	while (ok){
+    		if (ctClass.getSimpleName().contains("JapidController")){
+    			return true;
+    		}
+    		try {
+				ctClass = ctClass.getSuperclass();
+			} catch (NotFoundException e) {
+				return false;
+			}
+    		if (ctClass == null || ctClass.getName().equals(Object.class.getName()))
+    			return false;
+    	}
+    	return false;
+    }
+
 }

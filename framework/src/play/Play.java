@@ -334,6 +334,15 @@ public class Play {
         // Plugins
         pluginCollection.onApplicationReady();
 
+        // bran: check enhancer settings
+        if(Boolean.parseBoolean(configuration.getProperty("play.LVEnhancer.enabled", "true"))){
+        	Logger.warn("LVEnhancer is enabled by default, which can degrade performance if no Groovy templates are used. set \"play.LVEnhancer.enabled=false\" in the application.conf to disbaled it.");
+        }
+
+        if(Boolean.parseBoolean(configuration.getProperty("play.PropertiesEnhancer.enabled", "true"))){
+        	Logger.warn("PropertiesEnhancer is enabled by default, which can degrade performance if no Groovy templates are used. set \"play.PropertiesEnhancer.enabled=false\" in the application.conf to disbaled it.");
+        }
+        
         Play.initialized = true;
     }
 

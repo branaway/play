@@ -34,7 +34,10 @@ public class PropertiesEnhancer extends Enhancer {
     @Override
     public void enhanceThisClass(ApplicationClass applicationClass) throws Exception {
 
-        if(!Boolean.parseBoolean(Play.configuration.getProperty("play.propertiesEnhancer.enabled", "true"))) return;
+        if(!Boolean.parseBoolean(Play.configuration.getProperty("play.PropertiesEnhancer.enabled", "true"))) {
+        	Logger.debug("play.PropertiesEnhancer.enabled=false detected. ignore PropertiesEnhancer.");
+        	return;
+        }
 
         final CtClass ctClass = makeClass(applicationClass);
         if (ctClass.isInterface()) {
@@ -42,6 +45,11 @@ public class PropertiesEnhancer extends Enhancer {
         }
         if(ctClass.getName().endsWith(".package")) {
             return;
+        }
+        
+        if (!isModel(applicationClass)){
+        	Logger.info(applicationClass.name + " is not a model thus not applicable to PropertiesEnhancer");
+        	return;
         }
 
         // Add a default constructor if needed
@@ -158,6 +166,9 @@ public class PropertiesEnhancer extends Enhancer {
                                 }
                             }
 
+                            String camelName = fieldAccess.getFieldName();
+                            camelName = camelName.substring(0, 1).toUpperCase() + camelName.substring(1);
+
                             // To intercept getter of its own property
                             if (propertyName == null || !propertyName.equals(fieldAccess.getFieldName())) {
 
@@ -167,19 +178,22 @@ public class PropertiesEnhancer extends Enhancer {
 
                                     // Rewrite read access to the property
                                     fieldAccess.replace("$_ = ($r)play.classloading.enhancers.PropertiesEnhancer.FieldAccessor.invokeReadProperty($0, \"" + fieldAccess.getFieldName() + "\", \"" + fieldAccess.getClassName() + "\", \"" + invocationPoint + "\");");
-
+                                	
+                                	// bran: instead of the reflective way of reading something, let's call the getter directly:
+                                	// bran: not working because it may rely other target class to be enhanced first to have getter setter.   
+                                	// fieldAccess.replace("$_ = $0.get" + camelName + "();");
                                 } else if (!isFinal(fieldAccess.getField()) && fieldAccess.isWriter()) {
 
                                     // Rewrite write access to the property
                                     fieldAccess.replace("play.classloading.enhancers.PropertiesEnhancer.FieldAccessor.invokeWriteProperty($0, \"" + fieldAccess.getFieldName() + "\", " + fieldAccess.getField().getType().getName() + ".class, $1, \"" + fieldAccess.getClassName() + "\", \"" + invocationPoint + "\");");
-
-
+                                	// bran: direct setter. not working because it may rely other target class to be enhanced first to have getter setter.   
+                                	// fieldAccess.replace("$0.set" + camelName + "($1);");
                                 }
                             }
                         }
 
                     } catch (Exception e) {
-                        throw new UnexpectedException("Error in PropertiesEnhancer", e);
+                        throw new UnexpectedException("Error in PropertiesEnhancer for " + applicationClass.name, e);
                     }
                 }
             });

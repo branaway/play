@@ -33,9 +33,8 @@ def execute(**kargs):
     if javaVersion.startswith("1.7"):
         # JDK 7 compat
         vm_arguments = vm_arguments +' -XX:-UseSplitVerifier'
-    elif javaVersion.startswith("1.8"):
-        # JDK 8 compatible bran: let's try the split verifier
-        vm_arguments = vm_arguments +' -XX:-UseSplitVerifier'
+    #elif javaVersion.startswith("1.8"):
+        # JDK 8 compatible bran: the javassist is good enough to generate nice code for jdk8 to pass through class verification
         #vm_arguments = vm_arguments +' -noverify'
 
     if application_name:
@@ -142,6 +141,13 @@ def execute(**kargs):
         replaceAll(os.path.join(app.path, 'eclipse/debug.launch'), r'%JPDA_PORT%', str(app.jpda_port))
         replaceAll(os.path.join(app.path, 'eclipse/debug.launch'), r'%PLAY_VERSION%', play_env["version"])
         replaceAll(os.path.join(app.path, 'eclipse/debug.launch'), r'%VM_ARGUMENTS%', vm_arguments)
+        
+        # bran: set up the plain java mode application launch
+        replaceAll(os.path.join(app.path, 'eclipse/plainJava.launch'), r'%PROJECT_NAME%', application_name)
+        replaceAll(os.path.join(app.path, 'eclipse/plainJava.launch'), r'%PLAY_BASE%', play_env["basedir"])
+        replaceAll(os.path.join(app.path, 'eclipse/plainJava.launch'), r'%PLAY_ID%', play_env["id"])
+        replaceAll(os.path.join(app.path, 'eclipse/plainJava.launch'), r'%PLAY_VERSION%', play_env["version"])
+        replaceAll(os.path.join(app.path, 'eclipse/plainJava.launch'), r'%VM_ARGUMENTS%', vm_arguments)
 
         replaceAll(os.path.join(app.path, 'eclipse/test.launch'), r'%PROJECT_NAME%', application_name)
         replaceAll(os.path.join(app.path, 'eclipse/test.launch'), r'%PLAY_BASE%', play_env["basedir"])
@@ -155,7 +161,8 @@ def execute(**kargs):
 
         os.rename(os.path.join(app.path, 'eclipse/connect.launch'), os.path.join(app.path, 'eclipse/Connect JPDA to %s.launch' % application_name))
         os.rename(os.path.join(app.path, 'eclipse/test.launch'), os.path.join(app.path, 'eclipse/Test %s.launch' % application_name))
-        os.rename(os.path.join(app.path, 'eclipse/debug.launch'), os.path.join(app.path, 'eclipse/%s.launch' % application_name))
+        os.rename(os.path.join(app.path, 'eclipse/debug.launch'), os.path.join(app.path, 'eclipse/%s-remote-debug.launch' % application_name))
+        os.rename(os.path.join(app.path, 'eclipse/plainJava.launch'), os.path.join(app.path, 'eclipse/%s-plain.launch' % application_name))
    
     if is_application:
         print "~ OK, the application \"%s\" is ready for eclipse" % application_name
