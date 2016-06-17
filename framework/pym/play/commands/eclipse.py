@@ -117,6 +117,14 @@ def execute(**kargs):
     if os.path.exists(os.path.join(app.path, 'test')):
         cpTEST += '<classpathentry kind="src" path="test"/>'
     replaceAll(dotClasspath, r'%TESTCLASSPATH%', cpTEST)
+    
+    # bran:  generate source path for japidroot
+    cpJapidRoot = ""
+    if os.path.exists(os.path.join(app.path, "japidroot")):
+        cpJapidRoot += '<classpathentry kind="src" path="japidroot"/>'
+    replaceAll(dotClasspath, r'%JAPIDROOT%', cpJapidRoot)
+    
+    
 
     if len(modules):
         lXML = ""

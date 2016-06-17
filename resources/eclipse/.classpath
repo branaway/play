@@ -2,6 +2,7 @@
 <classpath>
 	<classpathentry excluding="japidviews/**|rythm/**|views/**" kind="src" path="app"/>
 	%TESTCLASSPATH%
+	%JAPIDROOT%
 	%MODULES%
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	%PROJECTCLASSPATH%
