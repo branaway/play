@@ -1,4 +1,14 @@
 # Application dependencies
-
+# adjust the version numbers for the latest japid hosted on: http://github.com/branaway/japid
 require:
-    - play
+    - cn.bran -> japid 0.9.6.2
+    - cn.bran -> japidplay 0.9.6.2
+    - com.google.code.javaparser -> javaparser 1.0.8
+
+# My custom repositories
+repositories:
+    - bran:
+        type:       http
+        artifact:   "https://raw.githubusercontent.com/branaway/Japid/master/dist-lib/[module]-[revision].[ext]"
+        contains:
+            - cn.bran -> *

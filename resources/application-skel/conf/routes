@@ -3,7 +3,8 @@
 # ~~~~
 
 # Home page
-GET     /                                       Application.index
+GET     /groovy                                       Application.index
+GET     /                                ApplicationJapid.index
 
 # Ignore favicon requests
 GET     /favicon.ico                            404

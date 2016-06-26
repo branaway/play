@@ -113,7 +113,9 @@ def new(app, args, env, cmdloader=None):
     if runDepsAfter:
         cmdloader.commands['dependencies'].execute(command='dependencies', app=app, args=['--sync'], env=env, cmdloader=cmdloader)
 
+
     print "~ OK, the application is created."
+    print "~ cd %s and download the depended jars with: play deps --sync" % sys.argv[2]
     print "~ Start it with : play run %s" % sys.argv[2]
     print "~ Have fun!"
     print "~"

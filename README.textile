@@ -1,6 +1,6 @@
 h2. About
 
-bing.ran@gmail.com
+bing.ran@iclass.com
 
 This fork came from the HEAD of master in the original Play framework, at about a post 1.4.x version. 
 
@@ -26,6 +26,7 @@ I have made a few patched that fix a few bugs and inconvenience
 
 h3. History:
 
+2016.6.25, added a bare-bone Japid sample controller and view to the default application skeleton. 
 2016.6.14, replacing systemout uses in the ApplicationClassLoader. Let the PropertiesEnhancer and LVEnhancer to enhance only the applicable classes for better performance. Users can use "play.LVEnhancer.enabled=false" and "play.PropertiesEnhancer.enabled=false" in the application.conf to disable these two enhancers all together if no Groovy templates are used in the app. 
 2016.6.13, reinstate PropertiesEnhancer and MailerEnhancer in CorePlugins. So the behavior of this version should match that of the original 1.4.x.
 2016.3.13, merged jdk8 branch to the master
