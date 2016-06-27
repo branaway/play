@@ -997,14 +997,18 @@ public class Play {
 	 */
 	public static String getErrorPage(int i, PageFormat format, Map<String, Object> params) {
 		if (errorPager == null) {
+			Exception e = (Exception) params.get("exception");
+			String msg =  e != null? e.getMessage() :"";
+			
 			switch (i) {
-			case 404:
-				return "URL not found";
+			case 404: {
+				return "404. URL not found: " + msg;
+			}
 			case 500:
-				Object e = params.get("exception");
-				return "System error 500: " + e;
+				
+				return "500. System error: " + msg;
 			default:
-				return "";
+				return msg;
 			}
 		} else
 			return errorPager.getErrorPage(i, format, params);
