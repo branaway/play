@@ -292,7 +292,10 @@ public class ApplicationClasses {
 		private void calcDependencies() {
 //			DependencyVisitor dv = new DependencyVisitor("models/", "controllers/");
 //			new ClassReader(this.enhancedByteCode).accept(dv, 0);
-			this.immediateDependencies = DependencyVisitor.getDependencies(this.enhancedByteCode, "models/", "controllers/");
+			this.immediateDependencies = DependencyVisitor.getDependencies(this.enhancedByteCode, "models/");
+			// bran: the above dependency hard work seems only for use in JPA model dependency resolving added a long while back
+			// I disable the controllers for now, since lamda in controller causes ASM issues such as  String index overflow.
+			//			this.immediateDependencies = DependencyVisitor.getDependencies(this.enhancedByteCode, "models/", "controllers/");
 		}
 
 		/**

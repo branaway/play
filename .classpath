@@ -21,7 +21,6 @@
 	<classpathentry exported="true" kind="lib" path="framework/lib/javax.inject-1.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/commons-lang-2.6.jar" sourcepath="/Users/bran/.m2/repository/commons-lang/commons-lang/2.6/commons-lang-2.6-sources.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/antlr-2.7.7.jar"/>
-	<classpathentry exported="true" kind="lib" path="framework/lib/jackson-all-1.7.5.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib/postgresql-9.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib-test/ant.jar"/>
 	<classpathentry exported="true" kind="lib" path="framework/lib-test/fest-assert-1.4.jar"/>

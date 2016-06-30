@@ -518,6 +518,7 @@ public class JPAPlugin extends PlayPlugin {
     @Override
     public void onApplicationStop() {
         JPA.close();
+        _startCount = 0;
     }
 
     @Override
