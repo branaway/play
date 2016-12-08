@@ -3,8 +3,12 @@ package play.server;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelFutureProgressListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.DefaultFileRegion;
+import org.jboss.netty.channel.FileRegion;
 import org.jboss.netty.handler.codec.http.*;
+import org.jboss.netty.handler.ssl.SslHandler;
 import org.jboss.netty.handler.stream.ChunkedFile;
 import org.jboss.netty.handler.stream.ChunkedInput;
 
@@ -25,6 +29,14 @@ import java.util.Comparator;
 import static org.apache.commons.io.IOUtils.closeQuietly;
 import static org.jboss.netty.buffer.ChannelBuffers.wrappedBuffer;
 import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
+
+/**
+ * the service is not effective since it's using the chunked response thus lots of memory. 
+ * Consider revising the implementation to use zero-copy mechanism. 
+ * 
+ * @author ran
+ *
+ */
 
 public class FileService  {
 
@@ -61,13 +73,38 @@ public class FileService  {
 
             // Write the content.
             if (!nettyRequest.getMethod().equals(HttpMethod.HEAD)) {
-                ChunkedInput chunkedInput = getChunckedInput(raf, MimeTypes.getContentType(localFile.getName(), "text/plain"), channel, nettyRequest, nettyResponse);
-                if (channel.isOpen()) {
-                    channel.write(nettyResponse);
-                    writeFuture = channel.write(chunkedInput);
-                }else{
-                    Logger.debug("Try to write on a closed channel[keepAlive:%s]: Remote host may have closed the connection", String.valueOf(isKeepAlive)); 
-                }
+//                    writeFuture = channel.write(new ChunkedFile(raf, 0, fileLength, 8192));
+                    if (channel.isOpen()) {
+                        channel.write(nettyResponse);
+                        if (channel.getPipeline().get(SslHandler.class) != null) {
+                        	// Cannot use zero-copy with HTTPS.
+	                        ChunkedInput chunkedInput = getChunckedInput(raf, MimeTypes.getContentType(localFile.getName(), "text/plain"), channel, nettyRequest, nettyResponse);
+	                        writeFuture = channel.write(chunkedInput);
+                        }
+	                    else {
+	                    	// bran: added zero-copy code. need testing
+	                    	// initial test show 2.5X as much output capacity, on par with direct NGINX serving
+	                    	// No encryption - use zero-copy.
+	                    	final FileRegion region =
+	                    			new DefaultFileRegion(raf.getChannel(), 0, fileLength);
+	                    	writeFuture = channel.write(region);
+	                    	writeFuture.addListener(new ChannelFutureProgressListener() {
+	                    		public void operationComplete(ChannelFuture future) {
+	                    			region.releaseExternalResources();
+//	                    			Logger.info("finished zero-copy sending file: %s, amount: %d bytes",localFile.getName(), fileLength);
+	                    		}
+	                    		public void operationProgressed(
+	                    				ChannelFuture future, long amount, long current, long total) {
+//	                    			System.err.printf("%s: %d / %d (+%d)%n", path, current, total, amount);
+//	                    			if (future.isSuccess()) {
+//	                    				Logger.debug("finished zero-copy sending file: %s, amount: %d bytes",localFile.getName(), amount); 
+//	                    			}
+	                    		}
+	                    	});
+	                    }
+                    }else{
+                        Logger.debug("Try to write on a closed channel[keepAlive:%s]: Remote host may have closed the connection", String.valueOf(isKeepAlive)); 
+                    }
             } else {
                 if (channel.isOpen()) {
                     writeFuture = channel.write(nettyResponse);

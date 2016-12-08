@@ -221,6 +221,7 @@ public class JPQL {
         return q;
     }
 
+    // to support Play quick query. see https://playframework.com/documentation/1.2.3/jpa
     private String findByToJPQL(String findBy) {
         findBy = findBy.substring(2);
         StringBuilder jpql = new StringBuilder();

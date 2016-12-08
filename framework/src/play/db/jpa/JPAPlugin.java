@@ -326,6 +326,9 @@ public class JPAPlugin extends PlayPlugin {
 				throw e;
 			}
 		}
+		else {
+			throw e;
+		}
 	}
 
     /**

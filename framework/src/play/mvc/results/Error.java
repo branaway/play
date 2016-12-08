@@ -9,6 +9,7 @@ import play.mvc.Http;
 import play.mvc.Http.Request;
 import play.mvc.Http.Response;
 import play.mvc.Scope;
+import play.templates.TemplateLoader;
 
 /**
  * 500 Error. Can also be used for other errors when using the constructor with error code
@@ -45,8 +46,8 @@ public class Error extends Result {
         binding.put("play", new Play());
         String errorHtml = getMessage();
         try {
-//            errorHtml = TemplateLoader.load("errors/" + this.status + "." + (format == null ? "html" : format)).render(binding);
-            errorHtml = Play.getErrorPage(this.status, Play.PageFormat.from(format), binding);
+            errorHtml = TemplateLoader.load("errors/" + this.status + "." + (format == null ? "html" : format)).render(binding);
+//            errorHtml = Play.getErrorPage(this.status, Play.PageFormat.from(format), binding);
         } catch (Exception e) {
             // no template in desired format, just display the default response
         }

@@ -998,7 +998,7 @@ public class Play {
 	public static String getErrorPage(int i, PageFormat format, Map<String, Object> params) {
 		if (errorPager == null) {
 			Exception e = (Exception) params.get("exception");
-			String msg =  e != null? e.getMessage() :"";
+			String msg = "HTTP Error " + i + ". " + e != null? e.getMessage() :"";
 			
 			switch (i) {
 			case 404: {
